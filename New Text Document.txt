@@ -1,0 +1,7 @@
+Username	Password	Role
+admin	admin123	IT Manager
+head	head123	Technical Head
+area	area123	Area Manager
+store	store123	Warehouse Keeper
+senior	senior123	Senior Technical
+junior	junior123	Junior Technical

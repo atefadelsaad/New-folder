@@ -1,0 +1,10 @@
+.git
+.gitignore
+node_modules
+**/node_modules
+server/node_modules
+.env
+*.log
+pgdata
+test_swap.js
+check.js

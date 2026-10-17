@@ -6,19 +6,18 @@
 <title>مخزن تكنولوجيا المعلومات</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f4f6f3;--sf:#fff;--ink:#17262b;--mut:#5d6c70;--ln:#dbe1dd;--pri:#0e5a62;--pi:#fff;--acc:#a96d00;--accb:#fbf0d6;--ok:#23704a;--okb:#dff1e6;--bad:#b3392f;--badb:#f9e3e0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f181b;--sf:#172428;--ink:#e8eeee;--mut:#9fb0b3;--ln:#2a3b3f;--pri:#4cc0c9;--pi:#06292d;--acc:#f0b84a;--accb:#3a2e12;--ok:#6fd09b;--okb:#17342a;--bad:#f08a80;--badb:#3d1d1a;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#0f181b;--sf:#172428;--ink:#e8eeee;--mut:#9fb0b3;--ln:#2a3b3f;--pri:#4cc0c9;--pi:#06292d;--acc:#f0b84a;--accb:#3a2e12;--ok:#6fd09b;--okb:#17342a;--bad:#f08a80;--badb:#3d1d1a;color-scheme:dark}
+:root{--bg:#f4f6f3;--sf:#fff;--ink:#17262b;--mut:#5d6c70;--ln:#dbe1dd;--pri:#ffd400;--pi:#1a1a1a;--acc:#a96d00;--accb:#fbf0d6;--ok:#23704a;--okb:#dff1e6;--bad:#b3392f;--badb:#f9e3e0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f181b;--sf:#172428;--ink:#e8eeee;--mut:#9fb0b3;--ln:#2a3b3f;--pri:#ffd400;--pi:#1a1a1a;--acc:#f0b84a;--accb:#3a2e12;--ok:#6fd09b;--okb:#17342a;--bad:#f08a80;--badb:#3d1d1a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f181b;--sf:#172428;--ink:#e8eeee;--mut:#9fb0b3;--ln:#2a3b3f;--pri:#ffd400;--pi:#1a1a1a;--acc:#f0b84a;--accb:#3a2e12;--ok:#6fd09b;--okb:#17342a;--bad:#f08a80;--badb:#3d1d1a;color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:400 15px/1.6 Cairo,Tahoma,Arial,sans-serif}
-header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--pri);color:var(--pi)}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 18px;background:#ffd400;color:#000}
 header h1{margin:0;font-size:19px;font-weight:800}
-header label{font-size:13px;display:flex;gap:8px;align-items:center}
-header select{max-width:60vw}
-nav{display:flex;gap:4px;padding:10px 18px 0;border-bottom:1px solid var(--ln);overflow-x:auto}
-nav button{background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;font:600 15px Cairo,Tahoma,sans-serif;color:var(--mut);cursor:pointer;white-space:nowrap}
-nav button.on{color:var(--pri);border-color:var(--pri)}
+header .ubar{font-size:13px;display:flex;gap:10px;align-items:center}
+nav{display:flex;gap:4px;padding:10px 18px 0;background:#ffd400;border-bottom:1px solid var(--ln);overflow-x:auto}
+nav button{background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;font:600 15px Cairo,Tahoma,sans-serif;color:#000;cursor:pointer;white-space:nowrap}
+nav button.on{color:#000;border-color:#000}
 main{max-width:980px;margin:0 auto;padding:18px}
 h2{font-size:18px;margin:0 0 10px}
 h3{font-size:16px;margin:0 0 8px}
@@ -30,6 +29,7 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
 .search{width:100%;margin-bottom:12px}
 .btn{background:var(--pri);color:var(--pi);border:0;border-radius:6px;padding:8px 16px;font:600 14px Cairo,Tahoma,sans-serif;cursor:pointer}
 .btn.ghost{background:none;color:var(--pri);border:1px solid var(--pri)}
+.header .btn.ghost,header .btn.ghost{color:#000;border-color:#000}
 .btn.bad{background:var(--bad);color:var(--sf)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin:10px 0}
 .tw{overflow-x:auto}
@@ -56,24 +56,22 @@ th{font-weight:600;color:var(--mut);font-size:13px}
 <body>
 <header>
   <h1>مخزن محرم بك - تقنية المعلومات</h1>
-  <label>الدور الحالي (للتجربة)
-    <select id="role" onchange="setRole(this.value)"></select>
-  </label>
+  <div class="ubar" id="roleBar"></div>
 </header>
 <nav id="nav"></nav>
 <main id="m"></main>
 <div id="t" role="status"></div>
 <script>
 const GOV=['الإسكندرية','القاهرة','الجيزة','البحيرة','مطروح','الغربية','الدقهلية','الشرقية','المنوفية','كفر الشيخ','دمياط','بورسعيد'];
-const CATS=['برنتر','كاشير','شاشة','كاميرا','اكسس بوينت','سيرفر','سويتش'];
-const SER={};CATS.forEach(c=>SER[c]=true);
 const R={admin:'IT Manager',head:'Technical Head',area:'Area Manager',store:'Warehouse Keeper',senior:'Senior Technical',junior:'Junior Technical'};
 const CAN={addBranch:['admin','head'],stock:['admin','head','store'],view:['admin','head','senior','area','store'],review:['admin','head','senior'],reject:['admin','head','area','store'],edit:['admin','head','area','store'],delRecv:['admin','head'],request:['admin','head','senior','junior'],branchEdit:['admin','head','senior'],approve:['admin','head','area'],release:['admin','head','store']};
 const ST={review:['بانتظار مراجعة السينيور',''],pending:['بانتظار مدير المنطقة',''],approved:['بانتظار مسؤول المخزن',''],released:['تم الصرف','ok'],rejected:['مرفوض','bad']};
-let items=[{id:1,n:'برنتر إيصالات',c:'برنتر',s:24},{id:2,n:'جهاز كاشير',c:'كاشير',s:12},{id:3,n:'شاشة عرض 24 بوصة',c:'شاشة',s:18},{id:4,n:'كاميرا مراقبة IP',c:'كاميرا',s:40},{id:5,n:'اكسس بوينت',c:'اكسس بوينت',s:15},{id:6,n:'سويتش 24 بورت',c:'سويتش',s:9},{id:7,n:'سيرفر فرع',c:'سيرفر',s:3}];
-let branches=[{id:1,n:'فرع سموحة',g:'الإسكندرية',q:{1:3,2:6,4:16},x:[{n:'شاشة عرض إعلانات',c:'شاشة',q:2}]},{id:2,n:'فرع العجمي',g:'الإسكندرية',q:{1:2,2:4,5:3},x:[]},{id:3,n:'فرع طنطا',g:'الغربية',q:{1:2,2:5,4:12,6:1},x:[{n:'برنتر ملصقات باركود',c:'برنتر',q:1}]}];
-let reqs=[{id:1,b:1,by:R.junior,l:[{i:5,q:1}],st:'pending',log:[{by:R.junior,a:'أرسل الطلب',k:'',t:''},{by:R.senior,a:'أكد الطلب',k:'ok',t:''}]},{id:2,b:3,by:R.junior,l:[{i:1,q:2},{i:4,q:3}],st:'review',log:[{by:R.junior,a:'أرسل الطلب',k:'',t:'محتاجين بدل لأجهزة الفرع'}]}];
-const DB={in:[{id:1,d:'2026/10/01',k:'sup',sup:'شركة النور للتوريدات',b:null,p:'1001',by:'Warehouse Keeper',lines:[{i:1,q:2,sns:['PR-1001','PR-1002'],cd:''},{i:4,q:3,sns:['CAM-201','CAM-202','CAM-203'],cd:''}]},{id:2,d:'2026/10/05',k:'maint',sup:'مركز الصيانة المتحد',b:null,p:'1002',by:'Warehouse Keeper',lines:[{i:2,q:1,sns:['SN-48213'],cd:'تم إصلاحه (صالح للاستخدام)'}]}],out:[{id:3,d:'2026/10/08',k:'br',sup:'',b:2,p:'2001',by:'Warehouse Keeper',lines:[{i:5,q:1,sns:['AP-7781'],cd:''}]}]};
+const STS=[['stock','مخزون'],['maint','تحت الصيانة'],['scrap','خردة']];
+const SM={stock:'مخزون',maint:'تحت الصيانة',scrap:'خردة'};
+const SRC={in:{sup:'من مورد',maint:'من صيانة',br:'من فرع'},out:{sup:'إلى مورد',br:'إلى فرع'}};
+const STATE={token:localStorage.getItem('wh_token')||'',user:null};
+let CATS=[];const SER={};
+let items=[],branches=[],reqs=[],suppliers=[],DB={in:[],out:[]},MAINT={},SCRAP={};
 let role='junior',tab='stock',sel=null,q='';
 const $=s=>document.querySelector(s);
 const e=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -82,79 +80,149 @@ const it=id=>items.find(i=>i.id==id);
 const br=id=>branches.find(b=>b.id==id);
 const dist=id=>branches.reduce((a,b)=>a+(b.q[id]||0),0);
 const opts=(a,sel)=>a.map(x=>`<option${x==sel?' selected':''}>${e(x)}</option>`).join('');
-function setRole(v){role=v;sel=null;ui=null;go()}
-let pendDel=null,editId=null;
-function vItems(){
-  const adm=role=='admin',cs=i=>opts(CATS.includes(i.c)?CATS:[...CATS,i.c],i.c);
-  return `<div class="box"><h3>الفئات</h3><div class="row"><label>اسم الفئة الجديدة<input id="cn"></label><label>السيريال<select id="cs"><option value="yes">يوجد سيريال</option><option value="no">بدون سيريال</option></select></label><button class="btn" onclick="addCat()">إضافة فئة</button></div>
-  <p style="margin:10px 0 0">${CATS.map((c,k)=>`<button class="chip ${SER[c]?'ok':''}" style="border:0;cursor:pointer;font-family:inherit" onclick="togSer(${k})">${e(c)} · ${SER[c]?'بسيريال':'بدون سيريال'}</button>`).join(' ')}</p></div>
-  <div class="box"><h3>إضافة صنف جديد</h3><div class="row"><label>اسم الصنف<input id="nn"></label><label>الفئة<select id="nc">${opts(CATS)}</select></label><label>الرصيد<input type="number" min="0" id="nq" style="width:90px"></label><button class="btn" onclick="newItem()">حفظ الصنف</button></div></div>
-  <div class="box tw"><h3>الأصناف (${items.length})</h3><table><tr><th>الصنف</th><th>الفئة</th><th>رصيد المخزن</th><th>أضافه</th><th></th></tr>`+items.map(i=>editId==i.id
-   ?`<tr><td><input id="ein" value="${e(i.n)}"></td><td><select id="eic">${cs(i)}</select></td><td><input type="number" min="0" id="eis" value="${i.s}" style="width:90px"></td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn" onclick="saveItem(${i.id})">تأكيد</button><button class="btn ghost" onclick="editId=null;go()">إلغاء</button></div></td></tr>`
-   :`<tr><td>${e(i.n)}</td><td>${e(i.c)}</td><td>${i.s}</td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn ghost" onclick="editId=${i.id};pendDel=null;go()">تعديل</button>${adm?`<button class="btn bad" onclick="del(${i.id})">${pendDel==i.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></td></tr>`).join('')+'</table></div>';
-}
-function addCat(){
-  const n=$('#cn').value.trim();
-  if(!n)return toast('اكتب اسم الفئة');
-  if(CATS.includes(n))return toast('الفئة موجودة بالفعل');
-  CATS.push(n);SER[n]=$('#cs').value=='yes';toast('تمت إضافة الفئة');go();
-}
-function togSer(k){if(!ok('stock'))return;SER[CATS[k]]=!SER[CATS[k]];toast('تم تغيير خاصية السيريال للفئة');go()}
-function saveItem(id){
-  const n=$('#ein').value.trim();
-  if(!n)return toast('اسم الصنف لا يمكن أن يكون فارغًا');
-  const i=it(id);i.n=n;i.c=$('#eic').value;i.s=Math.max(0,+$('#eis').value||0);
-  editId=null;toast('تم حفظ التعديل');go();
-}
-function del(id){
-  if(role!='admin')return;
-  const i=it(id);
-  if(branches.some(b=>b.q[id]>0)||reqs.some(r=>r.l.some(x=>x.i==id))||[...DB.in,...DB.out].some(r=>r.lines.some(l=>l.i==id)))return toast('لا يمكن حذف '+i.n+' لأنه موجود في فروع أو طلبات');
-  if(pendDel!=id){pendDel=id;toast('اضغط تأكيد الحذف للمتابعة');return go()}
-  items=items.filter(x=>x.id!=id);branches.forEach(b=>delete b.q[id]);pendDel=null;toast('تم حذف الصنف');go();
+let pendDel=null,editId=null,pend=null,ui=null,catEdit=null,pendCat=null;
+
+async function api(path,method='GET',body){
+  const headers=Object.assign({'Content-Type':'application/json'},STATE.token?{'Authorization':'Bearer '+STATE.token}:{});
+  const res=await fetch('/api'+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});
+  let data={};try{data=await res.json()}catch(_){}
+  if(!res.ok){const err=new Error(data.error||('خطأ '+res.status));err.status=res.status;throw err}
+  return data;
 }
 function toast(m){const t=$('#t');t.textContent=m;t.className='show';setTimeout(()=>t.className='',2600)}
+
+function renderLogin(msg){
+  $('#nav').innerHTML='';$('#roleBar').innerHTML='';
+  $('#m').innerHTML=`<div class="box" style="max-width:360px;margin:40px auto"><h2>تسجيل الدخول</h2>
+   <label style="margin-bottom:8px">اسم المستخدم<input id="lu" autocomplete="username"></label>
+   <label>كلمة المرور<input type="password" id="lp" autocomplete="current-password"></label>
+   <button class="btn" style="margin-top:12px" onclick="login()">دخول</button>${msg?`<p style="color:var(--bad);margin-bottom:0">${e(msg)}</p>`:''}</div>`;
+}
+async function login(){
+  const u=($('#lu')||{}).value||'',p=($('#lp')||{}).value||'';
+  try{
+    const d=await api('/auth/login','POST',{username:u.trim(),password:p});
+    STATE.token=d.token;STATE.user=d.user;localStorage.setItem('wh_token',d.token);
+    tab='stock';sel=null;await boot();
+  }catch(err){renderLogin(err.message)}
+}
+function logout(){STATE.token='';STATE.user=null;localStorage.removeItem('wh_token');renderLogin()}
+async function boot(){
+  if(!STATE.token)return renderLogin();
+  try{const d=await api('/bootstrap');hydrate(d);go()}
+  catch(err){STATE.token='';STATE.user=null;localStorage.removeItem('wh_token');renderLogin(err.status===401?'انتهت الجلسة، سجّل الدخول من جديد':err.message)}
+}
+function hydrate(d){
+  STATE.user=d.user;role=d.user.role;
+  items=d.items;branches=d.branches;reqs=d.requests;suppliers=d.suppliers;DB={in:d.vouchers.in,out:d.vouchers.out};
+  MAINT={};SCRAP={};(d.maintenance||[]).forEach(r=>MAINT[r.i]=r.q);(d.scrap||[]).forEach(r=>SCRAP[r.i]=r.q);
+  CATS=d.categories.map(c=>c.name);
+  Object.keys(SER).forEach(k=>delete SER[k]);d.categories.forEach(c=>SER[c.name]=c.has_serial);
+  $('#roleBar').innerHTML=`<span>${e(d.user.name)} · ${e(R[role]||role)}</span><button class="btn ghost" onclick="logout()">خروج</button>`;
+}
+async function refresh(){const d=await api('/bootstrap');hydrate(d)}
+
 function grid(p){return '<div class="grid">'+items.map(i=>`<label>${e(i.n)}<input type="number" min="0" id="${p}${i.id}" placeholder="0"></label>`).join('')+'</div>'}
-function read(p){const o={};items.forEach(i=>{const v=+$('#'+p+i.id).value;if(v>0)o[i.id]=v});return o}
+function read(p){const o={};items.forEach(i=>{const el=$('#'+p+i.id);const v=el?+el.value:0;if(v>0)o[i.id]=v});return o}
+function itemPick(p){return CATS.map(c=>{const g=items.filter(i=>i.c==c);return g.length?`<div style="margin-bottom:8px"><b>${e(c)}</b><div class="grid">`+g.map(i=>`<label class="ln"><input type="checkbox" id="${p}${i.id}"> ${e(i.n)}</label>`).join('')+'</div></div>':''}).join('')||'<p class="mut">لا توجد أصناف.</p>'}
+function readPick(p){return items.filter(i=>{const el=$('#'+p+i.id);return el&&el.checked}).map(i=>i.id)}
 
 function go(){
-  $('#role').innerHTML=Object.entries(R).map(([k,v])=>`<option value="${k}"${k==role?' selected':''}>${v}</option>`).join('');
   const todo=reqs.filter(r=>(r.st=='review'&&ok('review'))||(r.st=='pending'&&ok('approve'))||(r.st=='approved'&&ok('release'))).length;
-  const tabs=[['stock','الأصناف والمخزن'],['recv','استلام بضاعة'],['iss','أذون صرف'],['br','الفروع'],['items','إدارة الأصناف'],['rq','الطلبات'+(todo?` (${todo})`:'')]].filter(t=>t[0]=='rq'||((t[0]=='items'||t[0]=='recv'||t[0]=='iss')?ok('stock'):ok('view')));if(!tabs.some(t=>t[0]==tab))tab='rq';$('#nav').innerHTML=tabs.map(([k,v])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';sel=null;go()">${v}</button>`).join('');
-  $('#m').innerHTML=tab=='stock'?vStock():(tab=='recv'||tab=='iss')?vDoc():tab=='items'?vItems():tab=='br'?(sel?vBranch():vBranches()):vReqs();
+  const tabs=[['stock','الأصناف والمخزن'],['maint','تحت الصيانة'],['scrap','الخردة'],['recv','استلام بضاعة'],['iss','أذون صرف'],['br','الفروع'],['items','إدارة الأصناف'],['cats','الفئات'],['sup','الموردون'],['rq','الطلبات'+(todo?` (${todo})`:'')]].filter(t=>t[0]=='rq'||((t[0]=='items'||t[0]=='recv'||t[0]=='iss'||t[0]=='sup'||t[0]=='cats')?ok('stock'):ok('view')));if(!tabs.some(t=>t[0]==tab))tab='rq';$('#nav').innerHTML=tabs.map(([k,v])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';sel=null;go()">${v}</button>`).join('');
+  $('#m').innerHTML=tab=='stock'?vStock():tab=='maint'?vMaint():tab=='scrap'?vScrap():(tab=='recv'||tab=='iss')?vDoc():tab=='items'?vItems():tab=='cats'?vCats():tab=='sup'?vSuppliers():tab=='br'?(sel?vBranch():vBranches()):vReqs();
   if(tab=='stock')tbl();
 }
 
-const CDS=['تم إصلاحه (صالح للاستخدام)','لم يتم إصلاحه','خردة'];
-const SRC={in:{sup:'من مورد',maint:'من صيانة',br:'من فرع'},out:{sup:'إلى مورد',br:'إلى فرع'}};
+function vItems(){
+  const adm=role=='admin',cs=i=>opts(CATS.includes(i.c)?CATS:[...CATS,i.c],i.c);
+  return `<div class="box"><h3>إضافة صنف جديد</h3><div class="row"><label>اسم الصنف<input id="nn"></label><label>الفئة<select id="nc">${opts(CATS)}</select></label><button class="btn" onclick="newItem()">حفظ الصنف</button></div>
+  <p class="mut" style="margin:10px 0 0">تُضاف الكميات من أذون الاستلام فقط، ولا يمكن إدخال رصيد يدويًا.</p></div>
+  <div class="box tw"><h3>الأصناف (${items.length})</h3><table><tr><th>الصنف</th><th>الفئة</th><th>رصيد المخزن</th><th>أضافه</th><th></th></tr>`+items.map(i=>editId==i.id
+   ?`<tr><td><input id="ein" value="${e(i.n)}"></td><td><select id="eic">${cs(i)}</select></td><td>${i.s}</td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn" onclick="saveItem(${i.id})">تأكيد</button><button class="btn ghost" onclick="editId=null;go()">إلغاء</button></div></td></tr>`
+   :`<tr><td>${e(i.n)}</td><td>${e(i.c)}</td><td>${i.s}</td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn ghost" onclick="editId=${i.id};pendDel=null;go()">تعديل</button>${adm?`<button class="btn bad" onclick="del(${i.id})">${pendDel==i.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></td></tr>`).join('')+'</table></div>';
+}
+function vCats(){
+  return `<div class="box"><h3>إضافة فئة</h3><div class="row">
+   <label style="min-width:220px">اسم الفئة<input id="cn"></label>
+   <label>السيريال<select id="cs"><option value="yes">يوجد سيريال</option><option value="no">بدون سيريال</option></select></label>
+   <button class="btn" onclick="addCat()">إضافة فئة</button></div>
+   <p class="mut" style="margin:10px 0 0">الفئة تحتفظ باسمها. أضف الأنواع داخلها لتظهر عند اختيار الفئة في أذون الاستلام والصرف.</p></div>`+
+  (CATS.length?CATS.map((c,k)=>{
+    const its=items.filter(i=>i.c==c),ed=catEdit==k;
+    return `<div class="box"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
+     ${ed?`<span style="display:flex;gap:8px;align-items:center"><input id="cen" value="${e(c)}"><button class="btn" onclick="saveCat(${k})">تأكيد</button><button class="btn ghost" onclick="catEdit=null;go()">إلغاء</button></span>`
+        :`<h3 style="margin:0">${e(c)} <button class="chip ${SER[c]?'ok':''}" style="border:0;cursor:pointer;font-family:inherit" onclick="togSer(${k})">${SER[c]?'بسيريال':'بدون سيريال'}</button></h3>`}
+     ${ed?'':`<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="mut">${its.length} نوع · ${its.reduce((a,i)=>a+i.s,0)} بالمخزن</span><button class="btn ghost" onclick="catEdit=${k};pendCat=null;go()">تعديل الاسم</button><button class="btn bad" onclick="delCat(${k})">${pendCat==k?'تأكيد الحذف':'حذف الفئة'}</button></span>`}</div>
+     ${its.length?`<div class="tw" style="margin-top:8px"><table><tr><th>النوع</th><th>رصيد المخزن</th><th>في الفروع</th><th></th></tr>`+its.map(i=>`<tr><td>${editId==i.id?`<input id="ein" value="${e(i.n)}">`:e(i.n)}</td><td>${i.s}</td><td>${dist(i.id)}</td><td>${editId==i.id?`<div class="acts"><button class="btn" onclick="saveItem(${i.id})">تأكيد</button><button class="btn ghost" onclick="editId=null;go()">إلغاء</button></div>`:`<button class="btn ghost" onclick="editId=${i.id};go()">تعديل الاسم</button>`}</td></tr>`).join('')+'</table></div>':'<p class="mut" style="margin:8px 0 0">لا توجد أنواع في هذه الفئة بعد.</p>'}
+     <div class="row" style="margin-top:10px"><label>اسم النوع<input id="cin${k}"></label><button class="btn" onclick="addItemTo(${k})">إضافة نوع للفئة</button></div></div>`;
+  }).join(''):'<p class="mut">لا توجد فئات بعد.</p>');
+}
+async function addItemTo(k){
+  const c=CATS[k],nm=(($('#cin'+k)||{}).value||'').trim();
+  if(!nm)return toast('اكتب اسم الصنف');
+  try{await api('/items','POST',{name:nm,category:c});await refresh();toast('تمت إضافة الصنف إلى '+c);go()}catch(err){toast(err.message)}
+}
+async function saveCat(k){
+  const old=CATS[k],n=(($('#cen')||{}).value||'').trim();
+  if(!n)return toast('اكتب اسم الفئة');
+  if(n==old)return toast('لم يتغير اسم الفئة');
+  try{await api('/categories/'+encodeURIComponent(old),'PUT',{name:n,has_serial:SER[old]});catEdit=null;await refresh();toast('تم تعديل اسم الفئة');go()}catch(err){toast(err.message)}
+}
+async function delCat(k){
+  const c=CATS[k];
+  if(pendCat!=k){pendCat=k;toast('اضغط تأكيد الحذف للمتابعة');return go()}
+  try{await api('/categories/'+encodeURIComponent(c),'DELETE');pendCat=null;await refresh();toast('تم حذف الفئة وأنواعها');go()}catch(err){pendCat=null;toast(err.message);go()}
+}
+async function addCat(){
+  const n=$('#cn').value.trim();
+  if(!n)return toast('اكتب اسم الفئة');
+  if(CATS.includes(n))return toast('الفئة موجودة بالفعل');
+  try{await api('/categories','POST',{name:n,has_serial:$('#cs').value=='yes'});await refresh();toast('تمت إضافة الفئة');go()}catch(err){toast(err.message)}
+}
+async function togSer(k){if(!ok('stock'))return;const name=CATS[k];
+  try{await api('/categories/'+encodeURIComponent(name),'PUT',{has_serial:!SER[name]});await refresh();toast('تم تغيير خاصية السيريال للفئة');go()}catch(err){toast(err.message)}}
+async function saveItem(id){
+  const n=$('#ein').value.trim();
+  if(!n)return toast('اسم الصنف لا يمكن أن يكون فارغًا');
+  const el=$('#eic'),body={name:n};if(el)body.category=el.value;
+  try{await api('/items/'+id,'PUT',body);editId=null;await refresh();toast('تم حفظ التعديل');go()}catch(err){toast(err.message)}
+}
+async function del(id){
+  if(role!='admin')return;const i=it(id);
+  if(pendDel!=id){pendDel=id;toast('اضغط تأكيد الحذف للمتابعة');return go()}
+  try{await api('/items/'+id,'DELETE');pendDel=null;await refresh();toast('تم حذف الصنف');go()}catch(err){pendDel=null;toast(err.message);go()}
+}
+async function newItem(){
+  const n=$('#nn').value.trim();if(!n)return toast('اكتب اسم الصنف');
+  try{await api('/items','POST',{name:n,category:$('#nc').value});await refresh();toast('تمت إضافة الصنف');go()}catch(err){toast(err.message)}
+}
+
 const KK=()=>tab=='iss'?'out':'in';
-const firstOf=c=>(items.find(i=>i.c==c)||{}).id||'';
 const hasSer=id=>{const x=it(id);return !!(x&&SER[x.c])};
-const nl=()=>{const c=CATS[0];return {c,i:firstOf(c),q:1,sns:[''],cd:CDS[0]}};
-const nd=()=>({k:'sup',sup:'',b:branches[0].id,p:'',lines:[nl()]});
+const nl=()=>{const p=KK()=='out'?items.filter(i=>i.s>0):items;return {i:p.length?p[0].id:'',q:1,sns:[''],st:'stock'}};
+const nd=()=>({k:'sup',sup:'',b:branches[0]?branches[0].id:null,p:'',lines:[nl()]});
 const DR={in:nd(),out:nd()},E={in:null,out:null};
-let pend=null;
+function partyName(r){const b=br(r.b);return r.k=='br'?(b?b.n:'فرع غير محدد'):(r.sup||'مورد غير محدد')}
+function registeredSuppliers(){const used=[...DB.in,...DB.out].map(r=>String(r.sup||'').trim()).filter(Boolean);return [...new Set([...suppliers,...used])]}
+function supplierOptions(selected){const names=registeredSuppliers();if(selected&&!names.includes(selected))names.push(selected);const body=names.length?names.map(n=>`<option value="${e(n)}"${n==selected?' selected':''}>${e(n)}</option>`).join(''):'<option value="">لا يوجد موردون مسجلون بعد</option>';return '<option value="">اختر موردًا مسجلاً</option>'+body}
+function vSuppliers(){
+  const list=registeredSuppliers();
+  return `<div class="box"><h3>إضافة مورد جديد</h3><div class="row">
+   <label style="min-width:260px">اسم المورد<input id="supName" placeholder="اسم المورد أو جهة الصيانة"></label>
+   <button class="btn" onclick="addSup()">حفظ المورد</button></div>
+   <p class="mut" style="margin:10px 0 0">تُستخدم أسماء الموردين المسجلين هنا في أذون الاستلام والصرف.</p></div>
+  <div class="box tw"><h3>الموردون المسجلون (${list.length})</h3>${list.length
+   ?'<table><tr><th>اسم المورد</th></tr>'+list.map(n=>`<tr><td>${e(n)}</td></tr>`).join('')+'</table>'
+   :'<p class="mut">لا يوجد موردون مسجلون بعد.</p>'}</div>`;
+}
+async function addSup(){
+  const n=(($('#supName')||{}).value||'').trim();
+  if(!n)return toast('اكتب اسم المورد');
+  if(registeredSuppliers().includes(n))return toast('المورد مسجل بالفعل');
+  try{await api('/suppliers','POST',{name:n});await refresh();toast('تمت إضافة المورد: '+n);go()}catch(err){toast(err.message)}
+}
 function fixSn(l){const n=hasSer(l.i)?Math.min(l.q||0,200):0;while(l.sns.length<n)l.sns.push('');l.sns.length=n}
-function fx(K,r){
-  const o=[],sg=K=='in'?1:-1;
-  if(!r)return o;
-  r.lines.forEach(l=>{
-    if(K=='in'&&r.k=='maint'&&!String(l.cd).startsWith('تم'))return;
-    o.push(['s',0,l.i,sg*l.q]);
-    if(r.k=='br')o.push(['b',+r.b,l.i,-sg*l.q]);
-  });
-  return o;
-}
-function swap(K,o,n){
-  const S={},B={};
-  items.forEach(i=>S[i.id]=i.s);branches.forEach(b=>B[b.id]=Object.assign({},b.q));
-  const ap=(a,m)=>a.forEach(([t,b,i,d])=>{if(t=='s')S[i]=(S[i]||0)+m*d;else B[b][i]=(B[b][i]||0)+m*d});
-  ap(fx(K,o),-1);ap(fx(K,n),1);
-  const bad=items.find(i=>S[i.id]<0);
-  if(bad){toast('رصيد المخزن لا يسمح: '+bad.n);return false}
-  for(const b of branches)for(const i of items)if(B[b.id][i.id]<0){toast('الكمية غير كافية في '+b.n+': '+i.n);return false}
-  items.forEach(i=>i.s=S[i.id]);branches.forEach(b=>b.q=B[b.id]);return true;
-}
 function vStock(){
   return `<input class="search" placeholder="ابحث باسم الصنف أو الفئة" value="${e(q)}" oninput="q=this.value;tbl()"><div class="box tw" id="tb"></div>`;
 }
@@ -162,22 +230,31 @@ function tbl(){
   const f=items.filter(i=>(i.n+i.c).includes(q));
   $('#tb').innerHTML=f.length?`<table><tr><th>الصنف</th><th>الفئة</th><th>رصيد المخزن</th><th>في الفروع</th><th>الحالة</th></tr>`+f.map(i=>`<tr><td>${e(i.n)}</td><td>${e(i.c)}</td><td>${i.s}</td><td>${dist(i.id)}</td><td><span class="chip ${i.s>5?'ok':'bad'}">${i.s>5?'متوفر':'رصيد منخفض'}</span></td></tr>`).join('')+'</table>':'<p class="mut">لا توجد أصناف مطابقة. جرّب كلمة أخرى.</p>';
 }
+function trackTable(map,empty){
+  const rows=items.filter(i=>map[i.id]).map(i=>`<tr><td>${e(i.n)}</td><td>${e(i.c)}</td><td>${map[i.id]}</td></tr>`).join('');
+  return rows?`<div class="box tw"><table><tr><th>الصنف</th><th>الفئة</th><th>العدد</th></tr>${rows}</table></div>`:`<p class="mut">${empty}</p>`;
+}
+function vMaint(){return `<h2>تحت الصيانة</h2>${trackTable(MAINT,'لا توجد أصناف تحت الصيانة.')}`
+  +`<p class="mut">تُضاف هنا الأصناف المستلمة بحالة «تحت الصيانة» من أذون الاستلام.</p>`}
+function vScrap(){return `<h2>الخردة</h2>${trackTable(SCRAP,'لا توجد أصناف في الخردة.')}`
+  +`<p class="mut">تُضاف هنا الأصناف المستلمة بحالة «خردة» من أذون الاستلام.</p>`}
 function vDoc(){
-  const K=KK(),D=DR[K],k=D.k,inn=K=='in',mt=inn&&k=='maint';
+  const K=KK(),D=DR[K],k=D.k,inn=K=='in';
   const lines=D.lines.map((l,j)=>{
     fixSn(l);
+    const avail=inn?items:items.filter(i=>i.s>0||i.id==l.i);
+    const groups=CATS.map(c=>{const g=avail.filter(i=>i.c==c);return g.length?`<optgroup label="${e(c)}">`+g.map(i=>`<option value="${i.id}"${i.id==l.i?' selected':''}>${e(i.n)}</option>`).join('')+'</optgroup>':''}).join('');
+    const noItem=inn?'لا توجد أصناف — أضفها من إدارة الأصناف':'لا توجد أصناف متاحة في المخزن';
     return `<div class="box" style="background:var(--bg)"><div class="grid">
-   <label>الفئة<select onchange="lset(${j},this.value)">${opts(CATS,l.c)}</select></label>
-   <label>الصنف<select onchange="DR[KK()].lines[${j}].i=+this.value">${items.filter(i=>i.c==l.c).map(i=>`<option value="${i.id}"${i.id==l.i?' selected':''}>${e(i.n)}</option>`).join('')||'<option value="">لا توجد أصناف في الفئة</option>'}</select></label>
+   <label>الصنف<select onchange="DR[KK()].lines[${j}].i=+this.value;go()">${groups||`<option value="">${noItem}</option>`}</select></label>
    <label>${inn?'العدد المستلم':'العدد المصروف'}<input type="number" min="1" value="${l.q}" onchange="setQ(${j},this.value)"></label>
-   ${mt?`<label>حالة الصنف<select onchange="DR[KK()].lines[${j}].cd=this.value">${opts(CDS,l.cd)}</select></label>`:''}</div>
+   ${inn?`<label>الحالة النهائية<select onchange="DR[KK()].lines[${j}].st=this.value">${STS.map(([v,t])=>`<option value="${v}"${v==l.st?' selected':''}>${t}</option>`).join('')}</select></label>`:''}</div>
    ${hasSer(l.i)?'<div class="grid">'+l.sns.map((s,n)=>`<label>سيريال ${n+1}<input value="${e(s)}" oninput="DR[KK()].lines[${j}].sns[${n}]=this.value"></label>`).join('')+'</div>':'<p class="mut" style="margin:0">هذه الفئة بدون سيريال</p>'}
    ${D.lines.length>1?`<button class="btn ghost" style="margin-top:8px" onclick="DR[KK()].lines.splice(${j},1);go()">حذف السطر</button>`:''}</div>`}).join('');
-  const cat=inn?`<div class="box"><h3>إضافة فئة</h3><div class="row"><label>اسم الفئة<input id="rnc"></label><label>السيريال<select id="rcs"><option value="yes">يوجد سيريال</option><option value="no">بدون سيريال</option></select></label><button class="btn ghost" onclick="rcatAdd()">إضافة الفئة</button></div></div>`:'';
-  return cat+`<div class="box"><h3>${E[K]?(inn?'تعديل إذن استلام':'تعديل إذن صرف'):(inn?'إذن استلام جديد':'إذن صرف جديد')}</h3>
-  <div class="grid">${(() => { const vendors = [...new Set([...DB.in.map(r=>r.sup||''),...DB.out.map(r=>r.sup||'')].filter(Boolean))]; return vendors.length ? '<datalist id="supList">'+vendors.map(v=>'<option value="'+e(v)+'">').join('')+'</datalist>' : ''; })()}
-   <label>${inn?'مصدر الاستلام':'الصرف إلى'}<select onchange="DR[KK()].k=this.value;go()">${Object.entries(SRC[K]).map(([v,t])=>`<option value="${v}"${v==k?' selected':''}>${t}</option>`).join('')}</select></label>
-   ${k=='br'?`<label>الفرع<select onchange="DR[KK()].b=+this.value">${branches.map(b=>`<option value="${b.id}"${b.id==D.b?' selected':''}>${e(b.n)}</option>`).join('')}</select></label>`:`<label>${mt?'اسم المورد (جهة الصيانة)':'اسم المورد'}<input list="supList" value="${e(D.sup)}" oninput="DR[KK()].sup=this.value"></label>`}
+  return `<div class="box"><h3>${E[K]?(inn?'تعديل إذن استلام':'تعديل إذن صرف'):(inn?'إذن استلام جديد':'إذن صرف جديد')}</h3>
+  <div class="grid">
+    <label>${inn?'مصدر الاستلام':'الصرف إلى'}<select onchange="DR[KK()].k=this.value;go()">${Object.entries(SRC[K]).map(([v,t])=>`<option value="${v}"${v==k?' selected':''}>${t}</option>`).join('')}</select></label>
+    ${k=='br'?`<label>الفرع<select onchange="DR[KK()].b=+this.value">${branches.map(b=>`<option value="${b.id}"${b.id==D.b?' selected':''}>${e(b.n)}</option>`).join('')}</select></label>`:`<label>${inn&&k=='maint'?'جهة الصيانة المسجلة':'اسم المورد المسجل'}<select onchange="DR[KK()].sup=this.value">${supplierOptions(D.sup)}</select></label>`}
    <label>${inn?'رقم إذن الإدخال للتخزين':'رقم إذن الصرف'}<input value="${e(D.p)}" oninput="DR[KK()].p=this.value"></label>
   </div>
   <h3 style="margin-top:12px">الأصناف في الإذن (${D.lines.length})</h3>${lines}
@@ -186,82 +263,75 @@ function vDoc(){
 }
 function cards(K){
   if(!DB[K].length)return '<p class="mut">لا توجد أذونات بعد.</p>';
-  return DB[K].map(r=>{const mt=K=='in'&&r.k=='maint';return `<div class="box"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>إذن رقم ${e(r.p)}</b> <span class="chip ${r.k=='maint'?'':'ok'}">${SRC[K][r.k]}</span><div class="mut">${e(r.k=='br'?br(r.b).n:r.sup)} · ${e(r.d)} · ${e(r.by)}${r.ed?' · عدّله '+e(r.ed):''}</div></div>
+  return DB[K].map(r=>{const inn=K=='in',party=partyName(r);return `<div class="box"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>إذن رقم ${e(r.p)}</b> <span class="chip ${r.k=='maint'?'':'ok'}">${SRC[K][r.k]}</span><div class="mut">الجهة: ${e(party)} · ${e(r.d)} · ${e(r.by)}${r.ed?' · عدّله '+e(r.ed):''}</div></div>
    <div class="acts" style="flex-wrap:wrap">${ok('stock')?`<button class="btn ghost" onclick="editDoc(${r.id})">تعديل</button>`:''}${ok('delRecv')?`<button class="btn bad" onclick="delDoc(${r.id})">${pend==K+r.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></div>
-   <div class="tw"><table><tr><th>الصنف</th><th>السيريال</th>${mt?'<th>الحالة</th>':''}<th>العدد</th></tr>${r.lines.map(l=>`<tr><td>${e((it(l.i)||{n:'-'}).n)}</td><td>${e(l.sns.length?l.sns.join('، '):'بدون سيريال')}</td>${mt?`<td>${e(l.cd)}</td>`:''}<td>${l.q}</td></tr>`).join('')}</table></div></div>`}).join('');
+   <div class="tw"><table><tr><th>الصنف</th><th>السيريال</th>${inn?'<th>الحالة</th>':''}<th>العدد</th></tr>${r.lines.map(l=>`<tr><td>${e((it(l.i)||{n:'-'}).n)}</td><td>${e(l.sns.length?l.sns.join('، '):'بدون سيريال')}</td>${inn?`<td>${e(SM[l.st]||SM.stock)}</td>`:''}<td>${l.q}</td></tr>`).join('')}</table></div></div>`}).join('');
 }
-function lset(j,v){const l=DR[KK()].lines[j];l.c=v;l.i=firstOf(v);l.sns=[];go()}
 function setQ(j,v){DR[KK()].lines[j].q=Math.max(0,Math.floor(+v||0));go()}
-function rcatAdd(){
-  const n=$('#rnc').value.trim();
-  if(!n)return toast('اكتب اسم الفئة');
-  if(CATS.includes(n))return toast('الفئة موجودة بالفعل');
-  CATS.push(n);SER[n]=$('#rcs').value=='yes';toast('تمت إضافة الفئة');go();
-}
 function resetDoc(){const K=KK();E[K]=null;DR[K]=nd()}
 function editDoc(id){
   const K=KK(),r=DB[K].find(x=>x.id==id);E[K]=id;pend=null;
-  DR[K]={k:r.k,sup:r.sup,b:r.b||branches[0].id,p:r.p,lines:r.lines.map(l=>({c:it(l.i).c,i:l.i,q:l.q,sns:[...l.sns],cd:l.cd||CDS[0]}))};
+  DR[K]={k:r.k,sup:r.sup,b:r.b||(branches[0]?branches[0].id:null),p:r.p,lines:r.lines.map(l=>({i:l.i,q:l.q,sns:[...l.sns],st:l.st||'stock'}))};
   go();window.scrollTo(0,0);
 }
-function saveDoc(){
-  const K=KK(),D=DR[K],k=D.k,isb=k=='br',sup=D.sup.trim(),p=D.p.trim();
+async function saveDoc(){
+  const K=KK(),D=DR[K],k=D.k,isb=k=='br',sup=(D.sup||'').trim(),p=D.p.trim(),editing=E[K];
+  if(isb&&!br(D.b))return toast('اختر فرعًا مسجلاً');
   if(!isb&&!sup)return toast('اكتب اسم المورد');
   if(!p)return toast(K=='in'?'اكتب رقم إذن الإدخال':'اكتب رقم إذن الصرف');
-  if(DB[K].some(r=>r.p==p&&r.id!=E[K]))return toast('رقم الإذن مسجل من قبل');
-  const seen={};
+  const seen={};const lines=[];
   for(const l of D.lines){
     if(!l.i)return toast('اختر الصنف في كل سطر');
     if(!(l.q>0))return toast('اكتب العدد في كل سطر');
+    let sns=[];
     if(hasSer(l.i)){
-      fixSn(l);
-      for(const s of l.sns){
-        const t=s.trim().toLowerCase();
-        if(!t)return toast('اكتب كل السيريالات لصنف '+it(l.i).n);
-        if(seen[t])return toast('سيريال مكرر: '+s.trim());
-        seen[t]=1;
-      }
+      fixSn(l);sns=l.sns.map(s=>s.trim());
+      for(const s of sns){const t=s.toLowerCase();if(!t)return toast('اكتب كل السيريالات لصنف '+it(l.i).n);if(seen[t])return toast('سيريال مكرر: '+s);seen[t]=1}
     }
+    lines.push({item_id:+l.i,qty:+l.q,serials:sns,state:K=='in'?(l.st||'stock'):'stock'});
   }
-  const nr={k,sup:isb?'':sup,b:isb?+D.b:null,p,lines:D.lines.map(l=>({i:+l.i,q:+l.q,sns:hasSer(l.i)?l.sns.map(s=>s.trim()):[],cd:K=='in'&&k=='maint'?l.cd:''}))};
-  if(E[K]){
-    const o=DB[K].find(r=>r.id==E[K]);
-    if(!swap(K,o,nr))return;
-    Object.assign(o,nr);o.ed=R[role];toast('تم حفظ تعديل الإذن');
-  }else{
-    if(!swap(K,null,nr))return;
-    DB[K].unshift({...nr,id:Date.now(),d:new Date().toLocaleDateString('ar-EG'),by:R[role]});
-    toast('تم تسجيل الإذن وتحديث الأرصدة');
-  }
-  resetDoc();go();
+  const body={direction:K,kind:k,number:p,supplier_name:isb?'':sup,branch_id:isb?+D.b:null,lines};
+  try{
+    if(editing)await api('/vouchers/'+editing,'PUT',body);else await api('/vouchers','POST',body);
+    resetDoc();await refresh();toast(editing?'تم حفظ تعديل الإذن':'تم تسجيل الإذن وتحديث الأرصدة');go();
+  }catch(err){toast(err.message)}
 }
-function delDoc(id){
+async function delDoc(id){
   const K=KK();
   if(!ok('delRecv'))return;
   if(pend!=K+id){pend=K+id;toast('اضغط تأكيد الحذف للمتابعة');return go()}
-  const o=DB[K].find(r=>r.id==id);
-  if(!swap(K,o,null))return;
-  DB[K]=DB[K].filter(r=>r.id!=id);pend=null;if(E[K]==id)resetDoc();
-  toast('تم حذف الإذن وتعديل الأرصدة');go();
+  try{await api('/vouchers/'+id,'DELETE');pend=null;if(E[K]==id)resetDoc();await refresh();toast('تم حذف الإذن وتعديل الأرصدة');go()}catch(err){pend=null;toast(err.message);go()}
 }
-function newItem(){const n=$('#nn').value.trim();if(!n)return toast('اكتب اسم الصنف');items.push({id:Date.now(),n,c:$('#nc').value,s:+$('#nq').value||0,by:R[role]});toast('تمت إضافة الصنف بواسطة '+R[role]);go()}
 
 function vBranches(){
   let h='';
   if(ok('addBranch'))h+=`<div class="box"><h3>إضافة فرع</h3><div class="row"><label>اسم الفرع<input id="bn"></label><label>المحافظة<select id="bg">${opts(GOV)}</select></label></div>
-   <p class="mut" style="margin:12px 0 0">الأصناف الأساسية الموجودة في الفرع (اكتب العدد):</p>${grid('bq')}<button class="btn" onclick="addBranch()">حفظ الفرع</button></div>`;
-  return h+`<h2>الفروع (${branches.length})</h2><div class="bl">`+branches.map(b=>`<button class="bc" onclick="sel=${b.id};go()"><b>${e(b.n)}</b><span>${e(b.g)} · ${Object.values(b.q).reduce((a,c)=>a+c,0)+b.x.reduce((a,c)=>a+c.q,0)} قطعة</span>${b.by?`<span style="display:block">أضافه: ${e(b.by)}</span>`:''}</button>`).join('')+'</div>';
+   <p class="mut" style="margin:12px 0 0">اختر الأصناف التي تُستخدم في هذا الفرع:</p><div class="box" style="max-height:340px;overflow:auto">${itemPick('b')}</div><button class="btn" onclick="addBranch()">حفظ الفرع</button></div>`;
+  return h+`<h2>الفروع (${branches.length})</h2><div class="bl">`+branches.map(b=>`<button class="bc" onclick="sel=${b.id};go()"><b>${e(b.n)}</b><span>${e(b.g)} · ${Object.keys(b.q).length} صنف · ${Object.values(b.q).reduce((a,c)=>a+c,0)} قطعة</span>${b.by?`<span style="display:block">أضافه: ${e(b.by)}</span>`:''}</button>`).join('')+'</div>';
 }
-function addBranch(){const n=$('#bn').value.trim();if(!n)return toast('اكتب اسم الفرع');branches.push({id:Date.now(),n,g:$('#bg').value,q:read('bq'),x:[],by:R[role],d:new Date().toLocaleDateString('ar-EG')});toast('تمت إضافة الفرع بواسطة '+R[role]);go()}
+async function addBranch(){
+  const n=$('#bn').value.trim();if(!n)return toast('اكتب اسم الفرع');
+  try{await api('/branches','POST',{name:n,gov:$('#bg').value,item_ids:readPick('b')});await refresh();toast('تمت إضافة الفرع');go()}catch(err){toast(err.message)}
+}
+async function setBranchQty(bid,iid,v){
+  try{await api('/branches/'+bid+'/qty','PUT',{item_id:+iid,qty:+v||0});await refresh();toast('تم حفظ العدد')}catch(err){toast(err.message)}
+}
 function vBranch(){
   const b=br(sel),ed=ok('branchEdit');
-  const rows=items.filter(i=>b.q[i.id]!=null||ed).map(i=>`<tr><td>${e(i.n)}</td><td>${e(i.c)}</td><td>${ed?`<input type="number" min="0" value="${b.q[i.id]||0}" style="width:80px" onchange="br(${b.id}).q[${i.id}]=+this.value;toast('تم حفظ العدد')">`:b.q[i.id]}</td></tr>`).join('');
+  const assigned=items.filter(i=>b.q[i.id]!=null);
+  const rows=assigned.map(i=>`<tr><td>${e(i.n)}</td><td>${e(i.c)}</td><td>${ed?`<input type="number" min="0" value="${b.q[i.id]||0}" style="width:80px" onchange="setBranchQty(${b.id},${i.id},this.value)">`:b.q[i.id]||0}</td>${ed?`<td><button class="btn ghost" onclick="rmBranchItem(${b.id},${i.id})">إزالة</button></td>`:''}</tr>`).join('');
+  const free=items.filter(i=>b.q[i.id]==null);
+  const add=ed&&free.length?`<div class="row" style="margin-top:12px"><label>إضافة صنف<select id="bai">${free.map(i=>`<option value="${i.id}">${e(i.n)} — ${e(i.c)}</option>`).join('')}</select></label><button class="btn" onclick="addBranchItem(${b.id})">إضافة للفرع</button></div>`:'';
   return `<button class="btn ghost" onclick="sel=null;go()">رجوع للفروع</button><h2 style="margin-top:14px">${e(b.n)} <span class="mut">${e(b.g)}</span></h2>${b.by?`<div class="mut" style="margin:-6px 0 12px">تمت الإضافة بواسطة ${e(b.by)} · ${e(b.d)}</div>`:''}
-  <div class="box tw"><h3>الأصناف الأساسية</h3><table><tr><th>الصنف</th><th>الفئة</th><th>العدد</th></tr>${rows}</table></div>
-  <div class="box tw"><h3>أصناف خاصة بالفرع</h3>${b.x.length?`<table><tr><th>الصنف</th><th>الفئة</th><th>العدد</th></tr>`+b.x.map(x=>`<tr><td>${e(x.n)}</td><td>${e(x.c)}</td><td>${x.q}</td></tr>`).join('')+'</table>':'<p class="mut">لا توجد أصناف خاصة بهذا الفرع.</p>'}
-  ${ed?`<div class="row" style="margin-top:12px"><label>اسم الصنف<input id="xn"></label><label>الفئة<select id="xc">${opts(CATS)}</select></label><label>العدد<input type="number" min="1" id="xq" style="width:90px"></label><button class="btn" onclick="addX()">إضافة للفرع</button></div>`:''}</div>`;
+  <div class="box tw"><h3>أصناف الفرع (${assigned.length})</h3>${assigned.length?`<table><tr><th>الصنف</th><th>الفئة</th><th>العدد</th>${ed?'<th></th>':''}</tr>${rows}</table>`:'<p class="mut">لا توجد أصناف مخصصة لهذا الفرع بعد.</p>'}${add}</div>`;
 }
-function addX(){const n=$('#xn').value.trim(),c=+$('#xq').value;if(!n||!(c>0))return toast('اكتب اسم الصنف والعدد');br(sel).x.push({n,c:$('#xc').value,q:c});toast('تمت إضافة الصنف للفرع');go()}
+async function addBranchItem(bid){
+  const id=(($('#bai')||{}).value||0);if(!+id)return toast('اختر صنفًا');
+  try{await api('/branches/'+bid+'/items','POST',{item_id:+id});await refresh();toast('تمت إضافة الصنف للفرع');go()}catch(err){toast(err.message)}
+}
+async function rmBranchItem(bid,iid){
+  try{await api('/branches/'+bid+'/items/'+iid,'DELETE');await refresh();toast('تمت إزالة الصنف من الفرع');go()}catch(err){toast(err.message)}
+}
 
 function vReqs(){
   let h='';
@@ -273,7 +343,6 @@ function vReqs(){
   if(!reqs.length)return h+'<p class="mut">لا توجد طلبات بعد.</p>';
   return h+reqs.map(card).join('');
 }
-let ui=null;
 function card(r){
   const [lb,cl]=ST[r.st],open=['review','pending','approved'].includes(r.st);
   const u=ui&&ui.id==r.id?ui.m:null;
@@ -290,36 +359,28 @@ function card(r){
   if(open&&u=='edit')p=`<input class="cm" style="margin:0" id="c${r.id}" value="تم التعديل"><button class="btn" onclick="act(${r.id},'save')">حفظ التعديل</button><button class="btn ghost" onclick="ui=null;go()">إلغاء</button>`;
   return `<div class="box"><b>${e(br(r.b).n)}</b> <span class="chip ${cl}">${lb}</span><div class="mut">${e(r.by)}</div><div style="margin-top:6px">${lines}</div>${log}${p?`<div class="acts" style="margin-top:10px;flex-wrap:wrap">${p}</div>`:''}</div>`;
 }
-function send(){
-  const l=Object.entries(read('rq')).map(([i,n])=>({i:+i,q:n}));
+async function send(){
+  const l=Object.entries(read('rq')).map(([i,n])=>({item_id:+i,qty:n}));
   if(!l.length)return toast('اختر صنفًا واحدًا على الأقل');
-  const jr=role=='junior';
-  reqs.unshift({id:Date.now(),b:+$('#rb').value,by:R[role],l,st:jr?'review':'pending',log:[{by:R[role],a:'أرسل الطلب',k:'',t:$('#rc').value.trim()}]});
-  toast(jr?'تم إرسال الطلب لمراجعة السينيور':'تم إرسال الطلب لمدير المنطقة');go();
+  try{await api('/requests','POST',{branch_id:+$('#rb').value,lines:l,note:$('#rc').value.trim()});await refresh();toast(role=='junior'?'تم إرسال الطلب لمراجعة السينيور':'تم إرسال الطلب لمدير المنطقة');go()}catch(err){toast(err.message)}
 }
-function act(id,a){
-  const r=reqs.find(r=>r.id==id),c=(($('#c'+id)||{}).value||'').trim();
-  const add=(k,l,t)=>r.log.push({by:R[role],a:l,k,t});
-  if(a=='no'){
-    if(!c)return toast('اكتب سبب الرفض في التعليق');
-    add('no','رفض',c);r.st='rejected';toast('تم رفض الطلب');
-  }else if(a=='save'){
-    const l=r.l.map(x=>({i:x.i,q:+$('#e'+id+'_'+x.i).value})).filter(x=>x.q>0);
-    if(!l.length)return toast('اترك صنفًا واحدًا على الأقل أو ارفض الطلب');
-    if(JSON.stringify(l)==JSON.stringify(r.l))return toast('عدّل كمية واحدة على الأقل');
-    add('','عدّل الطلب',(c||'تم التعديل')+' · الكميات الجديدة: '+l.map(x=>it(x.i).n+' × '+x.q).join('، '));
-    r.l=l;toast('تم حفظ التعديل');
-  }else if(a=='rev'){add('ok','أكد الطلب','');r.st='pending';toast('تم التأكيد وإرسال الطلب لمدير المنطقة')}
-  else if(a=='ok'){add('ok','وافق','');r.st='approved';toast('تمت الموافقة وإرسال الطلب لمسؤول المخزن')}
-  else{
-    const s=r.l.find(x=>it(x.i).s<x.q);
-    if(s)return toast('الرصيد لا يكفي: '+it(s.i).n);
-    r.l.forEach(x=>{it(x.i).s-=x.q;const b=br(r.b);b.q[x.i]=(b.q[x.i]||0)+x.q});
-    add('ok','أكد الصرف','');r.st='released';toast('تم الصرف');
+async function act(id,a){
+  const body={action:a};
+  if(a=='no'){body.note=(($('#c'+id)||{}).value||'').trim();if(!body.note)return toast('اكتب سبب الرفض في التعليق')}
+  if(a=='save'){
+    const r=reqs.find(x=>x.id==id);
+    body.lines=r.l.map(x=>({item_id:x.i,qty:+($('#e'+id+'_'+x.i)||{}).value})).filter(x=>x.qty>0);
+    body.note=(($('#c'+id)||{}).value||'تم التعديل').trim();
+    if(!body.lines.length)return toast('اترك صنفًا واحدًا على الأقل أو ارفض الطلب');
   }
-  ui=null;go();
+  try{
+    await api('/requests/'+id+'/action','POST',body);ui=null;await refresh();
+    toast(a=='out'?'تم الصرف':a=='no'?'تم رفض الطلب':a=='save'?'تم حفظ التعديل':a=='rev'?'تم التأكيد وإرسال الطلب لمدير المنطقة':'تمت الموافقة وإرسال الطلب لمسؤول المخزن');
+    go();
+  }catch(err){toast(err.message)}
 }
-go();
+
+boot();
 </script>
 </body>
 </html>
