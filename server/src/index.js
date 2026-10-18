@@ -6,18 +6,28 @@ const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 
-const { pool } = require('./db');
+const { getPool, ensureDatabase } = require('./db');
 const routes = require('./routes');
 const { ensureUsersSeed, ensureDomainSeed } = require('./seed');
 
 // Resolve the project root both in local dev (cwd = server/) and in Docker (cwd = /app).
-const ROOT = fs.existsSync(path.join(process.cwd(), 'db', 'schema.sql'))
+const ROOT = fs.existsSync(path.join(process.cwd(), 'db', 'schema.mssql.sql'))
   ? process.cwd()
   : path.resolve(process.cwd(), '..');
 
+// SQL Server needs each GO-separated batch executed on its own.
+async function runSchema() {
+  const schema = fs.readFileSync(path.join(ROOT, 'db', 'schema.mssql.sql'), 'utf8');
+  const batches = schema.split(/^\s*GO\s*$/im).map((s) => s.trim()).filter(Boolean);
+  const pool = await getPool();
+  for (const batch of batches) {
+    await pool.request().batch(batch);
+  }
+}
+
 async function init() {
-  const schema = fs.readFileSync(path.join(ROOT, 'db', 'schema.sql'), 'utf8');
-  await pool.query(schema);
+  await ensureDatabase();
+  await runSchema();
   await ensureUsersSeed();
   await ensureDomainSeed();
 }

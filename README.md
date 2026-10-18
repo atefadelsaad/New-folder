@@ -1,22 +1,23 @@
 # مخزن تكنولوجيا المعلومات — IT Warehouse
 
-Single-page warehouse UI (Arabic/RTL) backed by an Express REST API and PostgreSQL,
-with JWT authentication and Docker support.
+Single-page warehouse UI (Arabic/RTL) backed by an Express REST API and Microsoft SQL
+Server, with JWT authentication and Docker support.
 
 ## Structure
 
 ```
 it-warehouse_1.html     # the UI (login + all screens), served by the API at /
-server/                 # Express + PostgreSQL API
+server/                 # Express + SQL Server API
   src/index.js          # bootstrap: schema + seed + static UI + routes
   src/routes.js         # REST endpoints + permissions
+  src/roles.js          # permission map (CAN), incl. pool movements
   src/stock.js          # pure stock math (shared with tests)
   src/seed.js           # default users + demo data
   src/auth.js           # JWT sign/verify
-  src/db.js             # pg pool
-db/schema.sql           # database schema (idempotent)
+  src/db.js             # mssql connection pool
+db/schema.mssql.sql     # database schema (idempotent)
 Dockerfile              # app image
-docker-compose.yml      # app + postgres
+docker-compose.yml      # app + SQL Server
 test_swap.js            # stock engine tests
 check.js                # inline UI script syntax check
 ```
@@ -29,8 +30,8 @@ docker compose up -d --build
 
 Open http://localhost:3000
 
-PostgreSQL is exposed on `localhost:5432` (user/password/db: `wh`/`wh`/`warehouse`).
-The API creates the schema and seeds demo data on first start.
+SQL Server is exposed on `localhost:1433` (user/password/db: `sa`/`Your_password123`/`it_warehouse`).
+The API creates the database, schema and seed data on first start.
 
 Stop / reset:
 
@@ -41,12 +42,12 @@ docker compose down -v       # stop and delete the database volume
 
 ## Run locally (without Docker)
 
-Requires a running PostgreSQL.
+Requires a reachable SQL Server (2019+). The target database is created automatically.
 
 ```bash
 cd server
 npm install
-# copy ../.env.example to server/.env and adjust DATABASE_URL / JWT_SECRET
+# copy ../.env.example to server/.env and adjust DB_SERVER / DB_PASSWORD / JWT_SECRET
 npm start
 ```
 
@@ -75,10 +76,19 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
 
 ## Business rules
 
+- Three warehouse pools per item: `stock`, `تحت الصيانة` (`maint_qty`) and `خردة`
+  (`scrap_qty`). All are kept non-negative in `server/src/stock.js` and enforced inside a
+  DB transaction with row locks before anything is written.
+- Pools are **filled only by receipts**: a supplier receipt line marked `تحت الصيانة` or
+  `خردة` adds to that pool instead of stock.
+- `تحت الصيانة` drains **only back to stock** via a `مِن صيانة` receipt (`kind = maint`);
+  `خردة` is terminal and never leaves the pool. Pools are warehouse-level only.
+- Pool movements (marking a line `تحت الصيانة`/`خردة`, or returning from maintenance) are
+  restricted to **admin and head** (the `pool` permission).
 - A disbursement can never exceed the warehouse balance, and a branch balance can never
-  go negative. Checked in `server/src/stock.js` and enforced inside a DB transaction with
-  row locks before anything is written.
-- Only repaired maintenance units (`تم إصلاحه...`) return to sellable stock.
+  go negative.
+- Deleting a voucher soft-deletes it and reverses its stock effect; its permit number
+  becomes reusable.
 - Supplier vouchers store the supplier name; branch vouchers store the branch. Every
   receipt/disbursement shows its party (`الجهة`).
 

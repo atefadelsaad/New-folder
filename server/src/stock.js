@@ -1,8 +1,13 @@
 'use strict';
 
 // Pure stock math shared by the API and the tests.
-// A voucher line may move stock on the warehouse and (for branch transfers)
-// on a branch. Reversing an existing voucher is expressed with mult = -1.
+// Three warehouse pools exist per item:
+//   stock   - goods in good standing, available to issue/transfer
+//   maint   - "under maintenance" pool, filled only by receipts, drained
+//             only by receiving an item back from maintenance (`kind = maint`)
+//   scrap   - "scrap" pool, terminal: it only ever grows
+// A receipt may also move qty into a branch (kind `br`). Reversing an existing
+// voucher is expressed with mult = -1.
 
 function lineQty(line) {
   const q = Number(line.qty != null ? line.qty : line.q);
@@ -30,39 +35,63 @@ function lineState(line) {
 function voucherDeltas(voucher) {
   const direction = voucher.direction || voucher.dir;
   const kind = voucher.kind || voucher.k;
-  const sign = direction === 'in' ? 1 : -1;
   const branchId = voucher.branch_id != null ? voucher.branch_id : voucher.b;
   const out = [];
 
   for (const line of voucher.lines || []) {
     const qty = lineQty(line);
     if (!qty) continue;
-    // Only goods in good standing add to warehouse stock. Lines received
-    // as under-maintenance or scrap are recorded but tracked separately.
-    const state = direction === 'in' ? lineState(line) : 'stock';
-    if (state !== 'stock') continue;
+    const delta = { itemId: lineItemId(line), stock: 0, maint: 0, scrap: 0, branchId: null, branch: 0 };
 
-    const delta = { itemId: lineItemId(line), stock: sign * qty, branchId: null, branch: 0 };
-    if (kind === 'br') {
-      delta.branchId = Number(branchId);
-      delta.branch = -sign * qty;
+    if (direction === 'in') {
+      if (kind === 'maint') {
+        // Receive back from maintenance: drains the pool into the warehouse.
+        delta.maint = -qty;
+        delta.stock = qty;
+      } else if (kind === 'br') {
+        // Receive back from a branch.
+        delta.stock = qty;
+        delta.branchId = Number(branchId);
+        delta.branch = -qty;
+      } else {
+        // From a supplier: line state decides the pool.
+        const state = lineState(line);
+        if (state === 'maint') delta.maint = qty;
+        else if (state === 'scrap') delta.scrap = qty;
+        else delta.stock = qty;
+      }
+    } else {
+      delta.stock = -qty;
+      if (kind === 'br') {
+        delta.branchId = Number(branchId);
+        delta.branch = qty;
+      }
     }
+
     out.push(delta);
   }
   return out;
 }
 
 // Apply a list of deltas (each with optional mult, default 1) to a state
-// snapshot. Matches the original client behaviour: all deltas are summed
-// first and only the final result is validated, so a reversal that dips
-// below zero temporarily is allowed as long as the outcome is valid.
+// snapshot. All deltas are summed first and only the final result is
+// validated, so a reversal that dips below zero temporarily is allowed as
+// long as the outcome is valid.
 function applyDeltas(current, deltas) {
   const stockDelta = new Map();
+  const maintDelta = new Map();
+  const scrapDelta = new Map();
   const branchDelta = new Map();
+
+  const add = (map, key, value) => {
+    if (value) map.set(key, (map.get(key) || 0) + value);
+  };
 
   for (const d of deltas) {
     const mult = d.mult == null ? 1 : d.mult;
-    stockDelta.set(d.itemId, (stockDelta.get(d.itemId) || 0) + d.stock * mult);
+    add(stockDelta, d.itemId, d.stock * mult);
+    add(maintDelta, d.itemId, d.maint * mult);
+    add(scrapDelta, d.itemId, d.scrap * mult);
     if (d.branchId != null) {
       const key = d.branchId + ':' + d.itemId;
       const prev = branchDelta.get(key);
@@ -74,12 +103,22 @@ function applyDeltas(current, deltas) {
     }
   }
 
-  const stock = new Map(current.stock);
-  for (const [itemId, delta] of stockDelta) {
-    const next = (stock.get(itemId) || 0) + delta;
-    if (next < 0) return { ok: false, error: 'stock', itemId };
-    stock.set(itemId, next);
-  }
+  const check = (source, delta, label, copy) => {
+    const map = copy ? new Map(source) : source;
+    for (const [itemId, value] of delta) {
+      const next = (map.get(itemId) || 0) + value;
+      if (next < 0) return { ok: false, error: label, itemId };
+      map.set(itemId, next);
+    }
+    return { ok: true, map };
+  };
+
+  const stock = check(current.stock, stockDelta, 'stock', true);
+  if (!stock.ok) return stock;
+  const maint = check(current.maint, maintDelta, 'maint', true);
+  if (!maint.ok) return maint;
+  const scrap = check(current.scrap, scrapDelta, 'scrap', true);
+  if (!scrap.ok) return scrap;
 
   const branch = new Map();
   for (const [bid, map] of current.branch) branch.set(bid, new Map(map));
@@ -91,7 +130,7 @@ function applyDeltas(current, deltas) {
     map.set(entry.itemId, next);
   }
 
-  return { ok: true, stock, branch };
+  return { ok: true, stock: stock.map, maint: maint.map, scrap: scrap.map, branch };
 }
 
 // Build the combined delta list for replacing `oldVoucher` with `newVoucher`.
@@ -102,4 +141,4 @@ function planChange(oldVoucher, newVoucher) {
   return deltas;
 }
 
-module.exports = { voucherDeltas, applyDeltas, planChange };
+module.exports = { voucherDeltas, applyDeltas, planChange, lineState };

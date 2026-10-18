@@ -1,14 +1,12 @@
 const assert = require('assert');
 const { voucherDeltas, applyDeltas, planChange } = require('./server/src/stock');
 
-const emptyState = (stock, branch) => ({
-  stock: new Map(Object.entries(stock).map(([k, v]) => [Number(k), v])),
-  branch: new Map(
-    Object.entries(branch || {}).map(([bid, m]) => [
-      Number(bid),
-      new Map(Object.entries(m).map(([k, v]) => [Number(k), v]))
-    ])
-  )
+const numMap = (obj) => new Map(Object.entries(obj || {}).map(([k, v]) => [Number(k), v]));
+const emptyState = (stock, branch, maint, scrap) => ({
+  stock: numMap(stock),
+  maint: numMap(maint),
+  scrap: numMap(scrap),
+  branch: new Map(Object.entries(branch || {}).map(([bid, m]) => [Number(bid), numMap(m)]))
 });
 
 // 1. Creating a disbursement larger than the warehouse balance is blocked.
@@ -48,28 +46,42 @@ assert.deepStrictEqual(
   { ok: false, error: 'branch', branchId: 1 }
 );
 
-// 5. Only lines in good standing ('stock') enter warehouse stock; items
-//    received as under-maintenance or scrap are recorded but do not.
-const asMaint = applyDeltas(
+// 5. Supplier receipt line states feed the pools; only 'stock' enters the warehouse.
+const intoMaint = applyDeltas(
   emptyState({ 2: 0 }, {}),
-  planChange(null, { direction: 'in', kind: 'maint', lines: [{ itemId: 2, qty: 1, state: 'maint' }] })
+  planChange(null, { direction: 'in', kind: 'sup', lines: [{ itemId: 2, qty: 1, state: 'maint' }] })
 );
-assert.strictEqual(asMaint.ok, true);
-assert.strictEqual(asMaint.stock.get(2), 0);
+assert.strictEqual(intoMaint.ok, true);
+assert.strictEqual(intoMaint.stock.get(2), 0);
+assert.strictEqual(intoMaint.maint.get(2), 1);
 
-const asScrap = applyDeltas(
+const intoScrap = applyDeltas(
   emptyState({ 2: 0 }, {}),
   planChange(null, { direction: 'in', kind: 'sup', lines: [{ itemId: 2, qty: 1, state: 'scrap' }] })
 );
-assert.strictEqual(asScrap.stock.get(2), 0);
+assert.strictEqual(intoScrap.stock.get(2), 0);
+assert.strictEqual(intoScrap.scrap.get(2), 1);
 
+// 6. A `maint` receipt drains the maintenance pool back into stock.
 const repaired = applyDeltas(
-  emptyState({ 2: 0 }, {}),
+  emptyState({ 2: 0 }, {}, { 2: 2 }),
   planChange(null, { direction: 'in', kind: 'maint', lines: [{ itemId: 2, qty: 1, state: 'stock' }] })
 );
+assert.strictEqual(repaired.ok, true);
 assert.strictEqual(repaired.stock.get(2), 1);
+assert.strictEqual(repaired.maint.get(2), 1);
 
-// 6. Editing an existing voucher reverses the old effect before applying the new one.
+// Returning more than the pool holds is blocked.
+const badReturn = applyDeltas(
+  emptyState({ 2: 0 }, {}, { 2: 1 }),
+  planChange(null, { direction: 'in', kind: 'maint', lines: [{ itemId: 2, qty: 2, state: 'stock' }] })
+);
+assert.deepStrictEqual(
+  { ok: badReturn.ok, error: badReturn.error, itemId: badReturn.itemId },
+  { ok: false, error: 'maint', itemId: 2 }
+);
+
+// 7. Editing an existing voucher reverses the old effect before applying the new one.
 const edit = applyDeltas(
   emptyState({ 1: 5 }, {}),
   planChange(
@@ -89,10 +101,10 @@ const editBlocked = applyDeltas(
 );
 assert.strictEqual(editBlocked.ok, false);
 
-// 7. Delta shape helpers.
+// 8. Delta shape helpers.
 assert.deepStrictEqual(
   voucherDeltas({ direction: 'out', kind: 'br', branch_id: 3, lines: [{ itemId: 6, qty: 1 }] }),
-  [{ itemId: 6, stock: -1, branchId: 3, branch: 1 }]
+  [{ itemId: 6, stock: -1, maint: 0, scrap: 0, branchId: 3, branch: 1 }]
 );
 
-console.log('Stock engine tests passed (8 scenarios)');
+console.log('Stock engine tests passed (13 scenarios)');

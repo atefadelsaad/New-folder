@@ -64,7 +64,7 @@ th{font-weight:600;color:var(--mut);font-size:13px}
 <script>
 const GOV=['الإسكندرية','القاهرة','الجيزة','البحيرة','مطروح','الغربية','الدقهلية','الشرقية','المنوفية','كفر الشيخ','دمياط','بورسعيد'];
 const R={admin:'IT Manager',head:'Technical Head',area:'Area Manager',store:'Warehouse Keeper',senior:'Senior Technical',junior:'Junior Technical'};
-const CAN={addBranch:['admin','head'],stock:['admin','head','store'],view:['admin','head','senior','area','store'],review:['admin','head','senior'],reject:['admin','head','area','store'],edit:['admin','head','area','store'],delRecv:['admin','head'],request:['admin','head','senior','junior'],branchEdit:['admin','head','senior'],approve:['admin','head','area'],release:['admin','head','store']};
+const CAN={addBranch:['admin','head'],stock:['admin','head','store'],view:['admin','head','senior','area','store'],review:['admin','head','senior'],reject:['admin','head','area','store'],edit:['admin','head','area','store'],delRecv:['admin','head'],request:['admin','head','senior','junior'],branchEdit:['admin','head','senior'],approve:['admin','head','area'],release:['admin','head','store'],pool:['admin','head']};
 const ST={review:['بانتظار مراجعة السينيور',''],pending:['بانتظار مدير المنطقة',''],approved:['بانتظار مسؤول المخزن',''],released:['تم الصرف','ok'],rejected:['مرفوض','bad']};
 const STS=[['stock','مخزون'],['maint','تحت الصيانة'],['scrap','خردة']];
 const SM={stock:'مخزون',maint:'تحت الصيانة',scrap:'خردة'};
@@ -80,7 +80,7 @@ const it=id=>items.find(i=>i.id==id);
 const br=id=>branches.find(b=>b.id==id);
 const dist=id=>branches.reduce((a,b)=>a+(b.q[id]||0),0);
 const opts=(a,sel)=>a.map(x=>`<option${x==sel?' selected':''}>${e(x)}</option>`).join('');
-let pendDel=null,editId=null,pend=null,ui=null,catEdit=null,pendCat=null;
+let pendDel=null,editId=null,pend=null,ui=null,catEdit=null,pendCat=null,stockLoc=null;
 
 async function api(path,method='GET',body){
   const headers=Object.assign({'Content-Type':'application/json'},STATE.token?{'Authorization':'Bearer '+STATE.token}:{});
@@ -103,7 +103,7 @@ async function login(){
   try{
     const d=await api('/auth/login','POST',{username:u.trim(),password:p});
     STATE.token=d.token;STATE.user=d.user;localStorage.setItem('wh_token',d.token);
-    tab='stock';sel=null;await boot();
+    tab='stock';sel=null;stockLoc=null;await boot();
   }catch(err){renderLogin(err.message)}
 }
 function logout(){STATE.token='';STATE.user=null;localStorage.removeItem('wh_token');renderLogin()}
@@ -129,8 +129,8 @@ function readPick(p){return items.filter(i=>{const el=$('#'+p+i.id);return el&&e
 
 function go(){
   const todo=reqs.filter(r=>(r.st=='review'&&ok('review'))||(r.st=='pending'&&ok('approve'))||(r.st=='approved'&&ok('release'))).length;
-  const tabs=[['stock','الأصناف والمخزن'],['maint','تحت الصيانة'],['scrap','الخردة'],['recv','استلام بضاعة'],['iss','أذون صرف'],['br','الفروع'],['items','إدارة الأصناف'],['cats','الفئات'],['sup','الموردون'],['rq','الطلبات'+(todo?` (${todo})`:'')]].filter(t=>t[0]=='rq'||((t[0]=='items'||t[0]=='recv'||t[0]=='iss'||t[0]=='sup'||t[0]=='cats')?ok('stock'):ok('view')));if(!tabs.some(t=>t[0]==tab))tab='rq';$('#nav').innerHTML=tabs.map(([k,v])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';sel=null;go()">${v}</button>`).join('');
-  $('#m').innerHTML=tab=='stock'?vStock():tab=='maint'?vMaint():tab=='scrap'?vScrap():(tab=='recv'||tab=='iss')?vDoc():tab=='items'?vItems():tab=='cats'?vCats():tab=='sup'?vSuppliers():tab=='br'?(sel?vBranch():vBranches()):vReqs();
+  const tabs=[['stock','الأصناف والمخزن'],['maint','تحت الصيانة'],['scrap','الخردة'],['recv','استلام بضاعة'],['iss','أذون صرف'],['br','الفروع'],['items','إدارة الأصناف'],['cats','الفئات'],['sup','الموردون'],['rq','الطلبات'+(todo?` (${todo})`:'')],['reqbr','متطلبات الفروع']].filter(t=>t[0]=='rq'||((t[0]=='items'||t[0]=='recv'||t[0]=='iss'||t[0]=='sup'||t[0]=='cats')?ok('stock'):ok('view')));if(!tabs.some(t=>t[0]==tab))tab='rq';$('#nav').innerHTML=tabs.map(([k,v])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';sel=null;go()">${v}</button>`).join('');
+  $('#m').innerHTML=tab=='stock'?vStock():tab=='maint'?vMaint():tab=='scrap'?vScrap():(tab=='recv'||tab=='iss')?vDoc():tab=='items'?vItems():tab=='cats'?vCats():tab=='sup'?vSuppliers():tab=='br'?(sel?vBranch():vBranches()):tab=='reqbr'?vBranchReqs():vReqs();
   if(tab=='stock')tbl();
 }
 
@@ -138,9 +138,9 @@ function vItems(){
   const adm=role=='admin',cs=i=>opts(CATS.includes(i.c)?CATS:[...CATS,i.c],i.c);
   return `<div class="box"><h3>إضافة صنف جديد</h3><div class="row"><label>اسم الصنف<input id="nn"></label><label>الفئة<select id="nc">${opts(CATS)}</select></label><button class="btn" onclick="newItem()">حفظ الصنف</button></div>
   <p class="mut" style="margin:10px 0 0">تُضاف الكميات من أذون الاستلام فقط، ولا يمكن إدخال رصيد يدويًا.</p></div>
-  <div class="box tw"><h3>الأصناف (${items.length})</h3><table><tr><th>الصنف</th><th>الفئة</th><th>رصيد المخزن</th><th>أضافه</th><th></th></tr>`+items.map(i=>editId==i.id
-   ?`<tr><td><input id="ein" value="${e(i.n)}"></td><td><select id="eic">${cs(i)}</select></td><td>${i.s}</td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn" onclick="saveItem(${i.id})">تأكيد</button><button class="btn ghost" onclick="editId=null;go()">إلغاء</button></div></td></tr>`
-   :`<tr><td>${e(i.n)}</td><td>${e(i.c)}</td><td>${i.s}</td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn ghost" onclick="editId=${i.id};pendDel=null;go()">تعديل</button>${adm?`<button class="btn bad" onclick="del(${i.id})">${pendDel==i.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></td></tr>`).join('')+'</table></div>';
+  <div class="box tw"><h3>الأصناف (${items.length})</h3><table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>أضافه</th><th></th></tr>`+items.map(i=>editId==i.id
+   ?`<tr><td><select id="eic">${cs(i)}</select></td><td><input id="ein" value="${e(i.n)}"></td><td>${i.s}</td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn" onclick="saveItem(${i.id})">تأكيد</button><button class="btn ghost" onclick="editId=null;go()">إلغاء</button></div></td></tr>`
+   :`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${i.s}</td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn ghost" onclick="editId=${i.id};pendDel=null;go()">تعديل</button>${adm?`<button class="btn bad" onclick="del(${i.id})">${pendDel==i.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></td></tr>`).join('')+'</table></div>';
 }
 function vCats(){
   return `<div class="box"><h3>إضافة فئة</h3><div class="row">
@@ -224,20 +224,48 @@ async function addSup(){
 }
 function fixSn(l){const n=hasSer(l.i)?Math.min(l.q||0,200):0;while(l.sns.length<n)l.sns.push('');l.sns.length=n}
 function vStock(){
-  return `<input class="search" placeholder="ابحث باسم الصنف أو الفئة" value="${e(q)}" oninput="q=this.value;tbl()"><div class="box tw" id="tb"></div>`;
+  if(stockLoc!==null&&!br(stockLoc))stockLoc=null;
+  const locs=[{id:null,n:'المخزن'}].concat(branches.map(b=>({id:b.id,n:b.n})));
+  const btns=locs.map(l=>`<button class="btn ${stockLoc===l.id?'':'ghost'}" onclick="stockLoc=${l.id===null?'null':l.id};go()">${e(l.n)}</button>`).join('');
+  return `<div class="row" style="margin-bottom:12px">${btns}</div>
+   <input class="search" placeholder="${stockLoc===null?'ابحث باسم الصنف أو الفئة':'ابحث في أصناف الفرع'}" value="${e(q)}" oninput="q=this.value;tbl()"><div class="box tw" id="tb"></div>`;
 }
 function tbl(){
   const f=items.filter(i=>(i.n+i.c).includes(q));
-  $('#tb').innerHTML=f.length?`<table><tr><th>الصنف</th><th>الفئة</th><th>رصيد المخزن</th><th>في الفروع</th><th>الحالة</th></tr>`+f.map(i=>`<tr><td>${e(i.n)}</td><td>${e(i.c)}</td><td>${i.s}</td><td>${dist(i.id)}</td><td><span class="chip ${i.s>5?'ok':'bad'}">${i.s>5?'متوفر':'رصيد منخفض'}</span></td></tr>`).join('')+'</table>':'<p class="mut">لا توجد أصناف مطابقة. جرّب كلمة أخرى.</p>';
+  if(stockLoc===null){
+    $('#tb').innerHTML=f.length?`<table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>الحالة</th></tr>`+f.map(i=>`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${i.s}</td><td><span class="chip ${i.s>0?'ok':'bad'}">${i.s>0?'متوفر':'غير متوفر'}</span></td></tr>`).join('')+'</table>':'<p class="mut">لا توجد أصناف مطابقة. جرّب كلمة أخرى.</p>';
+    return;
+  }
+  const b=br(stockLoc),rows=f.filter(i=>b.q[i.id]!=null);
+  $('#tb').innerHTML=rows.length?`<table><tr><th>الفئة</th><th>الصنف</th><th>العدد في الفرع</th></tr>`+rows.map(i=>`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${b.q[i.id]||0}</td></tr>`).join('')+'</table>':'<p class="mut">لا توجد أصناف مطابقة في هذا الفرع.</p>';
 }
 function trackTable(map,empty){
-  const rows=items.filter(i=>map[i.id]).map(i=>`<tr><td>${e(i.n)}</td><td>${e(i.c)}</td><td>${map[i.id]}</td></tr>`).join('');
-  return rows?`<div class="box tw"><table><tr><th>الصنف</th><th>الفئة</th><th>العدد</th></tr>${rows}</table></div>`:`<p class="mut">${empty}</p>`;
+  const rows=items.filter(i=>map[i.id]).map(i=>`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${map[i.id]}</td></tr>`).join('');
+  return rows?`<div class="box tw"><table><tr><th>الفئة</th><th>الصنف</th><th>العدد</th></tr>${rows}</table></div>`:`<p class="mut">${empty}</p>`;
 }
-function vMaint(){return `<h2>تحت الصيانة</h2>${trackTable(MAINT,'لا توجد أصناف تحت الصيانة.')}`
-  +`<p class="mut">تُضاف هنا الأصناف المستلمة بحالة «تحت الصيانة» من أذون الاستلام.</p>`}
-function vScrap(){return `<h2>الخردة</h2>${trackTable(SCRAP,'لا توجد أصناف في الخردة.')}`
-  +`<p class="mut">تُضاف هنا الأصناف المستلمة بحالة «خردة» من أذون الاستلام.</p>`}
+function vMaint(){
+  const rows=items.filter(i=>MAINT[i.id]).map(i=>`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${MAINT[i.id]}</td>${ok('pool')?`<td><button class="btn ghost" onclick="retMaint(${i.id})">إرجاع للمخزن</button></td>`:''}</tr>`).join('');
+  const head=`<tr><th>الفئة</th><th>الصنف</th><th>العدد</th>${ok('pool')?'<th>إجراء</th>':''}</tr>`;
+  return `<h2>تحت الصيانة</h2>`+(rows?`<div class="box tw"><table>${head}${rows}</table></div>`:'<p class="mut">لا توجد أصناف تحت الصيانة.</p>')
+   +`<p class="mut">تُضاف الأصناف من أذون الاستلام (من مورد) بحالة «تحت الصيانة»، ويُعاد إرجاعها إلى المخزن من هنا.</p>`;
+}
+function vScrap(){
+  const rows=items.filter(i=>SCRAP[i.id]).map(i=>`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${SCRAP[i.id]}</td></tr>`).join('');
+  return `<h2>الخردة</h2>`+(rows?`<div class="box tw"><table><tr><th>الفئة</th><th>الصنف</th><th>العدد</th></tr>${rows}</table></div>`:'<p class="mut">لا توجد أصناف في الخردة.</p>')
+   +`<p class="mut">تُضاف تلقائيًا من أذون الاستلام بحالة «خردة». الخردة نهائية ولا تُصرف.</p>`;
+}
+async function retMaint(iid){
+  const itm=it(iid),max=MAINT[iid]||0;
+  if(!itm||max<=0)return toast('لا يوجد رصيد تحت الصيانة لهذا الصنف');
+  const q=prompt(`عدد الأصناف الراجعة إلى المخزن من «${itm.n}» (المتاح ${max})`,String(max));
+  if(q===null)return;const qty=Math.floor(+q||0);
+  if(qty<=0)return toast('اكتب عددًا صحيحًا');
+  if(qty>max)return toast('العدد أكبر من الرصيد تحت الصيانة');
+  const num=prompt('رقم إذن الإرجاع من الصيانة','');
+  if(num===null)return;const number=String(num).trim();
+  if(!number)return toast('اكتب رقم الإذن');
+  try{await api('/vouchers','POST',{direction:'in',kind:'maint',number,supplier_name:'',branch_id:null,lines:[{item_id:+iid,qty,serials:[],state:'stock'}]});await refresh();toast('تم إرجاع الصنف إلى المخزن');go()}catch(err){toast(err.message)}
+}
 function vDoc(){
   const K=KK(),D=DR[K],k=D.k,inn=K=='in';
   const lines=D.lines.map((l,j)=>{
@@ -248,7 +276,7 @@ function vDoc(){
     return `<div class="box" style="background:var(--bg)"><div class="grid">
    <label>الصنف<select onchange="DR[KK()].lines[${j}].i=+this.value;go()">${groups||`<option value="">${noItem}</option>`}</select></label>
    <label>${inn?'العدد المستلم':'العدد المصروف'}<input type="number" min="1" value="${l.q}" onchange="setQ(${j},this.value)"></label>
-   ${inn?`<label>الحالة النهائية<select onchange="DR[KK()].lines[${j}].st=this.value">${STS.map(([v,t])=>`<option value="${v}"${v==l.st?' selected':''}>${t}</option>`).join('')}</select></label>`:''}</div>
+   ${inn&&k=='sup'&&ok('pool')?`<label>الحالة النهائية<select onchange="DR[KK()].lines[${j}].st=this.value">${STS.map(([v,t])=>`<option value="${v}"${v==l.st?' selected':''}>${t}</option>`).join('')}</select></label>`:''}</div>
    ${hasSer(l.i)?'<div class="grid">'+l.sns.map((s,n)=>`<label>سيريال ${n+1}<input value="${e(s)}" oninput="DR[KK()].lines[${j}].sns[${n}]=this.value"></label>`).join('')+'</div>':'<p class="mut" style="margin:0">هذه الفئة بدون سيريال</p>'}
    ${D.lines.length>1?`<button class="btn ghost" style="margin-top:8px" onclick="DR[KK()].lines.splice(${j},1);go()">حذف السطر</button>`:''}</div>`}).join('');
   return `<div class="box"><h3>${E[K]?(inn?'تعديل إذن استلام':'تعديل إذن صرف'):(inn?'إذن استلام جديد':'إذن صرف جديد')}</h3>
@@ -277,7 +305,7 @@ function editDoc(id){
 async function saveDoc(){
   const K=KK(),D=DR[K],k=D.k,isb=k=='br',sup=(D.sup||'').trim(),p=D.p.trim(),editing=E[K];
   if(isb&&!br(D.b))return toast('اختر فرعًا مسجلاً');
-  if(!isb&&!sup)return toast('اكتب اسم المورد');
+  if(k=='sup'&&!sup)return toast('اختر المورد');
   if(!p)return toast(K=='in'?'اكتب رقم إذن الإدخال':'اكتب رقم إذن الصرف');
   const seen={};const lines=[];
   for(const l of D.lines){
@@ -288,7 +316,7 @@ async function saveDoc(){
       fixSn(l);sns=l.sns.map(s=>s.trim());
       for(const s of sns){const t=s.toLowerCase();if(!t)return toast('اكتب كل السيريالات لصنف '+it(l.i).n);if(seen[t])return toast('سيريال مكرر: '+s);seen[t]=1}
     }
-    lines.push({item_id:+l.i,qty:+l.q,serials:sns,state:K=='in'?(l.st||'stock'):'stock'});
+    lines.push({item_id:+l.i,qty:+l.q,serials:sns,state:(K=='in'&&k=='sup'&&ok('pool'))?(l.st||'stock'):'stock'});
   }
   const body={direction:K,kind:k,number:p,supplier_name:isb?'':sup,branch_id:isb?+D.b:null,lines};
   try{
@@ -319,11 +347,11 @@ async function setBranchQty(bid,iid,v){
 function vBranch(){
   const b=br(sel),ed=ok('branchEdit');
   const assigned=items.filter(i=>b.q[i.id]!=null);
-  const rows=assigned.map(i=>`<tr><td>${e(i.n)}</td><td>${e(i.c)}</td><td>${ed?`<input type="number" min="0" value="${b.q[i.id]||0}" style="width:80px" onchange="setBranchQty(${b.id},${i.id},this.value)">`:b.q[i.id]||0}</td>${ed?`<td><button class="btn ghost" onclick="rmBranchItem(${b.id},${i.id})">إزالة</button></td>`:''}</tr>`).join('');
+  const rows=assigned.map(i=>`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${ed?`<input type="number" min="0" value="${b.q[i.id]||0}" style="width:80px" onchange="setBranchQty(${b.id},${i.id},this.value)">`:b.q[i.id]||0}</td>${ed?`<td><button class="btn ghost" onclick="rmBranchItem(${b.id},${i.id})">إزالة</button></td>`:''}</tr>`).join('');
   const free=items.filter(i=>b.q[i.id]==null);
   const add=ed&&free.length?`<div class="row" style="margin-top:12px"><label>إضافة صنف<select id="bai">${free.map(i=>`<option value="${i.id}">${e(i.n)} — ${e(i.c)}</option>`).join('')}</select></label><button class="btn" onclick="addBranchItem(${b.id})">إضافة للفرع</button></div>`:'';
   return `<button class="btn ghost" onclick="sel=null;go()">رجوع للفروع</button><h2 style="margin-top:14px">${e(b.n)} <span class="mut">${e(b.g)}</span></h2>${b.by?`<div class="mut" style="margin:-6px 0 12px">تمت الإضافة بواسطة ${e(b.by)} · ${e(b.d)}</div>`:''}
-  <div class="box tw"><h3>أصناف الفرع (${assigned.length})</h3>${assigned.length?`<table><tr><th>الصنف</th><th>الفئة</th><th>العدد</th>${ed?'<th></th>':''}</tr>${rows}</table>`:'<p class="mut">لا توجد أصناف مخصصة لهذا الفرع بعد.</p>'}${add}</div>`;
+  <div class="box tw"><h3>أصناف الفرع (${assigned.length})</h3>${assigned.length?`<table><tr><th>الفئة</th><th>الصنف</th><th>العدد</th>${ed?'<th></th>':''}</tr>${rows}</table>`:'<p class="mut">لا توجد أصناف مخصصة لهذا الفرع بعد.</p>'}${add}</div>`;
 }
 async function addBranchItem(bid){
   const id=(($('#bai')||{}).value||0);if(!+id)return toast('اختر صنفًا');
@@ -333,6 +361,18 @@ async function rmBranchItem(bid,iid){
   try{await api('/branches/'+bid+'/items/'+iid,'DELETE');await refresh();toast('تمت إزالة الصنف من الفرع');go()}catch(err){toast(err.message)}
 }
 
+function vBranchReqs(){
+  const rows=reqs.map(r=>{
+    const st=ST[r.st]||['',''],lb=st[0],cl=st[1];
+    const items=r.l.length?r.l.map(x=>`${e((it(x.i)||{n:'-'}).n)} × ${x.q}`).join('، '):'—';
+    const last=r.log.length?r.log[r.log.length-1]:null;
+    const lastTxt=last?`${e(last.by)} — ${e(last.a)}`:'—';
+    return `<tr><td>${e((br(r.b)||{n:'-'}).n)}</td><td>${e(r.by)}</td><td><span class="chip ${cl}">${lb}</span></td><td>${items}</td><td class="mut">${lastTxt}</td></tr>`;
+  }).join('');
+  return `<h2>متطلبات الفروع</h2>
+   <p class="mut" style="margin:-6px 0 12px">عرض فقط لجميع طلبات الفروع: من قدّمها وما هو المطلوب.</p>
+   ${reqs.length?`<div class="box tw"><table><tr><th>الفرع</th><th>مقدّم الطلب</th><th>الحالة</th><th>الأصناف المطلوبة</th><th>آخر إجراء</th></tr>${rows}</table></div>`:'<p class="mut">لا توجد طلبات بعد.</p>'}`;
+}
 function vReqs(){
   let h='';
   if(ok('request'))h+=`<div class="box"><h3>طلب جديد</h3><label style="max-width:260px">الفرع<select id="rb">${branches.map(b=>`<option value="${b.id}">${e(b.n)}</option>`).join('')}</select></label>

@@ -1,6 +1,6 @@
 'use strict';
 const bcrypt = require('bcryptjs');
-const { pool } = require('./db');
+const { getPool, sql } = require('./db');
 
 const USERS = [
   ['admin', 'admin123', 'admin', 'IT Manager'],
@@ -21,25 +21,34 @@ const BRANCHES = [
 ];
 
 async function ensureUsersSeed() {
-  const { rows } = await pool.query('SELECT count(*)::int AS c FROM users');
-  if (rows[0].c > 0) return;
+  const pool = await getPool();
+  const r = await pool.request().query('SELECT COUNT(*) AS c FROM users');
+  if (r.recordset[0].c > 0) return;
   for (const [username, password, role, name] of USERS) {
-    await pool.query(
-      'INSERT INTO users (username, password_hash, role, name) VALUES ($1,$2,$3,$4) ON CONFLICT (username) DO NOTHING',
-      [username, bcrypt.hashSync(password, 10), role, name]
-    );
+    await pool.request()
+      .input('u', sql.NVarChar(64), username)
+      .input('p', sql.NVarChar(255), bcrypt.hashSync(password, 10))
+      .input('r', sql.NVarChar(16), role)
+      .input('n', sql.NVarChar(120), name)
+      .query('INSERT INTO users (username, password_hash, role, name) VALUES (@u, @p, @r, @n)');
   }
 }
 
 async function ensureDomainSeed() {
-  const { rows } = await pool.query('SELECT count(*)::int AS c FROM categories');
-  if (rows[0].c > 0) return;
+  const pool = await getPool();
+  const r = await pool.request().query('SELECT COUNT(*) AS c FROM categories');
+  if (r.recordset[0].c > 0) return;
 
   for (const name of CATEGORIES) {
-    await pool.query('INSERT INTO categories (name, has_serial) VALUES ($1, TRUE) ON CONFLICT (name) DO NOTHING', [name]);
+    await pool.request()
+      .input('n', sql.NVarChar(120), name)
+      .query('IF NOT EXISTS (SELECT 1 FROM categories WHERE name = @n) INSERT INTO categories (name, has_serial) VALUES (@n, 1)');
   }
   for (const b of BRANCHES) {
-    await pool.query('INSERT INTO branches (name, gov, created_by) VALUES ($1,$2,$3)', [b.name, b.gov, 'Warehouse Keeper']);
+    await pool.request()
+      .input('n', sql.NVarChar(160), b.name)
+      .input('g', sql.NVarChar(80), b.gov)
+      .query('INSERT INTO branches (name, gov, created_by) VALUES (@n, @g, N\'Warehouse Keeper\')');
   }
 }
 
