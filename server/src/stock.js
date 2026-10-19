@@ -45,12 +45,18 @@ function voucherDeltas(voucher) {
 
     if (direction === 'in') {
       if (kind === 'maint') {
-        // Receive back from maintenance: drains the pool into the warehouse.
+        // Receive back from maintenance: every line drains the pool; repaired
+        // lines return to stock, damaged lines move to scrap.
+        const state = lineState(line);
         delta.maint = -qty;
-        delta.stock = qty;
+        if (state === 'scrap') delta.scrap = qty;
+        else delta.stock = qty;
       } else if (kind === 'br') {
-        // Receive back from a branch.
-        delta.stock = qty;
+        // Receive back from a branch: the branch balance drops either way, and
+        // the qty lands in stock (good) or scrap (damaged).
+        const state = lineState(line);
+        if (state === 'scrap') delta.scrap = qty;
+        else delta.stock = qty;
         delta.branchId = Number(branchId);
         delta.branch = -qty;
       } else {
@@ -65,6 +71,10 @@ function voucherDeltas(voucher) {
       if (kind === 'br') {
         delta.branchId = Number(branchId);
         delta.branch = qty;
+      } else if (kind === 'sup') {
+        // Disbursing to a supplier sends the item for maintenance: the qty
+        // leaves stock and enters the `تحت الصيانة` pool.
+        delta.maint = qty;
       }
     }
 

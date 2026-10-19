@@ -27,6 +27,15 @@ const exact = applyDeltas(
 assert.strictEqual(exact.ok, true);
 assert.strictEqual(exact.stock.get(4), 0);
 
+// 2b. Disbursing to a supplier sends the item to the maintenance pool.
+const sendMaint = applyDeltas(
+  emptyState({ 3: 5 }, {}),
+  planChange(null, { direction: 'out', kind: 'sup', lines: [{ itemId: 3, qty: 2 }] })
+);
+assert.strictEqual(sendMaint.ok, true);
+assert.strictEqual(sendMaint.stock.get(3), 3);
+assert.strictEqual(sendMaint.maint.get(3), 2);
+
 // 3. A branch transfer moves stock off the warehouse and onto the branch.
 const transfer = applyDeltas(
   emptyState({ 5: 3 }, { 2: { 5: 1 } }),
@@ -71,6 +80,16 @@ assert.strictEqual(repaired.ok, true);
 assert.strictEqual(repaired.stock.get(2), 1);
 assert.strictEqual(repaired.maint.get(2), 1);
 
+// A damaged line returned from maintenance drains the pool into scrap.
+const damaged = applyDeltas(
+  emptyState({ 2: 0 }, {}, { 2: 2 }),
+  planChange(null, { direction: 'in', kind: 'maint', lines: [{ itemId: 2, qty: 1, state: 'scrap' }] })
+);
+assert.strictEqual(damaged.ok, true);
+assert.strictEqual(damaged.stock.get(2), 0);
+assert.strictEqual(damaged.scrap.get(2), 1);
+assert.strictEqual(damaged.maint.get(2), 1);
+
 // Returning more than the pool holds is blocked.
 const badReturn = applyDeltas(
   emptyState({ 2: 0 }, {}, { 2: 1 }),
@@ -107,4 +126,4 @@ assert.deepStrictEqual(
   [{ itemId: 6, stock: -1, maint: 0, scrap: 0, branchId: 3, branch: 1 }]
 );
 
-console.log('Stock engine tests passed (13 scenarios)');
+console.log('Stock engine tests passed (15 scenarios)');

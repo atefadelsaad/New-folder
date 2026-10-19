@@ -49,6 +49,10 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_items_category' AND object_id = OBJECT_ID('dbo.items'))
   CREATE INDEX ix_items_category ON dbo.items(category_id);
 GO
+/* Warranty expiry for the catalogue item (NULL = no warranty recorded). */
+IF COL_LENGTH('dbo.items', 'warranty_until') IS NULL
+  ALTER TABLE dbo.items ADD warranty_until DATE NULL;
+GO
 
 /* ------------------------------ branches -------------------------------- */
 IF OBJECT_ID('dbo.branches', 'U') IS NULL
@@ -104,6 +108,10 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'uq_vouchers_dir_num' AND object_id = OBJECT_ID('dbo.vouchers'))
   CREATE UNIQUE INDEX uq_vouchers_dir_num ON dbo.vouchers(direction, number) WHERE deleted_at IS NULL;
 GO
+/* Origin branch recorded on a maintenance disbursement (informational). */
+IF COL_LENGTH('dbo.vouchers', 'source_branch') IS NULL
+  ALTER TABLE dbo.vouchers ADD source_branch NVARCHAR(160) NULL;
+GO
 
 /* --------------------------- voucher_lines ------------------------------ */
 -- serials is a JSON array string (SQL Server has no array type); parsed in the app.
@@ -125,6 +133,19 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_vl_voucher' AND object
 GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_vl_item' AND object_id = OBJECT_ID('dbo.voucher_lines'))
   CREATE INDEX ix_vl_item ON dbo.voucher_lines(item_id);
+GO
+/* Per-line maintenance reason/explanation and warranty captured on a receipt. */
+IF COL_LENGTH('dbo.voucher_lines', 'reason') IS NULL
+  ALTER TABLE dbo.voucher_lines ADD reason NVARCHAR(200) NULL;
+GO
+IF COL_LENGTH('dbo.voucher_lines', 'line_note') IS NULL
+  ALTER TABLE dbo.voucher_lines ADD line_note NVARCHAR(MAX) NULL;
+GO
+IF COL_LENGTH('dbo.voucher_lines', 'has_warranty') IS NULL
+  ALTER TABLE dbo.voucher_lines ADD has_warranty BIT NULL;
+GO
+IF COL_LENGTH('dbo.voucher_lines', 'line_warranty_until') IS NULL
+  ALTER TABLE dbo.voucher_lines ADD line_warranty_until DATE NULL;
 GO
 
 /* ------------------------------ requests -------------------------------- */

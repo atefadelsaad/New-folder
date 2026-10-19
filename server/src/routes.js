@@ -17,6 +17,11 @@ const asInt = (v, fallback = 0) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
+const asDate = (v) => {
+  const s = String(v == null ? '' : v).trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+};
+
 const sqlReq = (client) => new sql.Request(client);
 
 const loginLimiter = rateLimit({
@@ -54,18 +59,18 @@ async function loadBootstrap(role) {
   const pool = await getPool();
   const cats = await pool.request().query('SELECT id, name, has_serial FROM categories ORDER BY id');
   const items = await pool.request().query(
-    'SELECT i.id, i.name, i.stock, i.maint_qty, i.scrap_qty, i.created_by, c.name AS category FROM items i JOIN categories c ON c.id = i.category_id ORDER BY i.id'
+    'SELECT i.id, i.name, i.stock, i.maint_qty, i.scrap_qty, i.created_by, i.warranty_until, c.name AS category FROM items i JOIN categories c ON c.id = i.category_id ORDER BY i.id'
   );
   const branches = await pool.request().query('SELECT id, name, gov, created_by, created_at FROM branches ORDER BY id');
   const branchItems = await pool.request().query('SELECT branch_id, item_id, qty FROM branch_items');
   const suppliers = await pool.request().query('SELECT name FROM suppliers ORDER BY name');
   const vouchers = await pool.request().query(
-    `SELECT v.id, v.direction, v.kind, v.number, v.branch_id, v.created_by, v.edited_by, v.doc_date, s.name AS supplier_name
+    `SELECT v.id, v.direction, v.kind, v.number, v.branch_id, v.created_by, v.edited_by, v.doc_date, v.source_branch, s.name AS supplier_name
        FROM vouchers v LEFT JOIN suppliers s ON s.id = v.supplier_id
       WHERE v.deleted_at IS NULL ORDER BY v.id DESC`
   );
   const lines = await pool.request().query(
-    `SELECT vl.voucher_id, vl.item_id, vl.qty, vl.serials, vl.state
+    `SELECT vl.voucher_id, vl.item_id, vl.qty, vl.serials, vl.state, vl.reason, vl.line_note, vl.has_warranty, vl.line_warranty_until
        FROM voucher_lines vl JOIN vouchers v ON v.id = vl.voucher_id
       WHERE v.deleted_at IS NULL ORDER BY vl.id`
   );
@@ -81,13 +86,17 @@ async function loadBootstrap(role) {
     let sns = [];
     if (r.serials) { try { sns = JSON.parse(r.serials); } catch (_) { sns = []; } }
     (linesByVoucher[r.voucher_id] = linesByVoucher[r.voucher_id] || []).push({
-      i: r.item_id, q: r.qty, sns, cd: r.item_condition || '', st: r.state || 'stock'
+      i: r.item_id, q: r.qty, sns, cd: r.item_condition || '', st: r.state || 'stock',
+      rs: r.reason || '', nt: r.line_note || '',
+      hw: !!r.has_warranty,
+      wu: r.line_warranty_until ? new Date(r.line_warranty_until).toISOString().slice(0, 10) : ''
     });
   });
 
   const voucherRows = vouchers.recordset.map((r) => ({
     id: r.id, d: r.doc_date, k: r.kind, sup: r.supplier_name || '',
     b: r.branch_id, p: r.number, by: r.created_by, ed: r.edited_by,
+    sb: r.source_branch || '',
     direction: r.direction, lines: linesByVoucher[r.id] || []
   }));
 
@@ -105,7 +114,10 @@ async function loadBootstrap(role) {
 
   return {
     categories: cats.recordset.map((r) => ({ id: r.id, name: r.name, has_serial: !!r.has_serial })),
-    items: items.recordset.map((r) => ({ id: r.id, n: r.name, c: r.category, s: junior ? 0 : r.stock, by: r.created_by })),
+    items: items.recordset.map((r) => ({
+      id: r.id, n: r.name, c: r.category, s: junior ? 0 : r.stock, by: r.created_by,
+      w: r.warranty_until ? new Date(r.warranty_until).toISOString().slice(0, 10) : ''
+    })),
     branches: branches.recordset.map((r) => ({
       id: r.id, n: r.name, g: r.gov, by: r.created_by,
       d: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : '',
@@ -221,7 +233,8 @@ router.post('/items', guard('stock'), async (req, res, next) => {
       .input('n', sql.NVarChar(160), name)
       .input('c', sql.Int, cid)
       .input('by', sql.NVarChar(120), req.user.name)
-      .query('INSERT INTO items (name, category_id, stock, maint_qty, scrap_qty, created_by) OUTPUT INSERTED.id VALUES (@n, @c, 0, 0, 0, @by)');
+      .input('w', sql.Date, asDate(req.body.warranty_until))
+      .query('INSERT INTO items (name, category_id, stock, maint_qty, scrap_qty, created_by, warranty_until) OUTPUT INSERTED.id VALUES (@n, @c, 0, 0, 0, @by, @w)');
     res.json({ ok: true, id: r.recordset[0].id });
   } catch (err) { next(err); }
 });
@@ -232,9 +245,14 @@ router.put('/items/:id', guard('stock'), async (req, res, next) => {
     if (!name) return res.status(400).json({ error: 'اسم الصنف لا يمكن أن يكون فارغًا' });
     const pool = await getPool();
     const cid = await categoryIdOn(pool, req.body.category);
-    await pool.request()
-      .input('n', sql.NVarChar(160), name).input('c', sql.Int, cid).input('id', sql.Int, asInt(req.params.id))
-      .query('UPDATE items SET name = @n, category_id = @c WHERE id = @id');
+    const hasW = Object.prototype.hasOwnProperty.call(req.body, 'warranty_until');
+    const q = hasW
+      ? 'UPDATE items SET name = @n, category_id = @c, warranty_until = @w WHERE id = @id'
+      : 'UPDATE items SET name = @n, category_id = @c WHERE id = @id';
+    const request = pool.request()
+      .input('n', sql.NVarChar(160), name).input('c', sql.Int, cid).input('id', sql.Int, asInt(req.params.id));
+    if (hasW) request.input('w', sql.Date, asDate(req.body.warranty_until));
+    await request.query(q);
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
@@ -403,19 +421,33 @@ function stockError(r) {
   return { error: 'الكمية غير كافية في الفرع المحدد' };
 }
 
+// Pool state carried by a receipt line. Any received line is either good
+// (`stock`) or damaged (`scrap`), whatever its source: a supplier receipt may
+// be marked خردة, a branch return may arrive damaged, and a maintenance return
+// is either repaired (`stock`) or denied (`scrap`).
+function receiptState(direction, raw) {
+  if (direction !== 'in') return 'stock';
+  return String(raw || '') === 'scrap' ? 'scrap' : 'stock';
+}
+
 function normalize(b) {
   const direction = b.direction === 'in' ? 'in' : 'out';
   const kind = ['sup', 'maint', 'br'].includes(b.kind) ? b.kind : 'sup';
   const branchId = kind === 'br' ? asInt(b.branch_id) || null : null;
   const supplierName = String(b.supplier_name || '').trim();
   const number = String(b.number || '').trim();
+  const sourceBranch = String(b.source_branch || '').trim();
   const lines = (b.lines || []).map((l) => ({
     itemId: asInt(l.item_id),
     qty: asInt(l.qty),
-    state: direction === 'in' && kind === 'sup' && ['maint', 'scrap'].includes(l.state) ? l.state : 'stock',
-    serials: Array.isArray(l.serials) ? l.serials : []
+    state: receiptState(direction, l.state),
+    serials: Array.isArray(l.serials) ? l.serials : [],
+    reason: String(l.reason || '').trim(),
+    note: String(l.note || '').trim(),
+    hasWarranty: !!l.has_warranty,
+    warrantyUntil: asDate(l.warranty_until)
   })).filter((l) => l.itemId && l.qty > 0);
-  return { direction, kind, branchId, supplierName, number, lines };
+  return { direction, kind, branchId, supplierName, number, sourceBranch, lines };
 }
 
 function validate(n) {
@@ -427,7 +459,34 @@ function validate(n) {
   return null;
 }
 
-const touchesPool = (n) => n.kind === 'maint' || n.lines.some((l) => l.state !== 'stock');
+// Movements that touch the under-maintenance / scrap pools: a return from
+// maintenance (`maint`) or a disbursement to a supplier (sent for repair).
+const touchesPool = (n) =>
+  (n.direction === 'out' && n.kind === 'sup') || n.kind === 'maint' || n.lines.some((l) => l.state !== 'stock');
+
+async function insertLine(client, voucherId, l) {
+  await sqlReq(client)
+    .input('v', sql.Int, voucherId).input('i', sql.Int, l.itemId).input('q', sql.Int, l.qty)
+    .input('st', sql.NVarChar(8), l.state).input('sn', sql.NVarChar(sql.MAX), JSON.stringify(l.serials))
+    .input('rs', sql.NVarChar(200), l.reason || null)
+    .input('nt', sql.NVarChar(sql.MAX), l.note || null)
+    .input('hw', sql.Bit, l.hasWarranty ? 1 : 0)
+    .input('wu', sql.Date, l.warrantyUntil || null)
+    .query(`INSERT INTO voucher_lines (voucher_id, item_id, qty, state, serials, reason, line_note, has_warranty, line_warranty_until)
+            VALUES (@v, @i, @q, @st, @sn, @rs, @nt, @hw, @wu)`);
+}
+
+// A warranty captured on a receipt that is not from a supplier (a unit back
+// from maintenance or from a branch) is also written onto the catalogue item.
+async function applyLineWarranty(client, n) {
+  if (n.direction !== 'in' || n.kind === 'sup') return;
+  for (const l of n.lines) {
+    if (l.hasWarranty && l.warrantyUntil) {
+      await sqlReq(client).input('w', sql.Date, l.warrantyUntil).input('id', sql.Int, l.itemId)
+        .query('UPDATE items SET warranty_until = @w WHERE id = @id');
+    }
+  }
+}
 
 router.post('/vouchers', guard('stock'), async (req, res, next) => {
   const pool = await getPool();
@@ -450,16 +509,13 @@ router.post('/vouchers', guard('stock'), async (req, res, next) => {
     const vr = await sqlReq(tx)
       .input('d', sql.NVarChar(3), n.direction).input('k', sql.NVarChar(8), n.kind)
       .input('s', sql.Int, supId).input('b', sql.Int, n.branchId).input('n', sql.NVarChar(60), n.number)
-      .input('dt', sql.NVarChar(40), new Date().toLocaleDateString('ar-EG'))
+      .input('sb', sql.NVarChar(160), n.sourceBranch || null)
+      .input('dt', sql.NVarChar(40), new Date().toLocaleDateString('en-CA'))
       .input('by', sql.NVarChar(120), req.user.name)
-      .query('INSERT INTO vouchers (direction, kind, supplier_id, branch_id, number, doc_date, created_by) OUTPUT INSERTED.id VALUES (@d, @k, @s, @b, @n, @dt, @by)');
+      .query('INSERT INTO vouchers (direction, kind, supplier_id, branch_id, number, source_branch, doc_date, created_by) OUTPUT INSERTED.id VALUES (@d, @k, @s, @b, @n, @sb, @dt, @by)');
     const vid = vr.recordset[0].id;
-    for (const l of n.lines) {
-      await sqlReq(tx)
-        .input('v', sql.Int, vid).input('i', sql.Int, l.itemId).input('q', sql.Int, l.qty)
-        .input('st', sql.NVarChar(8), l.state).input('sn', sql.NVarChar(sql.MAX), JSON.stringify(l.serials))
-        .query('INSERT INTO voucher_lines (voucher_id, item_id, qty, state, serials) VALUES (@v, @i, @q, @st, @sn)');
-    }
+    for (const l of n.lines) await insertLine(tx, vid, l);
+    await applyLineWarranty(tx, n);
     await tx.commit();
     res.json({ ok: true, id: vid });
   } catch (err) {
@@ -510,15 +566,12 @@ router.put('/vouchers/:id', guard('stock'), async (req, res, next) => {
     await sqlReq(tx)
       .input('d', sql.NVarChar(3), n.direction).input('k', sql.NVarChar(8), n.kind)
       .input('s', sql.Int, supId).input('b', sql.Int, n.branchId).input('n', sql.NVarChar(60), n.number)
+      .input('sb', sql.NVarChar(160), n.sourceBranch || null)
       .input('ed', sql.NVarChar(120), req.user.name).input('id', sql.Int, id)
-      .query('UPDATE vouchers SET direction = @d, kind = @k, supplier_id = @s, branch_id = @b, number = @n, edited_by = @ed WHERE id = @id');
+      .query('UPDATE vouchers SET direction = @d, kind = @k, supplier_id = @s, branch_id = @b, number = @n, source_branch = @sb, edited_by = @ed WHERE id = @id');
     await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM voucher_lines WHERE voucher_id = @id');
-    for (const l of n.lines) {
-      await sqlReq(tx)
-        .input('v', sql.Int, id).input('i', sql.Int, l.itemId).input('q', sql.Int, l.qty)
-        .input('st', sql.NVarChar(8), l.state).input('sn', sql.NVarChar(sql.MAX), JSON.stringify(l.serials))
-        .query('INSERT INTO voucher_lines (voucher_id, item_id, qty, state, serials) VALUES (@v, @i, @q, @st, @sn)');
-    }
+    for (const l of n.lines) await insertLine(tx, id, l);
+    await applyLineWarranty(tx, n);
     await tx.commit();
     res.json({ ok: true });
   } catch (err) {

@@ -79,11 +79,39 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
 - Three warehouse pools per item: `stock`, `تحت الصيانة` (`maint_qty`) and `خردة`
   (`scrap_qty`). All are kept non-negative in `server/src/stock.js` and enforced inside a
   DB transaction with row locks before anything is written.
-- Pools are **filled only by receipts**: a supplier receipt line marked `تحت الصيانة` or
-  `خردة` adds to that pool instead of stock.
-- `تحت الصيانة` drains **only back to stock** via a `مِن صيانة` receipt (`kind = maint`);
-  `خردة` is terminal and never leaves the pool. Pools are warehouse-level only.
-- Pool movements (marking a line `تحت الصيانة`/`خردة`, or returning from maintenance) are
+- The document operations are split into dedicated screens (tabs), each with a fixed
+  direction/kind and no source selector:
+  - **استلام من مورد** — receipt from a supplier (`in/sup`); always added to `مخزون`.
+  - **استلام من فرع** — receipt from a branch (`in/br`); the branch balance is reduced and
+    the qty is added to `مخزون` or `خردة` per line.
+  - **صرف إلى فرع** — disbursement to a branch (`out/br`); `مخزون` is reduced and the
+    branch balance is increased.
+  - **صرف إلى مورد الصيانة** — reached from the **تحت الصيانة** tab (`out/sup`).
+- Receiving goods (`direction = in`) moves qty into `stock` (good) or `خردة` (damaged),
+  according to the line's final status, whose default is `مخزون`. On a maintenance return
+  the same choice is labelled **تم إصلاحه** (repaired → `stock`) or **رفض الصيانة**
+  (denied → `خردة`), and the pool is adjusted automatically — the maintenance page never
+  asks for a stock/damaged quantity. Supplier receipts do not offer `خردة`.
+- Sending to maintenance is a **disbursement to a maintenance supplier** (`direction = out`,
+  `kind = sup`): qty leaves `stock` and enters `تحت الصيانة`. Such a permit records the
+  supplier, permit number, automatic date, items, serials, per-line maintenance reason and
+  explanation, and an optional origin branch. It is the source of the release note.
+- The **تحت الصيانة** tab has two actions: the read-only **إذن الخروج للصيانة** (exit
+  permits: serials, party, origin branch, reason, explanation, registrar and date) and
+  **إقرار استلام من الصيانة** (acknowledgement of the returned goods). The exit list shows
+  only the quantity still under maintenance, so fully returned lines disappear.
+- The acknowledgement page lists the open items with their exit-permit details (number,
+  date, supplier, origin branch, reason, explanation, registrar and available qty) and
+  records the result and warranty per line. It also shows the acknowledgement history with
+  the returned items' serials, quantities and results.   This page creates the maintenance
+  receipt slip, which is never mixed into the exit permit.
+- `خردة` is terminal and never leaves the pool. Pools are warehouse-level only.
+- **Warranty** is recorded per catalogue item (`items.warranty_until`), set from
+  **إدارة الأصناف**. A green badge shows `ضمان حتى <date>` while it is valid, a red
+  `انتهى الضمان` once expired, and `بدون ضمان` when unset. On receipts that are not from a
+  supplier (maintenance/branch) each line can also capture `هل يوجد ضمان؟` + expiry, which
+  is written back onto the item.
+- Maintenance movements (disbursing to a supplier and returning from maintenance) are
   restricted to **admin and head** (the `pool` permission).
 - A disbursement can never exceed the warehouse balance, and a branch balance can never
   go negative.

@@ -34,6 +34,7 @@ async function init() {
 
 const app = express();
 app.use(cors());
+app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 app.use(express.json({ limit: '2mb' }));
 
 app.get('/health', (req, res) => res.json({ ok: true }));

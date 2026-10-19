@@ -37,6 +37,7 @@ table{width:100%;border-collapse:collapse}
 th,td{text-align:start;padding:8px 10px;border-bottom:1px solid var(--ln);white-space:nowrap}
 th{font-weight:600;color:var(--mut);font-size:13px}
 .chip{display:inline-block;border-radius:20px;padding:1px 10px;font-size:12px;font-weight:600;background:var(--accb);color:var(--acc)}
+.dt{direction:ltr;unicode-bidi:isolate;display:inline-block;white-space:nowrap}
 .chip.ok{background:var(--okb);color:var(--ok)}.chip.bad{background:var(--badb);color:var(--bad)}
 .bl{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
 .bc{text-align:start;background:var(--sf);border:1px solid var(--ln);border-radius:8px;padding:14px;cursor:pointer;font:inherit;color:var(--ink)}
@@ -57,6 +58,7 @@ th{font-weight:600;color:var(--mut);font-size:13px}
 <header>
   <h1>مخزن محرم بك - تقنية المعلومات</h1>
   <div class="ubar" id="roleBar"></div>
+  <span style="font-size:11px;color:#000;opacity:.55" dir="ltr">build 2026-10-19 13:12-b8</span>
 </header>
 <nav id="nav"></nav>
 <main id="m"></main>
@@ -66,9 +68,10 @@ const GOV=['الإسكندرية','القاهرة','الجيزة','البحير�
 const R={admin:'IT Manager',head:'Technical Head',area:'Area Manager',store:'Warehouse Keeper',senior:'Senior Technical',junior:'Junior Technical'};
 const CAN={addBranch:['admin','head'],stock:['admin','head','store'],view:['admin','head','senior','area','store'],review:['admin','head','senior'],reject:['admin','head','area','store'],edit:['admin','head','area','store'],delRecv:['admin','head'],request:['admin','head','senior','junior'],branchEdit:['admin','head','senior'],approve:['admin','head','area'],release:['admin','head','store'],pool:['admin','head']};
 const ST={review:['بانتظار مراجعة السينيور',''],pending:['بانتظار مدير المنطقة',''],approved:['بانتظار مسؤول المخزن',''],released:['تم الصرف','ok'],rejected:['مرفوض','bad']};
-const STS=[['stock','مخزون'],['maint','تحت الصيانة'],['scrap','خردة']];
+const STS=[['stock','مخزون'],['scrap','خردة']];
+const MRES=[['stock','تم إصلاحه'],['scrap','رفض الصيانة']];
 const SM={stock:'مخزون',maint:'تحت الصيانة',scrap:'خردة'};
-const SRC={in:{sup:'من مورد',maint:'من صيانة',br:'من فرع'},out:{sup:'إلى مورد',br:'إلى فرع'}};
+const SRC={in:{sup:'من مورد',maint:'من صيانة',br:'من فرع'},out:{sup:'إلى مورد الصيانة',br:'إلى فرع'}};
 const STATE={token:localStorage.getItem('wh_token')||'',user:null};
 let CATS=[];const SER={};
 let items=[],branches=[],reqs=[],suppliers=[],DB={in:[],out:[]},MAINT={},SCRAP={};
@@ -79,8 +82,21 @@ const ok=a=>CAN[a].includes(role);
 const it=id=>items.find(i=>i.id==id);
 const br=id=>branches.find(b=>b.id==id);
 const dist=id=>branches.reduce((a,b)=>a+(b.q[id]||0),0);
+const isoToday=()=>new Date().toLocaleDateString('en-CA');
+const ARD={'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
+function dispDate(s){
+  if(!s)return '';
+  const raw=String(s).replace(/[\u200e\u200f\u061c]/g,'');
+  let m=raw.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(m)return `${m[1]}-${m[2]}-${m[3]}`;
+  const latin=raw.replace(/[٠-٩]/g,c=>ARD[c]||c);
+  m=latin.match(/(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/);
+  return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:raw;
+}
+const dcell=s=>s?`<span class="dt">${e(dispDate(s))}</span>`:'';
+function warrantyBadge(id){const x=it(id);if(!x||!x.w)return '<span class="chip">بدون ضمان</span>';return x.w>=isoToday()?`<span class="chip ok">ضمان حتى ${dcell(x.w)}</span>`:`<span class="chip bad">انتهى الضمان ${dcell(x.w)}</span>`}
 const opts=(a,sel)=>a.map(x=>`<option${x==sel?' selected':''}>${e(x)}</option>`).join('');
-let pendDel=null,editId=null,pend=null,ui=null,catEdit=null,pendCat=null,stockLoc=null;
+let pendDel=null,editId=null,pend=null,ui=null,catEdit=null,pendCat=null,stockLoc=null,maintView=null,MA=null;
 
 async function api(path,method='GET',body){
   const headers=Object.assign({'Content-Type':'application/json'},STATE.token?{'Authorization':'Bearer '+STATE.token}:{});
@@ -114,10 +130,12 @@ async function boot(){
 }
 function hydrate(d){
   STATE.user=d.user;role=d.user.role;
+  const wasEmpty=!items.length;
   items=d.items;branches=d.branches;reqs=d.requests;suppliers=d.suppliers;DB={in:d.vouchers.in,out:d.vouchers.out};
   MAINT={};SCRAP={};(d.maintenance||[]).forEach(r=>MAINT[r.i]=r.q);(d.scrap||[]).forEach(r=>SCRAP[r.i]=r.q);
   CATS=d.categories.map(c=>c.name);
   Object.keys(SER).forEach(k=>delete SER[k]);d.categories.forEach(c=>SER[c.name]=c.has_serial);
+  if(wasEmpty)Object.keys(DS).forEach(key=>{DR[key]=nd(key);E[key]=null});
   $('#roleBar').innerHTML=`<span>${e(d.user.name)} · ${e(R[role]||role)}</span><button class="btn ghost" onclick="logout()">خروج</button>`;
 }
 async function refresh(){const d=await api('/bootstrap');hydrate(d)}
@@ -129,18 +147,18 @@ function readPick(p){return items.filter(i=>{const el=$('#'+p+i.id);return el&&e
 
 function go(){
   const todo=reqs.filter(r=>(r.st=='review'&&ok('review'))||(r.st=='pending'&&ok('approve'))||(r.st=='approved'&&ok('release'))).length;
-  const tabs=[['stock','الأصناف والمخزن'],['maint','تحت الصيانة'],['scrap','الخردة'],['recv','استلام بضاعة'],['iss','أذون صرف'],['br','الفروع'],['items','إدارة الأصناف'],['cats','الفئات'],['sup','الموردون'],['rq','الطلبات'+(todo?` (${todo})`:'')],['reqbr','متطلبات الفروع']].filter(t=>t[0]=='rq'||((t[0]=='items'||t[0]=='recv'||t[0]=='iss'||t[0]=='sup'||t[0]=='cats')?ok('stock'):ok('view')));if(!tabs.some(t=>t[0]==tab))tab='rq';$('#nav').innerHTML=tabs.map(([k,v])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';sel=null;go()">${v}</button>`).join('');
-  $('#m').innerHTML=tab=='stock'?vStock():tab=='maint'?vMaint():tab=='scrap'?vScrap():(tab=='recv'||tab=='iss')?vDoc():tab=='items'?vItems():tab=='cats'?vCats():tab=='sup'?vSuppliers():tab=='br'?(sel?vBranch():vBranches()):tab=='reqbr'?vBranchReqs():vReqs();
+  const tabs=[['stock','الأصناف والمخزن'],['maint','تحت الصيانة'],['scrap','الخردة'],['recvsup','استلام من مورد'],['recvbr','استلام من فرع'],['issbr','صرف إلى فرع'],['br','الفروع'],['items','إدارة الأصناف'],['cats','الفئات'],['sup','الموردون'],['rq','الطلبات'+(todo?` (${todo})`:'')],['reqbr','متطلبات الفروع']].filter(t=>t[0]=='rq'||((t[0]=='items'||t[0]=='recvsup'||t[0]=='recvbr'||t[0]=='issbr'||t[0]=='sup'||t[0]=='cats')?ok('stock'):ok('view')));if(!tabs.some(t=>t[0]==tab))tab='rq';$('#nav').innerHTML=tabs.map(([k,v])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';sel=null;maintView=null;go()">${v}</button>`).join('');
+  $('#m').innerHTML=tab=='stock'?vStock():tab=='maint'?(maintView==='out'?vDoc('issmaint'):vMaint()):tab=='scrap'?vScrap():tab=='recvsup'?vDoc('recvsup'):tab=='recvbr'?vDoc('recvbr'):tab=='issbr'?vDoc('issbr'):tab=='items'?vItems():tab=='cats'?vCats():tab=='sup'?vSuppliers():tab=='br'?(sel?vBranch():vBranches()):tab=='reqbr'?vBranchReqs():vReqs();
   if(tab=='stock')tbl();
 }
 
 function vItems(){
   const adm=role=='admin',cs=i=>opts(CATS.includes(i.c)?CATS:[...CATS,i.c],i.c);
-  return `<div class="box"><h3>إضافة صنف جديد</h3><div class="row"><label>اسم الصنف<input id="nn"></label><label>الفئة<select id="nc">${opts(CATS)}</select></label><button class="btn" onclick="newItem()">حفظ الصنف</button></div>
-  <p class="mut" style="margin:10px 0 0">تُضاف الكميات من أذون الاستلام فقط، ولا يمكن إدخال رصيد يدويًا.</p></div>
-  <div class="box tw"><h3>الأصناف (${items.length})</h3><table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>أضافه</th><th></th></tr>`+items.map(i=>editId==i.id
-   ?`<tr><td><select id="eic">${cs(i)}</select></td><td><input id="ein" value="${e(i.n)}"></td><td>${i.s}</td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn" onclick="saveItem(${i.id})">تأكيد</button><button class="btn ghost" onclick="editId=null;go()">إلغاء</button></div></td></tr>`
-   :`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${i.s}</td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn ghost" onclick="editId=${i.id};pendDel=null;go()">تعديل</button>${adm?`<button class="btn bad" onclick="del(${i.id})">${pendDel==i.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></td></tr>`).join('')+'</table></div>';
+  return `<div class="box"><h3>إضافة صنف جديد</h3><div class="row"><label>اسم الصنف<input id="nn"></label><label>الفئة<select id="nc">${opts(CATS)}</select></label><label>انتهاء الضمان (اختياري)<input type="date" id="nw"></label><button class="btn" onclick="newItem()">حفظ الصنف</button></div>
+  <p class="mut" style="margin:10px 0 0">تُضاف الكميات من أذون الاستلام فقط، ولا يمكن إدخال رصيد يدويًا. يوضّح عمود الضمان إن كان الصنف تحت الضمان وتاريخ انتهائه.</p></div>
+  <div class="box tw"><h3>الأصناف (${items.length})</h3><table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>الضمان</th><th>أضافه</th><th></th></tr>`+items.map(i=>editId==i.id
+   ?`<tr><td><select id="eic">${cs(i)}</select></td><td><input id="ein" value="${e(i.n)}"></td><td>${i.s}</td><td><input type="date" id="eiw" value="${e(i.w)}"></td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn" onclick="saveItem(${i.id})">تأكيد</button><button class="btn ghost" onclick="editId=null;go()">إلغاء</button></div></td></tr>`
+   :`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${i.s}</td><td>${warrantyBadge(i.id)}</td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn ghost" onclick="editId=${i.id};pendDel=null;go()">تعديل</button>${adm?`<button class="btn bad" onclick="del(${i.id})">${pendDel==i.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></td></tr>`).join('')+'</table></div>';
 }
 function vCats(){
   return `<div class="box"><h3>إضافة فئة</h3><div class="row">
@@ -186,6 +204,7 @@ async function saveItem(id){
   const n=$('#ein').value.trim();
   if(!n)return toast('اسم الصنف لا يمكن أن يكون فارغًا');
   const el=$('#eic'),body={name:n};if(el)body.category=el.value;
+  const w=$('#eiw');if(w)body.warranty_until=w.value||'';
   try{await api('/items/'+id,'PUT',body);editId=null;await refresh();toast('تم حفظ التعديل');go()}catch(err){toast(err.message)}
 }
 async function del(id){
@@ -195,14 +214,16 @@ async function del(id){
 }
 async function newItem(){
   const n=$('#nn').value.trim();if(!n)return toast('اكتب اسم الصنف');
-  try{await api('/items','POST',{name:n,category:$('#nc').value});await refresh();toast('تمت إضافة الصنف');go()}catch(err){toast(err.message)}
+  try{await api('/items','POST',{name:n,category:$('#nc').value,warranty_until:($('#nw')||{}).value||''});await refresh();toast('تمت إضافة الصنف');go()}catch(err){toast(err.message)}
 }
 
-const KK=()=>tab=='iss'?'out':'in';
+const DS={recvsup:{dir:'in',kind:'sup',t:'استلام من مورد'},recvbr:{dir:'in',kind:'br',t:'استلام من فرع'},issbr:{dir:'out',kind:'br',t:'صرف إلى فرع'},issmaint:{dir:'out',kind:'sup',t:'صرف إلى مورد الصيانة'}};
+let docKey='recvsup';
+const KK=()=>docKey;
 const hasSer=id=>{const x=it(id);return !!(x&&SER[x.c])};
-const nl=()=>{const p=KK()=='out'?items.filter(i=>i.s>0):items;return {i:p.length?p[0].id:'',q:1,sns:[''],st:'stock'}};
-const nd=()=>({k:'sup',sup:'',b:branches[0]?branches[0].id:null,p:'',lines:[nl()]});
-const DR={in:nd(),out:nd()},E={in:null,out:null};
+const nl=(dir=DS[KK()].dir)=>{const p=dir=='out'?items.filter(i=>i.s>0):items;return {i:p.length?p[0].id:'',q:1,sns:[''],st:'stock',rs:'',nt:'',hw:false,wu:''}};
+const nd=key=>{const S=DS[key];return {k:S.kind,sup:'',b:branches[0]?branches[0].id:null,p:'',sb:'',lines:[nl(S.dir)]}};
+const DR={},E={};Object.keys(DS).forEach(key=>{DR[key]=nd(key);E[key]=null});
 function partyName(r){const b=br(r.b);return r.k=='br'?(b?b.n:'فرع غير محدد'):(r.sup||'مورد غير محدد')}
 function registeredSuppliers(){const used=[...DB.in,...DB.out].map(r=>String(r.sup||'').trim()).filter(Boolean);return [...new Set([...suppliers,...used])]}
 function supplierOptions(selected){const names=registeredSuppliers();if(selected&&!names.includes(selected))names.push(selected);const body=names.length?names.map(n=>`<option value="${e(n)}"${n==selected?' selected':''}>${e(n)}</option>`).join(''):'<option value="">لا يوجد موردون مسجلون بعد</option>';return '<option value="">اختر موردًا مسجلاً</option>'+body}
@@ -243,67 +264,183 @@ function trackTable(map,empty){
   const rows=items.filter(i=>map[i.id]).map(i=>`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${map[i.id]}</td></tr>`).join('');
   return rows?`<div class="box tw"><table><tr><th>الفئة</th><th>الصنف</th><th>العدد</th></tr>${rows}</table></div>`:`<p class="mut">${empty}</p>`;
 }
+function maintItems(){return items.filter(i=>MAINT[i.id]>0)}
 function vMaint(){
-  const rows=items.filter(i=>MAINT[i.id]).map(i=>`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${MAINT[i.id]}</td>${ok('pool')?`<td><button class="btn ghost" onclick="retMaint(${i.id})">إرجاع للمخزن</button></td>`:''}</tr>`).join('');
-  const head=`<tr><th>الفئة</th><th>الصنف</th><th>العدد</th>${ok('pool')?'<th>إجراء</th>':''}</tr>`;
-  return `<h2>تحت الصيانة</h2>`+(rows?`<div class="box tw"><table>${head}${rows}</table></div>`:'<p class="mut">لا توجد أصناف تحت الصيانة.</p>')
-   +`<p class="mut">تُضاف الأصناف من أذون الاستلام (من مورد) بحالة «تحت الصيانة»، ويُعاد إرجاعها إلى المخزن من هنا.</p>`;
+  if(maintView==='release')return vMaintRelease();
+  if(maintView==='ack')return vMaintAck();
+  const rows=maintItems().map(i=>`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${MAINT[i.id]}</td><td>${warrantyBadge(i.id)}</td></tr>`).join('');
+  return `<h2>تحت الصيانة</h2>
+   <div class="bl" style="margin-bottom:14px">
+     <button class="bc" onclick="openIssMaint()"><b>صرف إلى مورد الصيانة</b><span>إنشاء إذن خروج الأصناف إلى الصيانة</span></button>
+     <button class="bc" onclick="maintView='release';go()"><b>إذن الخروج للصيانة</b><span>كل الأصناف الخارجة للصيانة: السيريال، الجهة، من سجّلها، والتاريخ</span></button>
+     <button class="bc" onclick="MA=null;maintView='ack';go()"><b>إقرار استلام من الصيانة</b><span>تسجيل الأصناف الراجعة: النتيجة، السيريال، الجهة، والضمان مع تفاصيل إذن الخروج</span></button>
+   </div>
+   ${rows?`<div class="box tw"><h3>الرصيد الحالي تحت الصيانة</h3><table><tr><th>الفئة</th><th>الصنف</th><th>العدد</th><th>الضمان</th></tr>${rows}</table></div>`:'<p class="mut">لا توجد أصناف تحت الصيانة حاليًا.</p>'}
+   <p class="mut">تُضاف الأصناف من زر «صرف إلى مورد الصيانة»، ويُسجَّل استلامها من زر «إقرار استلام من الصيانة».</p>`;
+}
+function openIssMaint(){DR.issmaint=nd('issmaint');E.issmaint=null;maintView='out';go()}
+function maintOutRows(){
+  const remaining={...MAINT},rows=[];
+  [...DB.out].reverse().forEach(r=>{
+    if(r.k!='sup')return;
+    r.lines.forEach(l=>{
+      const rem=remaining[l.i]||0;
+      if(rem<=0)return;
+      const q=Math.min(l.q,rem);
+      remaining[l.i]=rem-q;
+      rows.push({r,l,q});
+    });
+  });
+  return rows;
+}
+function mackLine(){
+  const m=maintItems(),id=m.length?m[0].id:0;
+  const ref=id?maintOutRows().find(x=>x.l.i==id):null;
+  const L={i:id,q:1,sns:[],st:'stock',hw:false,wu:''};
+  if(ref)L.sns=ref.l.sns.slice(0,1);
+  fixSn(L);
+  return L;
+}
+function setAckItem(j,v){
+  const id=+v||0,L=MA.lines[j],ref=id?maintOutRows().find(x=>x.l.i==id):null;
+  L.i=id;L.q=1;L.sns=ref?ref.l.sns.slice(0,1):[];
+  fixSn(L);go();
+}
+function setAckQ(j,v){
+  const L=MA.lines[j];
+  L.q=Math.min(Math.max(1,Math.floor(+v||1)),Math.max(1,MAINT[L.i]||1));
+  fixSn(L);go();
+}
+function vMaintAck(){
+  const back=`<button class="btn ghost" onclick="maintView=null;go()">رجوع للصيانة</button>`;
+  const history=ackCards();
+  if(!ok('pool'))return back+`<h2 style="margin-top:14px">إقرار استلام من الصيانة</h2>
+   <p class="mut" style="margin:-6px 0 12px">عرض فقط. تسجيل الإقرار متاح لمدير النظام والمدير الفني.</p>${history}`;
+  const open=maintOutRows();
+  if(!open.length)return back+`<h2 style="margin-top:14px">إقرار استلام من الصيانة</h2>
+   <p class="mut">لا توجد أصناف تحت الصيانة حاليًا.</p>${history}`;
+  if(!MA)MA={sup:open[0].r.sup||'',p:'',lines:[mackLine()]};
+  const lines=MA.lines.map((l,j)=>{
+    fixSn(l);
+    const avail=items.filter(i=>(MAINT[i.id]||0)>0||i.id==l.i);
+    const groups=CATS.map(c=>{const g=avail.filter(i=>i.c==c);return g.length?`<optgroup label="${e(c)}">`+g.map(i=>`<option value="${i.id}"${i.id==l.i?' selected':''}>${e(i.n)}</option>`).join('')+'</optgroup>':''}).join('');
+    const ref=open.find(x=>x.l.i==l.i);
+    const det=ref?`<div class="mut" style="margin:6px 0 0;line-height:1.8">إذن الخروج: ${e(ref.r.p)} · ${dcell(ref.r.d)} · الجهة: ${e(ref.r.sup||'-')}${ref.r.sb?' · من فرع '+e(ref.r.sb):''}${ref.l.rs?' · سبب الصيانة: '+e(ref.l.rs):''}${ref.l.nt?' · شرح: '+e(ref.l.nt):''} · سجّله: ${e(ref.r.by||'-')} · المتاح: ${ref.q}</div>`:'';
+    return `<div class="box" style="background:var(--bg)"><div class="grid">
+     <label>الصنف<select onchange="setAckItem(${j},this.value)">${groups||'<option value="">لا توجد أصناف تحت الصيانة</option>'}</select>${warrantyBadge(l.i)}</label>
+     <label>النتيجة<select onchange="MA.lines[${j}].st=this.value"><option value="stock"${l.st!='scrap'?' selected':''}>تم إصلاحه</option><option value="scrap"${l.st=='scrap'?' selected':''}>رفض الصيانة</option></select></label>
+     <label>العدد المستلم (المتاح: ${MAINT[l.i]||0})<input type="number" min="1" value="${l.q}" onchange="setAckQ(${j},this.value)"></label></div>
+     ${det}
+     ${hasSer(l.i)?'<div class="grid">'+l.sns.map((s,n)=>`<label>سيريال ${n+1}<input value="${e(s)}" oninput="MA.lines[${j}].sns[${n}]=this.value"></label>`).join('')+'</div>':'<p class="mut" style="margin:0">هذه الفئة بدون سيريال</p>'}
+     <div class="ln" style="margin-top:8px"><label class="ln"><input type="checkbox" ${l.hw?'checked':''} onchange="MA.lines[${j}].hw=this.checked;go()"> هل يوجد ضمان؟</label>${l.hw?`<label>انتهاء الضمان<input type="date" value="${e(l.wu||'')}" oninput="MA.lines[${j}].wu=this.value"></label>`:''}</div>
+     ${MA.lines.length>1?`<button class="btn ghost" style="margin-top:8px" onclick="MA.lines.splice(${j},1);go()">حذف السطر</button>`:''}</div>`;
+  }).join('');
+  return back+`<div class="box" style="margin-top:14px"><h3>إقرار استلام من الصيانة</h3>
+   <p class="mut" style="margin:-4px 0 10px">يعرض تفاصيل إذن الخروج لكل صنف، ويوزّع الراجع تلقائيًا حسب النتيجة: تم إصلاحه ← مخزون، رفض الصيانة ← خردة.</p>
+   <div class="grid">
+    <label>جهة الصيانة<select onchange="MA.sup=this.value">${supplierOptions(MA.sup)}</select></label>
+    <label>رقم الإقرار<input value="${e(MA.p)}" oninput="MA.p=this.value"></label>
+    <label>تاريخ الاستلام<span style="padding:7px 0">${dcell(isoToday())}</span></label>
+    <label>المستلم<span style="padding:7px 0">${e((STATE.user||{}).name||'')}</span></label>
+   </div>
+   <h3 style="margin-top:12px">الأصناف الراجعة (${MA.lines.length})</h3>${lines}
+   <div class="row"><button class="btn ghost" onclick="MA.lines.push(mackLine());go()">إضافة صنف</button><button class="btn" onclick="saveAck()">تسجيل الإقرار</button></div></div>
+   <h2>سجل إقرارات الاستلام من الصيانة</h2>${history}`;
+}
+function ackCards(){
+  const list=DB.in.filter(r=>r.k=='maint');
+  if(!list.length)return '<p class="mut">لا توجد إقرارات استلام من الصيانة بعد.</p>';
+  return list.map(r=>`<div class="box"><div><b>إقرار استلام رقم ${e(r.p)}</b> <span class="chip">من صيانة</span><div class="mut">الجهة: ${e(r.sup||'غير محددة')} · ${dcell(r.d)} · استلمه ${e(r.by||'-')}${r.ed?' · عدّله '+e(r.ed):''}</div></div>
+   <div class="tw"><table><tr><th>الصنف</th><th>النتيجة</th><th>الضمان</th><th>السيريال</th><th>العدد</th></tr>${r.lines.map(l=>`<tr><td>${e((it(l.i)||{n:'-'}).n)}</td><td>${l.st=='scrap'?'<span class="chip bad">رفض الصيانة</span>':'<span class="chip ok">تم إصلاحه</span>'}</td><td>${l.hw?`حتى ${dcell(l.wu||'')}`:'بدون ضمان'}</td><td>${e(l.sns.length?l.sns.join('، '):'بدون سيريال')}</td><td>${l.q}</td></tr>`).join('')}</table></div></div>`).join('');
+}
+async function saveAck(){
+  if(!MA||!MA.lines.length)return toast('أضف صنفًا واحدًا على الأقل');
+  const p=(MA.p||'').trim();
+  if(!p)return toast('اكتب رقم الإقرار');
+  const seen={},used={},lines=[];
+  for(const l of MA.lines){
+    if(!l.i)return toast('اختر الصنف في كل سطر');
+    if(!(l.q>0))return toast('اكتب العدد في كل سطر');
+    used[l.i]=(used[l.i]||0)+Number(l.q);
+    if(used[l.i]>(MAINT[l.i]||0))return toast('العدد أكبر من الرصيد تحت الصيانة');
+    let sns=[];
+    if(hasSer(l.i)){
+      fixSn(l);sns=l.sns.map(s=>s.trim());
+      for(const s of sns){const t=s.toLowerCase();if(!t)return toast('اكتب كل السيريالات لصنف '+it(l.i).n);if(seen[t])return toast('سيريال مكرر: '+s);seen[t]=1}
+    }
+    if(l.hw&&!l.wu)return toast('اكتب تاريخ انتهاء الضمان');
+    lines.push({item_id:+l.i,qty:+l.q,serials:sns,state:l.st=='scrap'?'scrap':'stock',has_warranty:!!l.hw,warranty_until:l.hw?(l.wu||''):''});
+  }
+  try{
+    await api('/vouchers','POST',{direction:'in',kind:'maint',number:p,supplier_name:(MA.sup||'').trim(),branch_id:null,lines});
+    MA=null;await refresh();toast('تم تسجيل إقرار الاستلام من الصيانة');go();
+  }catch(err){toast(err.message)}
+}
+function vMaintRelease(){
+  const rows=maintOutRows();
+  return `<button class="btn ghost" onclick="maintView=null;go()">رجوع للصيانة</button>
+   <h2 style="margin-top:14px">إذن الخروج للصيانة</h2>
+   <p class="mut" style="margin:-6px 0 12px">أذون الصرف إلى مورد الصيانة التي لا تزال أصنافها تحت الصيانة: الصنف والسيريال والجهة والفرع المصدر وسبب الصيانة والشرح ومن سجّلها والتاريخ.</p>
+   ${rows.length?`<div class="box tw"><table><tr><th>التاريخ</th><th>رقم الإذن</th><th>الفئة</th><th>الصنف</th><th>السيريال</th><th>العدد</th><th>الضمان</th><th>جهة الصيانة</th><th>الفرع المصدر</th><th>سبب الصيانة</th><th>شرح</th><th>سجّله</th></tr>${rows.map(({r,l,q})=>`<tr><td>${dcell(r.d)}</td><td>${e(r.p)}</td><td>${e((it(l.i)||{c:'-'}).c)}</td><td>${e((it(l.i)||{n:'-'}).n)}</td><td>${e(l.sns.length?l.sns.slice(0,q).join('، '):'بدون سيريال')}</td><td>${q}</td><td>${warrantyBadge(l.i)}</td><td>${e(r.sup||'-')}</td><td>${e(r.sb||'-')}</td><td>${e(l.rs||'-')}</td><td>${e(l.nt||'-')}</td><td>${e(r.by||'-')}</td></tr>`).join('')}</table></div>`:'<p class="mut">لا توجد أصناف ما زالت تحت الصيانة.</p>'}`;
 }
 function vScrap(){
   const rows=items.filter(i=>SCRAP[i.id]).map(i=>`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${SCRAP[i.id]}</td></tr>`).join('');
   return `<h2>الخردة</h2>`+(rows?`<div class="box tw"><table><tr><th>الفئة</th><th>الصنف</th><th>العدد</th></tr>${rows}</table></div>`:'<p class="mut">لا توجد أصناف في الخردة.</p>')
    +`<p class="mut">تُضاف تلقائيًا من أذون الاستلام بحالة «خردة». الخردة نهائية ولا تُصرف.</p>`;
 }
-async function retMaint(iid){
-  const itm=it(iid),max=MAINT[iid]||0;
-  if(!itm||max<=0)return toast('لا يوجد رصيد تحت الصيانة لهذا الصنف');
-  const q=prompt(`عدد الأصناف الراجعة إلى المخزن من «${itm.n}» (المتاح ${max})`,String(max));
-  if(q===null)return;const qty=Math.floor(+q||0);
-  if(qty<=0)return toast('اكتب عددًا صحيحًا');
-  if(qty>max)return toast('العدد أكبر من الرصيد تحت الصيانة');
-  const num=prompt('رقم إذن الإرجاع من الصيانة','');
-  if(num===null)return;const number=String(num).trim();
-  if(!number)return toast('اكتب رقم الإذن');
-  try{await api('/vouchers','POST',{direction:'in',kind:'maint',number,supplier_name:'',branch_id:null,lines:[{item_id:+iid,qty,serials:[],state:'stock'}]});await refresh();toast('تم إرجاع الصنف إلى المخزن');go()}catch(err){toast(err.message)}
-}
-function vDoc(){
-  const K=KK(),D=DR[K],k=D.k,inn=K=='in';
+function vDoc(key){
+  docKey=key;
+  const S=DS[key],K=S.dir,D=DR[key],k=S.kind,inn=K=='in',ed=E[key];
+  const sendMaint=!inn&&k=='sup',backNonSup=inn&&k!='sup';
+  const srcNames=[...new Set(branches.map(b=>b.n))];if(D.sb&&!srcNames.includes(D.sb))srcNames.push(D.sb);
+  const list=DB[K].filter(r=>r.k==k);
   const lines=D.lines.map((l,j)=>{
     fixSn(l);
     const avail=inn?items:items.filter(i=>i.s>0||i.id==l.i);
     const groups=CATS.map(c=>{const g=avail.filter(i=>i.c==c);return g.length?`<optgroup label="${e(c)}">`+g.map(i=>`<option value="${i.id}"${i.id==l.i?' selected':''}>${e(i.n)}</option>`).join('')+'</optgroup>':''}).join('');
     const noItem=inn?'لا توجد أصناف — أضفها من إدارة الأصناف':'لا توجد أصناف متاحة في المخزن';
     return `<div class="box" style="background:var(--bg)"><div class="grid">
-   <label>الصنف<select onchange="DR[KK()].lines[${j}].i=+this.value;go()">${groups||`<option value="">${noItem}</option>`}</select></label>
+   <label>الصنف<select onchange="DR[KK()].lines[${j}].i=+this.value;go()">${groups||`<option value="">${noItem}</option>`}</select>${inn?warrantyBadge(l.i):''}</label>
    <label>${inn?'العدد المستلم':'العدد المصروف'}<input type="number" min="1" value="${l.q}" onchange="setQ(${j},this.value)"></label>
-   ${inn&&k=='sup'&&ok('pool')?`<label>الحالة النهائية<select onchange="DR[KK()].lines[${j}].st=this.value">${STS.map(([v,t])=>`<option value="${v}"${v==l.st?' selected':''}>${t}</option>`).join('')}</select></label>`:''}</div>
+   ${inn&&ok('pool')&&k!='sup'?`<label>الحالة النهائية<select onchange="DR[KK()].lines[${j}].st=this.value">${STS.map(([v,t])=>`<option value="${v}"${v==l.st?' selected':''}>${t}</option>`).join('')}</select></label>`:''}
+   ${sendMaint?`<label>سبب الصيانة<input value="${e(l.rs||'')}" oninput="DR[KK()].lines[${j}].rs=this.value"></label>`:''}
+   ${sendMaint?`<label>شرح<input value="${e(l.nt||'')}" oninput="DR[KK()].lines[${j}].nt=this.value"></label>`:''}</div>
    ${hasSer(l.i)?'<div class="grid">'+l.sns.map((s,n)=>`<label>سيريال ${n+1}<input value="${e(s)}" oninput="DR[KK()].lines[${j}].sns[${n}]=this.value"></label>`).join('')+'</div>':'<p class="mut" style="margin:0">هذه الفئة بدون سيريال</p>'}
+   ${backNonSup?`<div class="ln" style="margin-top:8px"><label class="ln"><input type="checkbox" ${l.hw?'checked':''} onchange="DR[KK()].lines[${j}].hw=this.checked;go()"> هل يوجد ضمان؟</label>${l.hw?`<label>انتهاء الضمان<input type="date" value="${e(l.wu||'')}" oninput="DR[KK()].lines[${j}].wu=this.value"></label>`:''}</div>`:''}
    ${D.lines.length>1?`<button class="btn ghost" style="margin-top:8px" onclick="DR[KK()].lines.splice(${j},1);go()">حذف السطر</button>`:''}</div>`}).join('');
-  return `<div class="box"><h3>${E[K]?(inn?'تعديل إذن استلام':'تعديل إذن صرف'):(inn?'إذن استلام جديد':'إذن صرف جديد')}</h3>
+  const hint=key=='recvsup'?'إذن استلام من مورد: يُضاف إلى المخزون.'
+   :key=='recvbr'?'إذن استلام من فرع: يُنقص رصيد الفرع، ويُضاف للمخزون أو الخردة حسب الحالة.'
+   :key=='issbr'?'إذن صرف إلى فرع: يُنقص المخزون، ويُضاف إلى رصيد الفرع.'
+   :'إذن صرف إلى مورد الصيانة: تنتقل الكمية من المخزن إلى «تحت الصيانة»، ويصبح هذا الإذن هو إذن الخروج للصيانة.';
+  return `${key=='issmaint'?'<button class="btn ghost" onclick="maintView=null;go()">رجوع للصيانة</button>':''}
+  <div class="box"${key=='issmaint'?' style="margin-top:14px"':''}><h3>${ed?'تعديل ':''}${S.t}</h3>
   <div class="grid">
-    <label>${inn?'مصدر الاستلام':'الصرف إلى'}<select onchange="DR[KK()].k=this.value;go()">${Object.entries(SRC[K]).map(([v,t])=>`<option value="${v}"${v==k?' selected':''}>${t}</option>`).join('')}</select></label>
-    ${k=='br'?`<label>الفرع<select onchange="DR[KK()].b=+this.value">${branches.map(b=>`<option value="${b.id}"${b.id==D.b?' selected':''}>${e(b.n)}</option>`).join('')}</select></label>`:`<label>${inn&&k=='maint'?'جهة الصيانة المسجلة':'اسم المورد المسجل'}<select onchange="DR[KK()].sup=this.value">${supplierOptions(D.sup)}</select></label>`}
-   <label>${inn?'رقم إذن الإدخال للتخزين':'رقم إذن الصرف'}<input value="${e(D.p)}" oninput="DR[KK()].p=this.value"></label>
+    ${k=='br'?`<label>الفرع<select onchange="DR[KK()].b=+this.value">${branches.map(b=>`<option value="${b.id}"${b.id==D.b?' selected':''}>${e(b.n)}</option>`).join('')}</select></label>`:`<label>${sendMaint?'جهة الصيانة':'اسم المورد المسجل'}<select onchange="DR[KK()].sup=this.value">${supplierOptions(D.sup)}</select></label>`}
+    ${sendMaint?`<label>الفرع المصدر<select onchange="DR[KK()].sb=this.value"><option value="">غير محدد</option>${srcNames.map(n=>`<option${n==D.sb?' selected':''}>${e(n)}</option>`).join('')}</select></label>`:''}
+    <label>${inn?'رقم إذن الإدخال للتخزين':'رقم إذن الصرف'}<input value="${e(D.p)}" oninput="DR[KK()].p=this.value"></label>
+    ${ed?'':`<label>التاريخ (تلقائي)<span style="padding:7px 0">${dcell(isoToday())}</span></label>`}
   </div>
+  <p class="mut" style="margin:0 0 10px">${hint}</p>
   <h3 style="margin-top:12px">الأصناف في الإذن (${D.lines.length})</h3>${lines}
-  <div class="row"><button class="btn ghost" onclick="DR[KK()].lines.push(nl());go()">إضافة صنف للإذن</button><button class="btn" onclick="saveDoc()">${E[K]?'حفظ التعديل':'تسجيل الإذن'}</button>${E[K]?'<button class="btn ghost" onclick="resetDoc();go()">إلغاء التعديل</button>':''}</div></div>
-  <h2>${inn?'أذونات الاستلام':'أذون الصرف'} (${DB[K].length})</h2>${cards(K)}`;
+  <div class="row"><button class="btn ghost" onclick="DR[KK()].lines.push(nl());go()">إضافة صنف للإذن</button><button class="btn" onclick="saveDoc()">${ed?'حفظ التعديل':'تسجيل الإذن'}</button>${ed?'<button class="btn ghost" onclick="resetDoc();go()">إلغاء التعديل</button>':''}</div></div>
+  <h2>${S.t} (${list.length})</h2>${cards(key)}`;
 }
-function cards(K){
-  if(!DB[K].length)return '<p class="mut">لا توجد أذونات بعد.</p>';
-  return DB[K].map(r=>{const inn=K=='in',party=partyName(r);return `<div class="box"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>إذن رقم ${e(r.p)}</b> <span class="chip ${r.k=='maint'?'':'ok'}">${SRC[K][r.k]}</span><div class="mut">الجهة: ${e(party)} · ${e(r.d)} · ${e(r.by)}${r.ed?' · عدّله '+e(r.ed):''}</div></div>
+function cards(key){
+  const S=DS[key],K=S.dir,list=DB[K].filter(r=>r.k==S.kind);
+  if(!list.length)return '<p class="mut">لا توجد أذونات بعد.</p>';
+  return list.map(r=>{const inn=K=='in',party=partyName(r);return `<div class="box"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>إذن رقم ${e(r.p)}</b> <span class="chip ok">${SRC[K][r.k]}</span><div class="mut">الجهة: ${e(party)}${r.sb?' · من فرع '+e(r.sb):''} · ${dcell(r.d)} · ${e(r.by)}${r.ed?' · عدّله '+e(r.ed):''}</div></div>
    <div class="acts" style="flex-wrap:wrap">${ok('stock')?`<button class="btn ghost" onclick="editDoc(${r.id})">تعديل</button>`:''}${ok('delRecv')?`<button class="btn bad" onclick="delDoc(${r.id})">${pend==K+r.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></div>
-   <div class="tw"><table><tr><th>الصنف</th><th>السيريال</th>${inn?'<th>الحالة</th>':''}<th>العدد</th></tr>${r.lines.map(l=>`<tr><td>${e((it(l.i)||{n:'-'}).n)}</td><td>${e(l.sns.length?l.sns.join('، '):'بدون سيريال')}</td>${inn?`<td>${e(SM[l.st]||SM.stock)}</td>`:''}<td>${l.q}</td></tr>`).join('')}</table></div></div>`}).join('');
+   <div class="tw"><table><tr><th>الصنف</th><th>السيريال</th>${inn?'<th>الحالة</th>':'<th>سبب الصيانة</th><th>شرح</th>'}<th>العدد</th></tr>${r.lines.map(l=>`<tr><td>${e((it(l.i)||{n:'-'}).n)}</td><td>${e(l.sns.length?l.sns.join('، '):'بدون سيريال')}</td>${inn?`<td>${e(SM[l.st]||SM.stock)}${l.hw?` · ضمان حتى ${e(l.wu||'')}`:''}</td>`:`<td>${e(l.rs||'-')}</td><td>${e(l.nt||'-')}</td>`}<td>${l.q}</td></tr>`).join('')}</table></div></div>`}).join('');
 }
 function setQ(j,v){DR[KK()].lines[j].q=Math.max(0,Math.floor(+v||0));go()}
-function resetDoc(){const K=KK();E[K]=null;DR[K]=nd()}
+function resetDoc(){const key=KK();E[key]=null;DR[key]=nd(key)}
 function editDoc(id){
-  const K=KK(),r=DB[K].find(x=>x.id==id);E[K]=id;pend=null;
-  DR[K]={k:r.k,sup:r.sup,b:r.b||(branches[0]?branches[0].id:null),p:r.p,lines:r.lines.map(l=>({i:l.i,q:l.q,sns:[...l.sns],st:l.st||'stock'}))};
+  const key=KK(),K=DS[key].dir,r=DB[K].find(x=>x.id==id);E[key]=id;pend=null;
+  DR[key]={k:DS[key].kind,sup:r.sup,b:r.b||(branches[0]?branches[0].id:null),p:r.p,sb:r.sb||'',lines:r.lines.map(l=>({i:l.i,q:l.q,sns:[...l.sns],st:l.st||'stock',rs:l.rs||'',nt:l.nt||'',hw:!!l.hw,wu:l.wu||''}))};
   go();window.scrollTo(0,0);
 }
 async function saveDoc(){
-  const K=KK(),D=DR[K],k=D.k,isb=k=='br',sup=(D.sup||'').trim(),p=D.p.trim(),editing=E[K];
+  const key=KK(),S=DS[key],K=S.dir,D=DR[key],k=S.kind,isb=k=='br',inn=K=='in',sendMaint=K=='out'&&k=='sup',backNonSup=inn&&k!='sup',sup=(D.sup||'').trim(),p=D.p.trim(),editing=E[key];
   if(isb&&!br(D.b))return toast('اختر فرعًا مسجلاً');
   if(k=='sup'&&!sup)return toast('اختر المورد');
   if(!p)return toast(K=='in'?'اكتب رقم إذن الإدخال':'اكتب رقم إذن الصرف');
@@ -316,19 +453,27 @@ async function saveDoc(){
       fixSn(l);sns=l.sns.map(s=>s.trim());
       for(const s of sns){const t=s.toLowerCase();if(!t)return toast('اكتب كل السيريالات لصنف '+it(l.i).n);if(seen[t])return toast('سيريال مكرر: '+s);seen[t]=1}
     }
-    lines.push({item_id:+l.i,qty:+l.q,serials:sns,state:(K=='in'&&k=='sup'&&ok('pool'))?(l.st||'stock'):'stock'});
+    if(backNonSup&&l.hw&&!l.wu)return toast('اكتب تاريخ انتهاء الضمان');
+    lines.push({
+      item_id:+l.i,qty:+l.q,serials:sns,
+      state:(inn&&ok('pool'))?(l.st||'stock'):'stock',
+      reason:sendMaint?(l.rs||''):'',
+      note:sendMaint?(l.nt||''):'',
+      has_warranty:backNonSup?!!l.hw:false,
+      warranty_until:backNonSup&&l.hw?(l.wu||''):''
+    });
   }
-  const body={direction:K,kind:k,number:p,supplier_name:isb?'':sup,branch_id:isb?+D.b:null,lines};
+  const body={direction:K,kind:k,number:p,supplier_name:isb?'':sup,branch_id:isb?+D.b:null,source_branch:sendMaint?(D.sb||''):'',lines};
   try{
     if(editing)await api('/vouchers/'+editing,'PUT',body);else await api('/vouchers','POST',body);
     resetDoc();await refresh();toast(editing?'تم حفظ تعديل الإذن':'تم تسجيل الإذن وتحديث الأرصدة');go();
   }catch(err){toast(err.message)}
 }
 async function delDoc(id){
-  const K=KK();
+  const key=KK(),K=DS[key].dir;
   if(!ok('delRecv'))return;
   if(pend!=K+id){pend=K+id;toast('اضغط تأكيد الحذف للمتابعة');return go()}
-  try{await api('/vouchers/'+id,'DELETE');pend=null;if(E[K]==id)resetDoc();await refresh();toast('تم حذف الإذن وتعديل الأرصدة');go()}catch(err){pend=null;toast(err.message);go()}
+  try{await api('/vouchers/'+id,'DELETE');pend=null;if(E[key]==id)resetDoc();await refresh();toast('تم حذف الإذن وتعديل الأرصدة');go()}catch(err){pend=null;toast(err.message);go()}
 }
 
 function vBranches(){
@@ -350,7 +495,7 @@ function vBranch(){
   const rows=assigned.map(i=>`<tr><td>${e(i.c)}</td><td>${e(i.n)}</td><td>${ed?`<input type="number" min="0" value="${b.q[i.id]||0}" style="width:80px" onchange="setBranchQty(${b.id},${i.id},this.value)">`:b.q[i.id]||0}</td>${ed?`<td><button class="btn ghost" onclick="rmBranchItem(${b.id},${i.id})">إزالة</button></td>`:''}</tr>`).join('');
   const free=items.filter(i=>b.q[i.id]==null);
   const add=ed&&free.length?`<div class="row" style="margin-top:12px"><label>إضافة صنف<select id="bai">${free.map(i=>`<option value="${i.id}">${e(i.n)} — ${e(i.c)}</option>`).join('')}</select></label><button class="btn" onclick="addBranchItem(${b.id})">إضافة للفرع</button></div>`:'';
-  return `<button class="btn ghost" onclick="sel=null;go()">رجوع للفروع</button><h2 style="margin-top:14px">${e(b.n)} <span class="mut">${e(b.g)}</span></h2>${b.by?`<div class="mut" style="margin:-6px 0 12px">تمت الإضافة بواسطة ${e(b.by)} · ${e(b.d)}</div>`:''}
+  return `<button class="btn ghost" onclick="sel=null;go()">رجوع للفروع</button><h2 style="margin-top:14px">${e(b.n)} <span class="mut">${e(b.g)}</span></h2>${b.by?`<div class="mut" style="margin:-6px 0 12px">تمت الإضافة بواسطة ${e(b.by)} · ${dcell(b.d)}</div>`:''}
   <div class="box tw"><h3>أصناف الفرع (${assigned.length})</h3>${assigned.length?`<table><tr><th>الفئة</th><th>الصنف</th><th>العدد</th>${ed?'<th></th>':''}</tr>${rows}</table>`:'<p class="mut">لا توجد أصناف مخصصة لهذا الفرع بعد.</p>'}${add}</div>`;
 }
 async function addBranchItem(bid){
