@@ -58,7 +58,7 @@ th{font-weight:600;color:var(--mut);font-size:13px}
 <header>
   <h1>مخزن محرم بك - تقنية المعلومات</h1>
   <div class="ubar" id="roleBar"></div>
-  <span style="font-size:11px;color:#000;opacity:.55" dir="ltr">build 2026-10-19 13:12-b8</span>
+  <span style="font-size:11px;color:#000;opacity:.55" dir="ltr">build 2026-10-19 13:38-b9</span>
 </header>
 <nav id="nav"></nav>
 <main id="m"></main>
@@ -73,8 +73,9 @@ const MRES=[['stock','تم إصلاحه'],['scrap','رفض الصيانة']];
 const SM={stock:'مخزون',maint:'تحت الصيانة',scrap:'خردة'};
 const SRC={in:{sup:'من مورد',maint:'من صيانة',br:'من فرع'},out:{sup:'إلى مورد الصيانة',br:'إلى فرع'}};
 const STATE={token:localStorage.getItem('wh_token')||'',user:null};
-let CATS=[];const SER={};
+let CATS=[];const SER={};const CATINFO={};
 let items=[],branches=[],reqs=[],suppliers=[],DB={in:[],out:[]},MAINT={},SCRAP={};
+let supEdit=null,pendSup=null;
 let role='junior',tab='stock',sel=null,q='';
 const $=s=>document.querySelector(s);
 const e=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -134,7 +135,8 @@ function hydrate(d){
   items=d.items;branches=d.branches;reqs=d.requests;suppliers=d.suppliers;DB={in:d.vouchers.in,out:d.vouchers.out};
   MAINT={};SCRAP={};(d.maintenance||[]).forEach(r=>MAINT[r.i]=r.q);(d.scrap||[]).forEach(r=>SCRAP[r.i]=r.q);
   CATS=d.categories.map(c=>c.name);
-  Object.keys(SER).forEach(k=>delete SER[k]);d.categories.forEach(c=>SER[c.name]=c.has_serial);
+  Object.keys(SER).forEach(k=>delete SER[k]);Object.keys(CATINFO).forEach(k=>delete CATINFO[k]);
+  d.categories.forEach(c=>{SER[c.name]=c.has_serial;CATINFO[c.name]={sup:c.supplier||'',by:c.by||'',d:c.d||''}});
   if(wasEmpty)Object.keys(DS).forEach(key=>{DR[key]=nd(key);E[key]=null});
   $('#roleBar').innerHTML=`<span>${e(d.user.name)} · ${e(R[role]||role)}</span><button class="btn ghost" onclick="logout()">خروج</button>`;
 }
@@ -163,14 +165,15 @@ function vItems(){
 function vCats(){
   return `<div class="box"><h3>إضافة فئة</h3><div class="row">
    <label style="min-width:220px">اسم الفئة<input id="cn"></label>
+   <label style="min-width:200px">المورد<select id="csu">${supplierOptions('')}</select></label>
    <label>السيريال<select id="cs"><option value="yes">يوجد سيريال</option><option value="no">بدون سيريال</option></select></label>
    <button class="btn" onclick="addCat()">إضافة فئة</button></div>
-   <p class="mut" style="margin:10px 0 0">الفئة تحتفظ باسمها. أضف الأنواع داخلها لتظهر عند اختيار الفئة في أذون الاستلام والصرف.</p></div>`+
+   <p class="mut" style="margin:10px 0 0">الفئة تحتفظ باسمها وبالمورد. أضف الأنواع داخلها لتظهر عند اختيار الفئة في أذون الاستلام والصرف.</p></div>`+
   (CATS.length?CATS.map((c,k)=>{
-    const its=items.filter(i=>i.c==c),ed=catEdit==k;
+    const its=items.filter(i=>i.c==c),ed=catEdit==k,info=CATINFO[c]||{};
     return `<div class="box"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
-     ${ed?`<span style="display:flex;gap:8px;align-items:center"><input id="cen" value="${e(c)}"><button class="btn" onclick="saveCat(${k})">تأكيد</button><button class="btn ghost" onclick="catEdit=null;go()">إلغاء</button></span>`
-        :`<h3 style="margin:0">${e(c)} <button class="chip ${SER[c]?'ok':''}" style="border:0;cursor:pointer;font-family:inherit" onclick="togSer(${k})">${SER[c]?'بسيريال':'بدون سيريال'}</button></h3>`}
+     ${ed?`<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="cen" value="${e(c)}"><select id="cse" style="min-width:180px">${supplierOptions(info.sup||'')}</select><button class="btn" onclick="saveCat(${k})">تأكيد</button><button class="btn ghost" onclick="catEdit=null;go()">إلغاء</button></span>`
+        :`<div><h3 style="margin:0">${e(c)} <button class="chip ${SER[c]?'ok':''}" style="border:0;cursor:pointer;font-family:inherit" onclick="togSer(${k})">${SER[c]?'بسيريال':'بدون سيريال'}</button></h3><div class="mut" style="margin-top:4px">المورد: ${e(info.sup||'-')} · تاريخ الإنشاء: ${info.d?dcell(info.d):'-'} · أنشأها: ${e(info.by||'-')}</div></div>`}
      ${ed?'':`<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="mut">${its.length} نوع · ${its.reduce((a,i)=>a+i.s,0)} بالمخزن</span><button class="btn ghost" onclick="catEdit=${k};pendCat=null;go()">تعديل الاسم</button><button class="btn bad" onclick="delCat(${k})">${pendCat==k?'تأكيد الحذف':'حذف الفئة'}</button></span>`}</div>
      ${its.length?`<div class="tw" style="margin-top:8px"><table><tr><th>النوع</th><th>رصيد المخزن</th><th>في الفروع</th><th></th></tr>`+its.map(i=>`<tr><td>${editId==i.id?`<input id="ein" value="${e(i.n)}">`:e(i.n)}</td><td>${i.s}</td><td>${dist(i.id)}</td><td>${editId==i.id?`<div class="acts"><button class="btn" onclick="saveItem(${i.id})">تأكيد</button><button class="btn ghost" onclick="editId=null;go()">إلغاء</button></div>`:`<button class="btn ghost" onclick="editId=${i.id};go()">تعديل الاسم</button>`}</td></tr>`).join('')+'</table></div>':'<p class="mut" style="margin:8px 0 0">لا توجد أنواع في هذه الفئة بعد.</p>'}
      <div class="row" style="margin-top:10px"><label>اسم النوع<input id="cin${k}"></label><button class="btn" onclick="addItemTo(${k})">إضافة نوع للفئة</button></div></div>`;
@@ -184,8 +187,8 @@ async function addItemTo(k){
 async function saveCat(k){
   const old=CATS[k],n=(($('#cen')||{}).value||'').trim();
   if(!n)return toast('اكتب اسم الفئة');
-  if(n==old)return toast('لم يتغير اسم الفئة');
-  try{await api('/categories/'+encodeURIComponent(old),'PUT',{name:n,has_serial:SER[old]});catEdit=null;await refresh();toast('تم تعديل اسم الفئة');go()}catch(err){toast(err.message)}
+  const sup=(($('#cse')||{}).value||'').trim();
+  try{await api('/categories/'+encodeURIComponent(old),'PUT',{name:n,has_serial:SER[old],supplier:sup});catEdit=null;await refresh();toast('تم حفظ الفئة');go()}catch(err){toast(err.message)}
 }
 async function delCat(k){
   const c=CATS[k];
@@ -196,7 +199,7 @@ async function addCat(){
   const n=$('#cn').value.trim();
   if(!n)return toast('اكتب اسم الفئة');
   if(CATS.includes(n))return toast('الفئة موجودة بالفعل');
-  try{await api('/categories','POST',{name:n,has_serial:$('#cs').value=='yes'});await refresh();toast('تمت إضافة الفئة');go()}catch(err){toast(err.message)}
+  try{await api('/categories','POST',{name:n,has_serial:$('#cs').value=='yes',supplier:(($('#csu')||{}).value||'').trim()});await refresh();toast('تمت إضافة الفئة');go()}catch(err){toast(err.message)}
 }
 async function togSer(k){if(!ok('stock'))return;const name=CATS[k];
   try{await api('/categories/'+encodeURIComponent(name),'PUT',{has_serial:!SER[name]});await refresh();toast('تم تغيير خاصية السيريال للفئة');go()}catch(err){toast(err.message)}}
@@ -225,23 +228,44 @@ const nl=(dir=DS[KK()].dir)=>{const p=dir=='out'?items.filter(i=>i.s>0):items;re
 const nd=key=>{const S=DS[key];return {k:S.kind,sup:'',b:branches[0]?branches[0].id:null,p:'',sb:'',lines:[nl(S.dir)]}};
 const DR={},E={};Object.keys(DS).forEach(key=>{DR[key]=nd(key);E[key]=null});
 function partyName(r){const b=br(r.b);return r.k=='br'?(b?b.n:'فرع غير محدد'):(r.sup||'مورد غير محدد')}
-function registeredSuppliers(){const used=[...DB.in,...DB.out].map(r=>String(r.sup||'').trim()).filter(Boolean);return [...new Set([...suppliers,...used])]}
+function registeredSuppliers(){const used=[...DB.in,...DB.out].map(r=>String(r.sup||'').trim()).filter(Boolean);return [...new Set([...suppliers.map(s=>s.n),...used])]}
 function supplierOptions(selected){const names=registeredSuppliers();if(selected&&!names.includes(selected))names.push(selected);const body=names.length?names.map(n=>`<option value="${e(n)}"${n==selected?' selected':''}>${e(n)}</option>`).join(''):'<option value="">لا يوجد موردون مسجلون بعد</option>';return '<option value="">اختر موردًا مسجلاً</option>'+body}
+function supRows(){
+  const rows=suppliers.map(s=>({...s})),have=new Set(rows.map(r=>r.n));
+  [...DB.in,...DB.out].forEach(v=>{const n=String(v.sup||'').trim();if(n&&!have.has(n)){have.add(n);rows.push({n,used:true})}});
+  return rows.sort((a,b)=>String(a.n).localeCompare(String(b.n),'ar'));
+}
 function vSuppliers(){
-  const list=registeredSuppliers();
-  return `<div class="box"><h3>إضافة مورد جديد</h3><div class="row">
-   <label style="min-width:260px">اسم المورد<input id="supName" placeholder="اسم المورد أو جهة الصيانة"></label>
-   <button class="btn" onclick="addSup()">حفظ المورد</button></div>
-   <p class="mut" style="margin:10px 0 0">تُستخدم أسماء الموردين المسجلين هنا في أذون الاستلام والصرف.</p></div>
-  <div class="box tw"><h3>الموردون المسجلون (${list.length})</h3>${list.length
-   ?'<table><tr><th>اسم المورد</th></tr>'+list.map(n=>`<tr><td>${e(n)}</td></tr>`).join('')+'</table>'
+  const rows=supRows(),ed=supEdit;
+  return `<div class="box"><h3>${ed?'تعديل مورد':'إضافة مورد جديد'}</h3><div class="grid">
+   <label>اسم المورد<input id="supName" placeholder="اسم المورد أو جهة الصيانة" value="${ed?e(ed.n):''}"></label>
+   <label>اسم الشركة<input id="supCompany" value="${ed?e(ed.company||''):''}"></label>
+   <label>العنوان<input id="supAddress" value="${ed?e(ed.address||''):''}"></label>
+   <label>هاتف الشركة<input id="supPhone" value="${ed?e(ed.phone||''):''}"></label>
+   <label>التليفون الأرضي<input id="supLandline" value="${ed?e(ed.landline||''):''}"></label>
+   <label class="ln"><input type="checkbox" id="supMaint"${ed&&ed.maint?' checked':''}> يقبل الصيانة</label>
+  </div><div class="row"><button class="btn" onclick="saveSup()">${ed?'حفظ التعديل':'حفظ المورد'}</button>${ed?'<button class="btn ghost" onclick="supEdit=null;go()">إلغاء</button>':''}</div>
+   <p class="mut" style="margin:10px 0 0">تُستخدم أسماء الموردين المسجلين في أذون الاستلام والصرف. تاريخ الإنشاء واسم المُنشئ يُسجَّلان تلقائيًا.</p></div>
+  <div class="box tw"><h3>الموردون (${rows.length})</h3>${rows.length
+   ?'<table><tr><th>اسم المورد</th><th>الشركة</th><th>العنوان</th><th>هاتف الشركة</th><th>الأرضي</th><th>يقبل الصيانة</th><th>أُنشئ بواسطة</th><th>تاريخ الإنشاء</th><th></th></tr>'+rows.map(r=>`<tr><td>${e(r.n)}${r.used?' <span class="chip">من الأذونات</span>':''}</td><td>${e(r.company||'-')}</td><td>${e(r.address||'-')}</td><td>${e(r.phone||'-')}</td><td>${e(r.landline||'-')}</td><td>${r.maint?'<span class="chip ok">نعم</span>':'لا'}</td><td>${e(r.by||'-')}</td><td>${r.d?dcell(r.d):'-'}</td><td>${r.id?`<div class="acts"><button class="btn ghost" onclick="editSup(${r.id})">تعديل</button>${role=='admin'?`<button class="btn bad" onclick="delSup(${r.id})">${pendSup==r.id?'تأكيد الحذف':'حذف'}</button>`:''}</div>`:''}</td></tr>`).join('')+'</table>'
    :'<p class="mut">لا يوجد موردون مسجلون بعد.</p>'}</div>`;
 }
-async function addSup(){
-  const n=(($('#supName')||{}).value||'').trim();
-  if(!n)return toast('اكتب اسم المورد');
-  if(registeredSuppliers().includes(n))return toast('المورد مسجل بالفعل');
-  try{await api('/suppliers','POST',{name:n});await refresh();toast('تمت إضافة المورد: '+n);go()}catch(err){toast(err.message)}
+function editSup(id){supEdit=suppliers.find(s=>s.id==id)||null;pendSup=null;go()}
+async function saveSup(){
+  const name=(($('#supName')||{}).value||'').trim();
+  if(!name)return toast('اكتب اسم المورد');
+  const body={name,company:(($('#supCompany')||{}).value||'').trim(),address:(($('#supAddress')||{}).value||'').trim(),phone:(($('#supPhone')||{}).value||'').trim(),landline:(($('#supLandline')||{}).value||'').trim(),accepts_maintenance:!!(($('#supMaint')||{}).checked)};
+  const editing=!!supEdit;
+  if(!editing&&registeredSuppliers().includes(name))return toast('المورد مسجل بالفعل');
+  try{
+    if(editing)await api('/suppliers/'+supEdit.id,'PUT',body);else await api('/suppliers','POST',body);
+    supEdit=null;await refresh();toast(editing?'تم حفظ المورد':'تمت إضافة المورد');go();
+  }catch(err){toast(err.message)}
+}
+async function delSup(id){
+  if(role!='admin')return;
+  if(pendSup!=id){pendSup=id;toast('اضغط تأكيد الحذف للمتابعة');return go()}
+  try{await api('/suppliers/'+id,'DELETE');pendSup=null;await refresh();toast('تم حذف المورد');go()}catch(err){pendSup=null;toast(err.message);go()}
 }
 function fixSn(l){const n=hasSer(l.i)?Math.min(l.q||0,200):0;while(l.sns.length<n)l.sns.push('');l.sns.length=n}
 function vStock(){

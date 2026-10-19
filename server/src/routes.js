@@ -57,13 +57,13 @@ router.get('/auth/me', (req, res) => res.json({ user: req.user }));
 
 async function loadBootstrap(role) {
   const pool = await getPool();
-  const cats = await pool.request().query('SELECT id, name, has_serial FROM categories ORDER BY id');
+  const cats = await pool.request().query('SELECT c.id, c.name, c.has_serial, c.created_by, c.created_at, s.name AS supplier FROM categories c LEFT JOIN suppliers s ON s.id = c.supplier_id ORDER BY c.id');
   const items = await pool.request().query(
     'SELECT i.id, i.name, i.stock, i.maint_qty, i.scrap_qty, i.created_by, i.warranty_until, c.name AS category FROM items i JOIN categories c ON c.id = i.category_id ORDER BY i.id'
   );
   const branches = await pool.request().query('SELECT id, name, gov, created_by, created_at FROM branches ORDER BY id');
   const branchItems = await pool.request().query('SELECT branch_id, item_id, qty FROM branch_items');
-  const suppliers = await pool.request().query('SELECT name FROM suppliers ORDER BY name');
+  const suppliers = await pool.request().query('SELECT id, name, company, address, phone, landline, accepts_maintenance, created_by, created_at FROM suppliers ORDER BY name');
   const vouchers = await pool.request().query(
     `SELECT v.id, v.direction, v.kind, v.number, v.branch_id, v.created_by, v.edited_by, v.doc_date, v.source_branch, s.name AS supplier_name
        FROM vouchers v LEFT JOIN suppliers s ON s.id = v.supplier_id
@@ -113,7 +113,10 @@ async function loadBootstrap(role) {
   const scrap = junior ? [] : items.recordset.filter((r) => r.scrap_qty > 0).map((r) => ({ i: r.id, q: r.scrap_qty }));
 
   return {
-    categories: cats.recordset.map((r) => ({ id: r.id, name: r.name, has_serial: !!r.has_serial })),
+    categories: cats.recordset.map((r) => ({
+      id: r.id, name: r.name, has_serial: !!r.has_serial, supplier: r.supplier || '',
+      by: r.created_by || '', d: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : ''
+    })),
     items: items.recordset.map((r) => ({
       id: r.id, n: r.name, c: r.category, s: junior ? 0 : r.stock, by: r.created_by,
       w: r.warranty_until ? new Date(r.warranty_until).toISOString().slice(0, 10) : ''
@@ -123,7 +126,11 @@ async function loadBootstrap(role) {
       d: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : '',
       q: q[r.id] || {}
     })),
-    suppliers: suppliers.recordset.map((r) => r.name),
+    suppliers: suppliers.recordset.map((r) => ({
+      id: r.id, n: r.name, company: r.company || '', address: r.address || '',
+      phone: r.phone || '', landline: r.landline || '', maint: !!r.accepts_maintenance,
+      by: r.created_by || '', d: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : ''
+    })),
     maintenance,
     scrap,
     vouchers: {
@@ -165,10 +172,14 @@ router.post('/categories', guard('stock'), async (req, res, next) => {
     const name = String(req.body.name || '').trim();
     if (!name) return res.status(400).json({ error: 'اكتب اسم الفئة' });
     const pool = await getPool();
+    const supplier = String(req.body.supplier || '').trim();
+    const supplierId = supplier ? await supplierIdOn(pool, supplier) : null;
     await pool.request()
       .input('n', sql.NVarChar(120), name)
       .input('s', sql.Bit, req.body.has_serial !== false ? 1 : 0)
-      .query('IF NOT EXISTS (SELECT 1 FROM categories WHERE name = @n) INSERT INTO categories (name, has_serial) VALUES (@n, @s)');
+      .input('sup', sql.Int, supplierId)
+      .input('by', sql.NVarChar(120), req.user.name)
+      .query('IF NOT EXISTS (SELECT 1 FROM categories WHERE name = @n) INSERT INTO categories (name, has_serial, supplier_id, created_by) VALUES (@n, @s, @sup, @by)');
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
@@ -189,6 +200,12 @@ router.put('/categories/:name', guard('stock'), async (req, res, next) => {
     if ('has_serial' in req.body) {
       await pool.request().input('s', sql.Bit, req.body.has_serial ? 1 : 0).input('n', sql.NVarChar(120), nextName || current)
         .query('UPDATE categories SET has_serial = @s WHERE name = @n');
+    }
+    if ('supplier' in req.body) {
+      const supplier = String(req.body.supplier || '').trim();
+      const supplierId = supplier ? await supplierIdOn(pool, supplier) : null;
+      await pool.request().input('sup', sql.Int, supplierId).input('n', sql.NVarChar(120), nextName || current)
+        .query('UPDATE categories SET supplier_id = @sup WHERE name = @n');
     }
     res.json({ ok: true });
   } catch (err) { next(err); }
@@ -345,12 +362,60 @@ router.put('/branches/:id/qty', guard('branchEdit'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+const supText = (v, n) => String(v == null ? '' : v).trim().slice(0, n) || null;
+
 router.post('/suppliers', guard('stock'), async (req, res, next) => {
   try {
     const name = String(req.body.name || '').trim();
     if (!name) return res.status(400).json({ error: 'اكتب اسم المورد' });
     const pool = await getPool();
-    await supplierIdOn(pool, name);
+    await pool.request()
+      .input('n', sql.NVarChar(160), name)
+      .input('co', sql.NVarChar(200), supText(req.body.company, 200))
+      .input('ad', sql.NVarChar(300), supText(req.body.address, 300))
+      .input('ph', sql.NVarChar(60), supText(req.body.phone, 60))
+      .input('ll', sql.NVarChar(60), supText(req.body.landline, 60))
+      .input('mt', sql.Bit, req.body.accepts_maintenance ? 1 : 0)
+      .input('by', sql.NVarChar(120), req.user.name)
+      .query(`IF NOT EXISTS (SELECT 1 FROM suppliers WHERE name = @n)
+                INSERT INTO suppliers (name, company, address, phone, landline, accepts_maintenance, created_by)
+                VALUES (@n, @co, @ad, @ph, @ll, @mt, @by)`);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.put('/suppliers/:id', guard('stock'), async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const name = String(req.body.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'اكتب اسم المورد' });
+    const pool = await getPool();
+    const exists = await pool.request().input('id', sql.Int, id).query('SELECT 1 AS x FROM suppliers WHERE id = @id');
+    if (!exists.recordset.length) return res.status(404).json({ error: 'المورد غير موجود' });
+    const dup = await pool.request().input('n', sql.NVarChar(160), name).input('id', sql.Int, id)
+      .query('SELECT 1 AS x FROM suppliers WHERE name = @n AND id <> @id');
+    if (dup.recordset.length) return res.status(400).json({ error: 'اسم المورد موجود بالفعل' });
+    await pool.request()
+      .input('id', sql.Int, id)
+      .input('n', sql.NVarChar(160), name)
+      .input('co', sql.NVarChar(200), supText(req.body.company, 200))
+      .input('ad', sql.NVarChar(300), supText(req.body.address, 300))
+      .input('ph', sql.NVarChar(60), supText(req.body.phone, 60))
+      .input('ll', sql.NVarChar(60), supText(req.body.landline, 60))
+      .input('mt', sql.Bit, req.body.accepts_maintenance ? 1 : 0)
+      .query('UPDATE suppliers SET name = @n, company = @co, address = @ad, phone = @ph, landline = @ll, accepts_maintenance = @mt WHERE id = @id');
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/suppliers/:id', guard('stock'), async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const pool = await getPool();
+    const used = await pool.request().input('id', sql.Int, id)
+      .query('SELECT TOP 1 1 AS x FROM vouchers WHERE supplier_id = @id OR EXISTS (SELECT 1 FROM categories WHERE supplier_id = @id)');
+    if (used.recordset.length) return res.status(400).json({ error: 'لا يمكن حذف المورد: مستخدم في أذونات أو فئات' });
+    await pool.request().input('id', sql.Int, id).query('DELETE FROM suppliers WHERE id = @id');
     res.json({ ok: true });
   } catch (err) { next(err); }
 });

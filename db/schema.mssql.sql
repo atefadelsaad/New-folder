@@ -84,8 +84,44 @@ GO
 IF OBJECT_ID('dbo.suppliers', 'U') IS NULL
 CREATE TABLE dbo.suppliers (
   id   INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_suppliers PRIMARY KEY,
-  name NVARCHAR(160) NOT NULL CONSTRAINT uq_suppliers_name UNIQUE
+  name NVARCHAR(160) NOT NULL CONSTRAINT uq_suppliers_name UNIQUE,
+  company  NVARCHAR(200) NULL,
+  address  NVARCHAR(300) NULL,
+  phone    NVARCHAR(60)  NULL,
+  landline NVARCHAR(60)  NULL,
+  accepts_maintenance BIT NOT NULL CONSTRAINT df_suppliers_maint DEFAULT (0),
+  created_by NVARCHAR(120) NULL,
+  created_at DATETIME2(0) NOT NULL CONSTRAINT df_suppliers_created DEFAULT SYSUTCDATETIME()
 );
+GO
+IF COL_LENGTH('dbo.suppliers', 'company') IS NULL
+  ALTER TABLE dbo.suppliers ADD company NVARCHAR(200) NULL;
+GO
+IF COL_LENGTH('dbo.suppliers', 'address') IS NULL
+  ALTER TABLE dbo.suppliers ADD address NVARCHAR(300) NULL;
+GO
+IF COL_LENGTH('dbo.suppliers', 'phone') IS NULL
+  ALTER TABLE dbo.suppliers ADD phone NVARCHAR(60) NULL;
+GO
+IF COL_LENGTH('dbo.suppliers', 'landline') IS NULL
+  ALTER TABLE dbo.suppliers ADD landline NVARCHAR(60) NULL;
+GO
+IF COL_LENGTH('dbo.suppliers', 'accepts_maintenance') IS NULL
+  ALTER TABLE dbo.suppliers ADD accepts_maintenance BIT NOT NULL CONSTRAINT df_suppliers_maint DEFAULT (0);
+GO
+IF COL_LENGTH('dbo.suppliers', 'created_by') IS NULL
+  ALTER TABLE dbo.suppliers ADD created_by NVARCHAR(120) NULL;
+GO
+IF COL_LENGTH('dbo.suppliers', 'created_at') IS NULL
+  ALTER TABLE dbo.suppliers ADD created_at DATETIME2(0) NOT NULL CONSTRAINT df_suppliers_created DEFAULT SYSUTCDATETIME();
+GO
+
+/* ---------------------- categories: supplier + author ------------------- */
+IF COL_LENGTH('dbo.categories', 'supplier_id') IS NULL
+  ALTER TABLE dbo.categories ADD supplier_id INT NULL CONSTRAINT fk_categories_supplier REFERENCES dbo.suppliers(id);
+GO
+IF COL_LENGTH('dbo.categories', 'created_by') IS NULL
+  ALTER TABLE dbo.categories ADD created_by NVARCHAR(120) NULL;
 GO
 
 /* ------------------------------ vouchers -------------------------------- */
