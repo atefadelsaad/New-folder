@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { voucherDeltas, applyDeltas, planChange } = require('./server/src/stock');
+const { voucherDeltas, scrapDeltas, applyDeltas, planChange } = require('./server/src/stock');
 
 const numMap = (obj) => new Map(Object.entries(obj || {}).map(([k, v]) => [Number(k), v]));
 const emptyState = (stock, branch, maint, scrap) => ({
@@ -126,4 +126,23 @@ assert.deepStrictEqual(
   [{ itemId: 6, stock: -1, maint: 0, scrap: 0, branchId: 3, branch: 1 }]
 );
 
-console.log('Stock engine tests passed (15 scenarios)');
+// 9. Scrapping deducts from the warehouse balance and feeds the terminal pool.
+const scrapped = applyDeltas(
+  emptyState({ 7: 3 }, {}),
+  scrapDeltas([{ itemId: 7, qty: 2, serials: ['SN-1', 'SN-2'] }])
+);
+assert.strictEqual(scrapped.ok, true);
+assert.strictEqual(scrapped.stock.get(7), 1);
+assert.strictEqual(scrapped.scrap.get(7), 2);
+
+// Scrapping more than the warehouse holds is blocked.
+const badScrap = applyDeltas(
+  emptyState({ 7: 1 }, {}),
+  scrapDeltas([{ itemId: 7, qty: 2 }])
+);
+assert.deepStrictEqual(
+  { ok: badScrap.ok, error: badScrap.error, itemId: badScrap.itemId },
+  { ok: false, error: 'stock', itemId: 7 }
+);
+
+console.log('Stock engine tests passed (17 scenarios)');

@@ -184,6 +184,24 @@ IF COL_LENGTH('dbo.voucher_lines', 'line_warranty_until') IS NULL
   ALTER TABLE dbo.voucher_lines ADD line_warranty_until DATE NULL;
 GO
 
+/* ---------------------------- scrap_entries ------------------------------ */
+-- Each scrapping action (damaged units written off the warehouse balance).
+-- serials is a JSON array string, like voucher_lines.serials.
+IF OBJECT_ID('dbo.scrap_entries', 'U') IS NULL
+CREATE TABLE dbo.scrap_entries (
+  id         INT IDENTITY(1,1) NOT NULL CONSTRAINT pk_scrap_entries PRIMARY KEY,
+  item_id    INT NOT NULL CONSTRAINT fk_scrap_item REFERENCES dbo.items(id),
+  qty        INT NOT NULL CONSTRAINT ck_scrap_qty CHECK (qty > 0),
+  serials    NVARCHAR(MAX) NULL
+             CONSTRAINT ck_scrap_serials_json CHECK (serials IS NULL OR ISJSON(serials) = 1),
+  created_by NVARCHAR(120) NULL,
+  created_at DATETIME2(0) NOT NULL CONSTRAINT df_scrap_created DEFAULT SYSUTCDATETIME()
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_scrap_item' AND object_id = OBJECT_ID('dbo.scrap_entries'))
+  CREATE INDEX ix_scrap_item ON dbo.scrap_entries(item_id);
+GO
+
 /* ------------------------------ requests -------------------------------- */
 IF OBJECT_ID('dbo.requests', 'U') IS NULL
 CREATE TABLE dbo.requests (

@@ -5,7 +5,7 @@ const rateLimit = require('express-rate-limit');
 const { getPool, sql } = require('./db');
 const { sign, auth } = require('./auth');
 const { can } = require('./roles');
-const { voucherDeltas, applyDeltas, planChange } = require('./stock');
+const { voucherDeltas, scrapDeltas, applyDeltas, planChange } = require('./stock');
 
 const router = express.Router();
 
@@ -23,6 +23,16 @@ const asDate = (v) => {
 };
 
 const sqlReq = (client) => new sql.Request(client);
+
+function parseSerials(raw) {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v : [];
+  } catch (_) {
+    return [];
+  }
+}
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -74,6 +84,9 @@ async function loadBootstrap(role) {
        FROM voucher_lines vl JOIN vouchers v ON v.id = vl.voucher_id
       WHERE v.deleted_at IS NULL ORDER BY vl.id`
   );
+  const scrapLog = await pool.request().query(
+    'SELECT id, item_id, qty, serials, created_by, created_at FROM scrap_entries ORDER BY id DESC'
+  );
   const requests = await pool.request().query('SELECT id, branch_id, requested_by, status FROM requests ORDER BY id DESC');
   const reqLines = await pool.request().query('SELECT request_id, item_id, qty FROM request_lines ORDER BY id');
   const logs = await pool.request().query('SELECT request_id, by_name, action, kind, note FROM request_logs ORDER BY id');
@@ -83,8 +96,7 @@ async function loadBootstrap(role) {
 
   const linesByVoucher = {};
   lines.recordset.forEach((r) => {
-    let sns = [];
-    if (r.serials) { try { sns = JSON.parse(r.serials); } catch (_) { sns = []; } }
+    const sns = parseSerials(r.serials);
     (linesByVoucher[r.voucher_id] = linesByVoucher[r.voucher_id] || []).push({
       i: r.item_id, q: r.qty, sns, cd: r.item_condition || '', st: r.state || 'stock',
       rs: r.reason || '', nt: r.line_note || '',
@@ -137,6 +149,11 @@ async function loadBootstrap(role) {
       in: voucherRows.filter((v) => v.direction === 'in'),
       out: voucherRows.filter((v) => v.direction === 'out')
     },
+    scrapLog: junior ? [] : scrapLog.recordset.map((r) => ({
+      id: r.id, i: r.item_id, q: r.qty, sns: parseSerials(r.serials),
+      by: r.created_by || '',
+      at: r.created_at ? new Date(r.created_at).toISOString() : ''
+    })),
     requests: requests.recordset.map((r) => ({
       id: r.id, b: r.branch_id, by: r.requested_by, st: r.status,
       l: linesByRequest[r.id] || [], log: logsByRequest[r.id] || []
@@ -512,6 +529,10 @@ function normalize(b) {
     hasWarranty: !!l.has_warranty,
     warrantyUntil: asDate(l.warranty_until)
   })).filter((l) => l.itemId && l.qty > 0);
+  // Branch receipts no longer feed the scrap pool: a unit coming back from a
+  // branch is always stored as good. Damaged units are written off from the
+  // Scrap screen, which deducts them from the warehouse balance.
+  if (direction === 'in' && kind === 'br') lines.forEach((l) => { l.state = 'stock'; });
   return { direction, kind, branchId, supplierName, number, sourceBranch, lines };
 }
 
@@ -662,6 +683,78 @@ router.delete('/vouchers/:id', guard('delRecv'), async (req, res, next) => {
     const applied = await applyAndPersist(tx, planChange(old.voucher, null), itemIds, branchIds);
     if (!applied.ok) { await tx.rollback(); return res.status(400).json(stockError(applied)); }
     await sqlReq(tx).input('id', sql.Int, id).query('UPDATE vouchers SET deleted_at = SYSUTCDATETIME() WHERE id = @id');
+    await tx.commit();
+    res.json({ ok: true });
+  } catch (err) {
+    try { await tx.rollback(); } catch (_) {}
+    next(err);
+  }
+});
+
+/* --------------------------------- scrap -------------------------------- */
+
+// Write damaged units off the warehouse balance and into the terminal scrap
+// pool. The qty is validated and applied atomically, serials are mandatory for
+// serialised categories, and every action is kept in scrap_entries.
+router.post('/scrap', guard('pool'), async (req, res, next) => {
+  const pool = await getPool();
+  const tx = new sql.Transaction(pool);
+  try {
+    const mode = req.body.mode === 'plain' ? 'plain' : 'serial';
+    const lines = (req.body.lines || []).map((l) => ({
+      itemId: asInt(l.item_id),
+      qty: asInt(l.qty),
+      serials: Array.isArray(l.serials) ? l.serials.map((s) => String(s).trim()) : []
+    })).filter((l) => l.itemId && l.qty > 0);
+    if (!lines.length) return res.status(400).json({ error: 'أضف صنفًا واحدًا على الأقل بعدد صحيح' });
+
+    const ids = [...new Set(lines.map((l) => l.itemId))];
+    await tx.begin();
+
+    const cats = await sqlReq(tx).input('ids', sql.NVarChar(sql.MAX), JSON.stringify(ids))
+      .query(`SELECT i.id, c.has_serial FROM items i JOIN categories c ON c.id = i.category_id
+               WHERE i.id IN (SELECT CAST(value AS INT) FROM OPENJSON(@ids))`);
+    const serialised = new Map(cats.recordset.map((r) => [r.id, !!r.has_serial]));
+
+    const seen = new Set();
+    for (const l of lines) {
+      // `plain` write-offs are quantity-only even for serialised categories.
+      if (mode === 'serial' && serialised.get(l.itemId)) {
+        if (l.serials.length !== l.qty) {
+          await tx.rollback();
+          return res.status(400).json({ error: 'اكتب سيريال لكل قطعة' });
+        }
+        if (l.serials.some((s) => !s)) {
+          await tx.rollback();
+          return res.status(400).json({ error: 'اكتب كل السيريالات' });
+        }
+        for (const s of l.serials) {
+          const key = s.toLowerCase();
+          if (seen.has(key)) {
+            await tx.rollback();
+            return res.status(400).json({ error: 'سيريال مكرر: ' + s });
+          }
+          seen.add(key);
+        }
+      } else {
+        l.serials = [];
+      }
+    }
+
+    const applied = await applyAndPersist(tx, scrapDeltas(lines), ids, []);
+    if (!applied.ok) {
+      await tx.rollback();
+      return res.status(400).json({ error: 'الكمية المطلوبة أكبر من رصيد المخزن' });
+    }
+
+    for (const l of lines) {
+      await sqlReq(tx)
+        .input('i', sql.Int, l.itemId).input('q', sql.Int, l.qty)
+        .input('sn', sql.NVarChar(sql.MAX), JSON.stringify(l.serials))
+        .input('by', sql.NVarChar(120), req.user.name)
+        .query('INSERT INTO scrap_entries (item_id, qty, serials, created_by) VALUES (@i, @q, @sn, @by)');
+    }
+
     await tx.commit();
     res.json({ ok: true });
   } catch (err) {

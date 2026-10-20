@@ -151,4 +151,16 @@ function planChange(oldVoucher, newVoucher) {
   return deltas;
 }
 
-module.exports = { voucherDeltas, applyDeltas, planChange, lineState };
+// Scrapping always drains the warehouse balance: the qty leaves `stock` and
+// enters the terminal `scrap` pool. Each line: { item_id, qty, serials }.
+function scrapDeltas(lines) {
+  const out = [];
+  for (const line of lines || []) {
+    const qty = lineQty(line);
+    if (!qty) continue;
+    out.push({ itemId: lineItemId(line), stock: -qty, maint: 0, scrap: qty, branchId: null, branch: 0 });
+  }
+  return out;
+}
+
+module.exports = { voucherDeltas, scrapDeltas, applyDeltas, planChange, lineState };

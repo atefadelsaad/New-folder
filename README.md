@@ -72,6 +72,7 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
 - `GET  /api/bootstrap` — items, categories, branches, suppliers, vouchers, requests
 - `POST/PUT/DELETE /api/items`, `/api/categories`, `/api/branches`, `/api/suppliers`
 - `POST/PUT/DELETE /api/vouchers` — receipts/disbursements (stock validated in a transaction)
+- `POST /api/scrap` — write damaged units off the warehouse balance into `خردة`
 - `POST /api/requests`, `POST /api/requests/:id/action`
 
 ## Business rules
@@ -83,15 +84,15 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
   direction/kind and no source selector:
   - **استلام من مورد** — receipt from a supplier (`in/sup`); always added to `مخزون`.
   - **استلام من فرع** — receipt from a branch (`in/br`); the branch balance is reduced and
-    the qty is added to `مخزون` or `خردة` per line.
+    the qty is always added to `مخزون`. Scrap is not an option on this document.
   - **صرف إلى فرع** — disbursement to a branch (`out/br`); `مخزون` is reduced and the
     branch balance is increased.
   - **صرف إلى مورد الصيانة** — reached from the **تحت الصيانة** tab (`out/sup`).
-- Receiving goods (`direction = in`) moves qty into `stock` (good) or `خردة` (damaged),
-  according to the line's final status, whose default is `مخزون`. On a maintenance return
-  the same choice is labelled **تم إصلاحه** (repaired → `stock`) or **رفض الصيانة**
-  (denied → `خردة`), and the pool is adjusted automatically — the maintenance page never
-  asks for a stock/damaged quantity. Supplier receipts do not offer `خردة`.
+- Receiving goods (`direction = in`) normally moves qty into `stock`. The only receipt
+  that may feed `خردة` is a maintenance return, whose result is **تم إصلاحه** (repaired →
+  `stock`) or **رفض الصيانة** (denied → `خردة`); the pool is adjusted automatically.
+  Supplier and branch receipts always add to `stock` — damaged units are written off from
+  the `الخردة` tab instead.
 - Sending to maintenance is a **disbursement to a maintenance supplier** (`direction = out`,
   `kind = sup`): qty leaves `stock` and enters `تحت الصيانة`. Such a permit records the
   supplier, permit number, automatic date, items, serials, per-line maintenance reason and
@@ -105,14 +106,21 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
   records the result and warranty per line. It also shows the acknowledgement history with
   the returned items' serials, quantities and results.   This page creates the maintenance
   receipt slip, which is never mixed into the exit permit.
+- The **الخردة** tab has two write-off buttons: damaged items **with a serial**
+  (`mode = serial`, serialised categories only) and damaged items **without a serial**
+  (`mode = plain`, any stocked item, quantity only). Both deduct the quantity from the
+  warehouse balance in a transaction (never below zero), add it to `خردة`, and append a
+  `scrap_entries` record (item, qty, serials, registrar, date). Serials are mandatory
+  and unique per submission in `serial` mode. The tab keeps the scrap balance hidden
+  behind an explicit **عرض رصيد الخردة** toggle and always shows the write-off history.
 - `خردة` is terminal and never leaves the pool. Pools are warehouse-level only.
 - **Warranty** is recorded per catalogue item (`items.warranty_until`), set from
   **إدارة الأصناف**. A green badge shows `ضمان حتى <date>` while it is valid, a red
   `انتهى الضمان` once expired, and `بدون ضمان` when unset. On receipts that are not from a
   supplier (maintenance/branch) each line can also capture `هل يوجد ضمان؟` + expiry, which
   is written back onto the item.
-- Maintenance movements (disbursing to a supplier and returning from maintenance) are
-  restricted to **admin and head** (the `pool` permission).
+- Maintenance movements (disbursing to a supplier and returning from maintenance) and
+  scrap write-offs are restricted to **admin and head** (the `pool` permission).
 - A disbursement can never exceed the warehouse balance, and a branch balance can never
   go negative.
 - Deleting a voucher soft-deletes it and reverses its stock effect; its permit number
