@@ -37,12 +37,22 @@ app.use(cors());
 app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 app.use(express.json({ limit: '2mb' }));
 
+// Unique per process start so clients can detect and load a freshly built UI.
+const BUILD = Date.now().toString();
+
 app.get('/health', (req, res) => res.json({ ok: true }));
+app.get('/version', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ build: BUILD });
+});
 
 app.use('/api', routes);
 
 // Serve the single-page UI (no other local assets are exposed).
-app.get('/', (req, res) => res.sendFile(path.join(ROOT, 'it-warehouse_1.html')));
+app.get('/', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.sendFile(path.join(ROOT, 'it-warehouse_1.html'));
+});
 
 app.use((err, req, res, next) => {
   console.error(err);

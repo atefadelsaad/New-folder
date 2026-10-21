@@ -278,15 +278,19 @@ router.put('/items/:id', guard('stock'), async (req, res, next) => {
     const name = String(req.body.name || '').trim();
     if (!name) return res.status(400).json({ error: 'اسم الصنف لا يمكن أن يكون فارغًا' });
     const pool = await getPool();
-    const cid = await categoryIdOn(pool, req.body.category);
-    const hasW = Object.prototype.hasOwnProperty.call(req.body, 'warranty_until');
-    const q = hasW
-      ? 'UPDATE items SET name = @n, category_id = @c, warranty_until = @w WHERE id = @id'
-      : 'UPDATE items SET name = @n, category_id = @c WHERE id = @id';
+    const hasCat = Object.prototype.hasOwnProperty.call(req.body, 'category') && String(req.body.category || '').trim();
+    const sets = ['name = @n'];
     const request = pool.request()
-      .input('n', sql.NVarChar(160), name).input('c', sql.Int, cid).input('id', sql.Int, asInt(req.params.id));
-    if (hasW) request.input('w', sql.Date, asDate(req.body.warranty_until));
-    await request.query(q);
+      .input('n', sql.NVarChar(160), name).input('id', sql.Int, asInt(req.params.id));
+    if (hasCat) {
+      request.input('c', sql.Int, await categoryIdOn(pool, req.body.category));
+      sets.push('category_id = @c');
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'warranty_until')) {
+      request.input('w', sql.Date, asDate(req.body.warranty_until));
+      sets.push('warranty_until = @w');
+    }
+    await request.query('UPDATE items SET ' + sets.join(', ') + ' WHERE id = @id');
     res.json({ ok: true });
   } catch (err) { next(err); }
 });

@@ -9,20 +9,27 @@
 :root{--bg:#eef2f9;--sf:#fff;--soft:#f3f6fb;--ink:#0f172a;--mut:#64748b;--ln:#e2e8f0;--pri:#2176ff;--pi:#fff;--acc:#1d6fe0;--accb:#e8f1ff;--ok:#15803d;--okb:#e7f6ec;--bad:#b42318;--badb:#fdecea;--r:16px;--sh:0 22px 48px rgba(30,64,175,.09),0 8px 20px rgba(15,23,42,.04);--sh2:0 34px 70px rgba(30,64,175,.15),0 12px 28px rgba(15,23,42,.06);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:radial-gradient(900px 500px at 92% -10%,rgba(33,118,255,.10),transparent 62%),radial-gradient(760px 440px at 0% 4%,rgba(147,197,253,.24),transparent 58%),radial-gradient(820px 520px at 50% 112%,rgba(191,219,254,.20),transparent 60%),var(--bg);background-attachment:fixed;color:var(--ink);font:400 16px/1.7 Cairo,Tahoma,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+html{scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:rgba(100,116,139,.35) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(100,116,139,.30);border:2px solid transparent;border-radius:999px;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:rgba(100,116,139,.50);background-clip:padding-box}
+body{background:radial-gradient(900px 500px at 92% -10%,rgba(33,118,255,.10),transparent 62%),radial-gradient(760px 440px at 0% 4%,rgba(147,197,253,.24),transparent 58%),radial-gradient(820px 520px at 50% 112%,rgba(191,219,254,.20),transparent 60%),var(--bg);background-attachment:fixed;color:var(--ink);font:400 16px/1.7 Cairo,Tahoma,Arial,sans-serif;-webkit-font-smoothing:antialiased;padding-inline-start:236px}
 header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 22px;background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.05);-webkit-backdrop-filter:blur(16px) saturate(1.05);color:var(--ink);border-top:4px solid var(--pri);border-bottom:1px solid var(--ln);box-shadow:0 10px 30px rgba(30,64,175,.06);position:relative;z-index:5}
 header h1{margin:0;font-size:21px;font-weight:800;letter-spacing:0;display:flex;align-items:center;gap:10px}
 header h1::before{content:'';width:11px;height:11px;border-radius:3px;background:var(--pri);box-shadow:0 0 0 5px var(--accb);flex:0 0 auto}
 header .ubar{font-size:13.5px;font-weight:600;display:flex;gap:10px;align-items:center}
-nav{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 18px;background:rgba(255,255,255,.78);backdrop-filter:blur(14px) saturate(1.05);-webkit-backdrop-filter:blur(14px) saturate(1.05);border-bottom:1px solid var(--ln);overflow:visible;position:relative;z-index:4;box-shadow:0 8px 22px rgba(30,64,175,.05)}
-nav button{display:inline-flex;align-items:center;gap:7px;background:none;border:1px solid transparent;border-radius:9px;padding:8px 14px;font:700 15px Cairo,Tahoma,sans-serif;color:var(--mut);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,border-color .15s,box-shadow .15s}
+nav{position:fixed;inset-block:0;inset-inline-start:0;z-index:60;display:flex;flex-direction:column;align-items:stretch;gap:4px;width:236px;padding:calc(18px + env(safe-area-inset-top,0px)) 12px calc(18px + env(safe-area-inset-bottom,0px));background:rgba(255,255,255,.86);backdrop-filter:blur(14px) saturate(1.05);-webkit-backdrop-filter:blur(14px) saturate(1.05);border-inline-end:1px solid var(--ln);overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;box-shadow:-8px 0 30px rgba(30,64,175,.06)}
+nav button{display:flex;align-items:center;gap:9px;width:100%;text-align:start;background:none;border:1px solid transparent;border-radius:10px;padding:9px 12px;font:700 14.5px Cairo,Tahoma,sans-serif;color:var(--mut);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,border-color .15s,box-shadow .15s}
+nav:empty{display:none}
+body:has(nav:empty){padding-inline-start:0}
 nav button:hover{background:var(--soft);color:var(--ink)}
 nav button.on{background:var(--pri);color:var(--pi);border-color:transparent;box-shadow:0 2px 6px rgba(15,23,42,.08),0 8px 20px rgba(33,118,255,.30)}
 .ico{display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--acc);vertical-align:-3px}
 .ico svg{width:18px;height:18px;display:block}
 nav .ico svg,.btn .ico svg{width:17px;height:17px}
 nav button.on .ico,.btn .ico{color:currentColor}
-main{max-width:1120px;margin:0 auto;padding:24px 20px 48px}
+main{max-width:none;margin:0;padding:24px 24px 48px}
 h2{font-size:22px;font-weight:800;margin:0 0 12px;letter-spacing:0}
 h3{font-size:17px;font-weight:800;margin:0 0 10px}
 .box{background:var(--sf);border:1px solid var(--ln);border-radius:var(--r);padding:18px;margin-bottom:18px;box-shadow:var(--sh)}
@@ -62,10 +69,18 @@ tbody tr:hover td{background:var(--soft)}
 .ln{flex-direction:row;align-items:center;gap:8px;margin:4px 0}
 .lg{margin-top:10px;border-inline-start:3px solid var(--ln);padding-inline-start:10px;font-size:13.5px;display:grid;gap:6px}
 .cm{width:100%;margin-top:10px}
-#t{position:fixed;inset-inline:0;bottom:calc(22px + env(safe-area-inset-bottom,0px));margin:auto;width:max-content;max-width:90vw;background:var(--ink);color:var(--bg);padding:11px 20px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;box-shadow:var(--sh2);font-size:14.5px;font-weight:600;z-index:50}
+#t{position:fixed;inset-inline-start:236px;inset-inline-end:0;bottom:calc(22px + env(safe-area-inset-bottom,0px));margin:auto;width:max-content;max-width:90vw;background:var(--ink);color:var(--bg);padding:11px 20px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;box-shadow:var(--sh2);font-size:14.5px;font-weight:600;z-index:50}
 #t.show{opacity:1}
 html.busy{cursor:progress}
 html.busy .btn{opacity:.6;pointer-events:none}
+@media (max-width:860px){
+body{padding-inline-start:0;padding-bottom:calc(62px + env(safe-area-inset-bottom,0px))}
+nav{inset-block:auto;inset-inline:0;bottom:0;top:auto;width:auto;flex-direction:row;gap:6px;padding:8px calc(10px + env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px));border-inline-end:0;border-top:1px solid var(--ln);overflow-x:auto;overflow-y:hidden;box-shadow:0 -8px 22px rgba(30,64,175,.08)}
+nav button{width:auto;flex:0 0 auto;padding:8px 12px}
+#t{inset-inline-start:0;bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+body:has(nav:empty){padding-bottom:0}
+body:has(nav:empty) #t{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
+}
 @media (prefers-reduced-motion:reduce){#t,.btn,.bc{transition:none}}
 .hero{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--sh)}
 .eyebrow{font-size:11.5px;font-weight:800;letter-spacing:0;color:var(--acc);margin-bottom:4px}
@@ -109,6 +124,9 @@ html.busy .btn{opacity:.6;pointer-events:none}
 .pro td{vertical-align:top}
 .num{color:var(--mut);font-variant-numeric:tabular-nums}
 .snlist{display:flex;flex-wrap:wrap;gap:4px;max-width:300px;white-space:normal}
+.snbox{margin-top:10px;border:1px solid var(--ln);border-radius:10px;padding:10px;background:var(--sf)}
+.snhead{font-size:12px;font-weight:700;color:var(--mut);margin-bottom:6px}
+.sngrid{margin:0;justify-content:start}
 .snchip{display:inline-block;background:var(--soft);border:1px solid var(--ln);border-radius:6px;padding:1px 7px;font-size:12.5px;font-family:ui-monospace,Consolas,monospace;direction:ltr}
 .empty{border:1px dashed var(--ln);border-radius:10px;padding:16px;text-align:center;color:var(--mut);font-size:13.5px;font-weight:500}
 </style>
@@ -117,7 +135,7 @@ html.busy .btn{opacity:.6;pointer-events:none}
 <header>
   <h1>مخزن محرم بك - تقنية المعلومات</h1>
   <div class="ubar" id="roleBar"></div>
-  <span style="font-size:11px;color:var(--mut)" dir="ltr">build 2026-10-20 sky-v10</span>
+  <span id="ver" style="font-size:11px;color:var(--mut)" dir="ltr"></span>
 </header>
 <nav id="nav"></nav>
 <main id="m"></main>
@@ -212,8 +230,21 @@ async function login(){
   }catch(err){renderLogin(err.message)}
 }
 function logout(){STATE.token='';STATE.user=null;localStorage.removeItem('wh_token');renderLogin()}
+let BUILD='';
+async function checkBuild(){
+  try{
+    const r=await fetch('/version',{cache:'no-store'});
+    const d=await r.json();
+    if(BUILD&&d.build!==BUILD){location.reload();return}
+    BUILD=d.build;
+    const v=$('#ver');if(v)v.textContent='build '+String(d.build).slice(-6);
+  }catch(err){}
+}
+setInterval(()=>{if(STATE.token)checkBuild()},15000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&STATE.token)checkBuild()});
 async function boot(){
   if(!STATE.token)return renderLogin();
+  checkBuild();
   try{const d=await api('/bootstrap');hydrate(d);go()}
   catch(err){STATE.token='';STATE.user=null;localStorage.removeItem('wh_token');renderLogin(err.status===401?'انتهت الجلسة، سجّل الدخول من جديد':err.message)}
 }
@@ -356,6 +387,19 @@ async function delSup(id){
   try{await api('/suppliers/'+id,'DELETE');pendSup=null;await refresh();toast('تم حذف المورد');go()}catch(err){pendSup=null;toast(err.message);go()}
 }
 function fixSn(l){const n=hasSer(l.i)?Math.min(l.q||0,200):0;while(l.sns.length<n)l.sns.push('');l.sns.length=n}
+function longestSerial(){let m=0;for(const r of DB.in.concat(DB.out))for(const l of r.lines)for(const s of (l.sns||[]))m=Math.max(m,String(s||'').length);return m}
+function snCols(values){
+  const m=Math.max(longestSerial(),...values.map(s=>String(s||'').length));
+  const w=Math.max(16,Math.min(m+2,30));
+  return `repeat(auto-fill,${w}ch)`;
+}
+function snGrid(sns){return 'grid-template-columns:'+snCols(sns)}
+function snGrow(el){const g=el.closest('.sngrid');if(g)g.style.gridTemplateColumns=snCols([...g.querySelectorAll('input')].map(i=>i.value))}
+function snList(sns){
+  const m=Math.max(0,...sns.map(s=>String(s||'').length));
+  const w=Math.max(10,Math.min(m+2,30));
+  return `<div class="snlist" style="min-width:${w}ch">${sns.map(s=>`<span class="snchip">${e(s)}</span>`).join('')}</div>`;
+}
 function vStock(){
   if(stockLoc!==null&&!br(stockLoc))stockLoc=null;
   const locs=[{id:null,n:'المخزن'}].concat(branches.map(b=>({id:b.id,n:b.n})));
@@ -443,7 +487,7 @@ function vMaintAck(){
      <label>النتيجة<select onchange="MA.lines[${j}].st=this.value"><option value="stock"${l.st!='scrap'?' selected':''}>تم إصلاحه</option><option value="scrap"${l.st=='scrap'?' selected':''}>رفض الصيانة</option></select></label>
      <label>العدد المستلم (المتاح: ${MAINT[l.i]||0})<input type="number" min="1" value="${l.q}" onchange="setAckQ(${j},this.value)"></label></div>
      ${det}
-     ${hasSer(l.i)?'<div class="grid">'+l.sns.map((s,n)=>`<label>سيريال ${n+1}<input value="${e(s)}" oninput="MA.lines[${j}].sns[${n}]=this.value"></label>`).join('')+'</div>':'<p class="mut" style="margin:0">هذه الفئة بدون سيريال</p>'}
+     ${hasSer(l.i)?'<div class="grid sngrid" style="'+snGrid(l.sns)+'">'+l.sns.map((s,n)=>`<label>سيريال ${n+1}<input value="${e(s)}" oninput="MA.lines[${j}].sns[${n}]=this.value;snGrow(this)"></label>`).join('')+'</div>':'<p class="mut" style="margin:0">هذه الفئة بدون سيريال</p>'}
      <div class="ln" style="margin-top:8px"><label class="ln"><input type="checkbox" ${l.hw?'checked':''} onchange="MA.lines[${j}].hw=this.checked;go()"> هل يوجد ضمان؟</label>${l.hw?`<label>انتهاء الضمان<input type="date" value="${e(l.wu||'')}" oninput="MA.lines[${j}].wu=this.value"></label>`:''}</div>
      ${MA.lines.length>1?`<button class="btn ghost" style="margin-top:8px" onclick="MA.lines.splice(${j},1);go()">حذف السطر</button>`:''}</div>`;
   }).join('');
@@ -564,7 +608,7 @@ function vScrapForm(){
       <label>العدد<input type="number" min="1" max="${avail}" value="${l.q}" onchange="setScrapQ(${j},this.value)"></label>
     </div>
     <div class="calc"><span>المتاح في المخزن: <b>${avail}</b></span><span>المتبقي بعد الخصم: <b>${after}</b></span></div>
-    ${serial?'<div class="grid" style="margin-top:10px">'+l.sns.map((s,n)=>`<label>سيريال ${n+1}<input value="${e(s)}" oninput="SCR.lines[${j}].sns[${n}]=this.value"></label>`).join('')+'</div>':'<p class="mut" style="margin:8px 0 0">بدون سيريال — تُسجَّل الكمية فقط.</p>'}
+    ${serial?'<div class="grid sngrid" style="margin-top:10px;'+snGrid(l.sns)+'">'+l.sns.map((s,n)=>`<label>سيريال ${n+1}<input value="${e(s)}" oninput="SCR.lines[${j}].sns[${n}]=this.value;snGrow(this)"></label>`).join('')+'</div>':'<p class="mut" style="margin:8px 0 0">بدون سيريال — تُسجَّل الكمية فقط.</p>'}
     ${SCR.lines.length>1?`<button class="btn ghost" style="margin-top:10px" onclick="SCR.lines.splice(${j},1);go()">حذف السطر</button>`:''}</div>`;
   }).join('');
   const total=SCR.lines.reduce((a,l)=>a+(+l.q||0),0);
@@ -632,7 +676,7 @@ function vDoc(key){
    <label>${inn?'العدد المستلم':'العدد المصروف'}<input type="number" min="1" value="${l.q}" onchange="setQ(${j},this.value)"></label>
    ${sendMaint?`<label>سبب الصيانة<input value="${e(l.rs||'')}" oninput="DR[KK()].lines[${j}].rs=this.value"></label>`:''}
    ${sendMaint?`<label>شرح<input value="${e(l.nt||'')}" oninput="DR[KK()].lines[${j}].nt=this.value"></label>`:''}</div>
-   ${hasSer(l.i)?'<div class="grid">'+l.sns.map((s,n)=>`<label>سيريال ${n+1}<input value="${e(s)}" oninput="DR[KK()].lines[${j}].sns[${n}]=this.value"></label>`).join('')+'</div>':'<p class="mut" style="margin:0">هذه الفئة بدون سيريال</p>'}
+   ${hasSer(l.i)?`<div class="snbox"><div class="snhead">أرقام السيريال (${l.sns.length})</div><div class="grid sngrid" style="${snGrid(l.sns)}">${l.sns.map((s,n)=>`<label>سيريال ${n+1}<input value="${e(s)}" oninput="DR[KK()].lines[${j}].sns[${n}]=this.value;snGrow(this)"></label>`).join('')}</div></div>`:'<p class="mut" style="margin:0">هذه الفئة بدون سيريال</p>'}
    ${backNonSup?`<div class="ln" style="margin-top:8px"><label class="ln"><input type="checkbox" ${l.hw?'checked':''} onchange="DR[KK()].lines[${j}].hw=this.checked;go()"> هل يوجد ضمان؟</label>${l.hw?`<label>انتهاء الضمان<input type="date" value="${e(l.wu||'')}" oninput="DR[KK()].lines[${j}].wu=this.value"></label>`:''}</div>`:''}
    ${D.lines.length>1?`<button class="btn ghost" style="margin-top:8px" onclick="DR[KK()].lines.splice(${j},1);go()">حذف السطر</button>`:''}</div>`}).join('');
   const hint=key=='recvsup'?'إذن استلام من مورد: يُضاف إلى المخزون.'
@@ -657,7 +701,7 @@ function cards(key){
   if(!list.length)return '<p class="mut">لا توجد أذونات بعد.</p>';
   return list.map(r=>{const inn=K=='in',party=partyName(r);return `<div class="box"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>إذن رقم ${e(r.p)}</b> <span class="chip ok">${SRC[K][r.k]}</span><div class="mut">الجهة: ${e(party)}${r.sb?' · من فرع '+e(r.sb):''} · ${dcell(r.d)} · ${e(r.by)}${r.ed?' · عدّله '+e(r.ed):''}</div></div>
    <div class="acts" style="flex-wrap:wrap">${ok('stock')?`<button class="btn ghost" onclick="editDoc(${r.id})">تعديل</button>`:''}${ok('delRecv')?`<button class="btn bad" onclick="delDoc(${r.id})">${pend==K+r.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></div>
-   <div class="tw"><table><tr><th>الصنف</th><th>السيريال</th>${inn?'<th>الحالة</th>':'<th>سبب الصيانة</th><th>شرح</th>'}<th>العدد</th></tr>${r.lines.map(l=>`<tr><td>${e((it(l.i)||{n:'-'}).n)}</td><td>${e(l.sns.length?l.sns.join('، '):'بدون سيريال')}</td>${inn?`<td>${e(SM[l.st]||SM.stock)}${l.hw?` · ضمان حتى ${e(l.wu||'')}`:''}</td>`:`<td>${e(l.rs||'-')}</td><td>${e(l.nt||'-')}</td>`}<td>${l.q}</td></tr>`).join('')}</table></div></div>`}).join('');
+   <div class="tw"><table><tr><th>الصنف</th><th>السيريال</th>${inn?'<th>الحالة</th>':'<th>سبب الصيانة</th><th>شرح</th>'}<th>العدد</th></tr>${r.lines.map(l=>`<tr><td>${e((it(l.i)||{n:'-'}).n)}</td><td>${l.sns.length?snList(l.sns):'<span class="mut">بدون سيريال</span>'}</td>${inn?`<td>${e(SM[l.st]||SM.stock)}${l.hw?` · ضمان حتى ${e(l.wu||'')}`:''}</td>`:`<td>${e(l.rs||'-')}</td><td>${e(l.nt||'-')}</td>`}<td>${l.q}</td></tr>`).join('')}</table></div></div>`}).join('');
 }
 function setQ(j,v){DR[KK()].lines[j].q=Math.max(0,Math.floor(+v||0));go()}
 function resetDoc(){const key=KK();E[key]=null;DR[key]=nd(key)}
@@ -693,7 +737,8 @@ async function saveDoc(){
   const body={direction:K,kind:k,number:p,supplier_name:isb?'':sup,branch_id:isb?+D.b:null,source_branch:sendMaint?(D.sb||''):'',lines};
   try{
     if(editing)await api('/vouchers/'+editing,'PUT',body);else await api('/vouchers','POST',body);
-    resetDoc();await refresh();toast(editing?'تم حفظ تعديل الإذن':'تم تسجيل الإذن وتحديث الأرصدة');go();
+    resetDoc();if(document.activeElement)document.activeElement.blur();go();
+    await refresh();toast(editing?'تم حفظ تعديل الإذن':'تم تسجيل الإذن وتحديث الأرصدة');go();
   }catch(err){toast(err.message)}
 }
 async function delDoc(id){
