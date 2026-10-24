@@ -326,9 +326,14 @@ router.post('/branches', guard('addBranch'), async (req, res, next) => {
     await tx.begin();
     const r = await sqlReq(tx)
       .input('n', sql.NVarChar(160), name)
+      .input('num', sql.NVarChar(20), String(req.body.number || '').trim() || null)
       .input('g', sql.NVarChar(80), String(req.body.gov || ''))
+      .input('man', sql.NVarChar(120), String(req.body.manager || '').trim() || null)
+      .input('ph', sql.NVarChar(30), String(req.body.phone || '').trim() || null)
+      .input('addr', sql.NVarChar(500), String(req.body.address || '').trim() || null)
+      .input('loc', sql.NVarChar(500), String(req.body.location || '').trim() || null)
       .input('by', sql.NVarChar(120), req.user.name)
-      .query('INSERT INTO branches (name, gov, created_by) OUTPUT INSERTED.id VALUES (@n, @g, @by)');
+      .query('INSERT INTO branches (name, number, gov, manager, phone, address, location, created_by) OUTPUT INSERTED.id VALUES (@n, @num, @g, @man, @ph, @addr, @loc, @by)');
     const branchId = r.recordset[0].id;
     const qty = req.body.qty || {};
     const ids = new Set((req.body.item_ids || []).map(asInt).filter((n) => n > 0));
@@ -343,6 +348,26 @@ router.post('/branches', guard('addBranch'), async (req, res, next) => {
     try { await tx.rollback(); } catch (_) {}
     next(err);
   }
+});
+
+router.put('/branches/:id', guard('branchEdit'), async (req, res, next) => {
+  try {
+    const bid = asInt(req.params.id);
+    const name = String(req.body.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'اكتب اسم الفرع' });
+    const pool = await getPool();
+    await pool.request()
+      .input('b', sql.Int, bid)
+      .input('n', sql.NVarChar(160), name)
+      .input('num', sql.NVarChar(20), String(req.body.number || '').trim() || null)
+      .input('g', sql.NVarChar(80), String(req.body.gov || ''))
+      .input('man', sql.NVarChar(120), String(req.body.manager || '').trim() || null)
+      .input('ph', sql.NVarChar(30), String(req.body.phone || '').trim() || null)
+      .input('addr', sql.NVarChar(500), String(req.body.address || '').trim() || null)
+      .input('loc', sql.NVarChar(500), String(req.body.location || '').trim() || null)
+      .query('UPDATE branches SET name=@n, number=@num, gov=@g, manager=@man, phone=@ph, address=@addr, location=@loc WHERE id=@b');
+    res.json({ ok: true });
+  } catch (err) { next(err); }
 });
 
 router.post('/branches/:id/items', guard('branchEdit'), async (req, res, next) => {

@@ -6,7 +6,7 @@
 <title>مخزن تكنولوجيا المعلومات</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#eef2f9;--sf:#fff;--soft:#f3f6fb;--ink:#0f172a;--mut:#64748b;--ln:#e2e8f0;--pri:#2176ff;--pi:#fff;--acc:#1d6fe0;--accb:#e8f1ff;--ok:#15803d;--okb:#e7f6ec;--bad:#b42318;--badb:#fdecea;--r:16px;--sh:0 22px 48px rgba(30,64,175,.09),0 8px 20px rgba(15,23,42,.04);--sh2:0 34px 70px rgba(30,64,175,.15),0 12px 28px rgba(15,23,42,.06);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+:root{--bg:#0B0F19;--sf:#161B2E;--soft:#1e293b;--ink:#f1f5f9;--mut:#94a3b8;--ln:#334155;--pri:#6366f1;--pi:#fff;--acc:#818cf8;--accb:#312e81;--ok:#22c55e;--okb:#14532d;--bad:#ef4444;--badb:#450a0a;--r:16px;--sh:0 22px 48px rgba(0,0,0,.35),0 8px 20px rgba(0,0,0,.25);--sh2:0 34px 70px rgba(0,0,0,.45),0 12px 28px rgba(0,0,0,.30);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0}
 html{scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:rgba(100,116,139,.35) transparent}
@@ -14,12 +14,12 @@ html{scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:rgba(100,116,1
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(100,116,139,.30);border:2px solid transparent;border-radius:999px;background-clip:padding-box}
 ::-webkit-scrollbar-thumb:hover{background:rgba(100,116,139,.50);background-clip:padding-box}
-body{background:radial-gradient(900px 500px at 92% -10%,rgba(33,118,255,.10),transparent 62%),radial-gradient(760px 440px at 0% 4%,rgba(147,197,253,.24),transparent 58%),radial-gradient(820px 520px at 50% 112%,rgba(191,219,254,.20),transparent 60%),var(--bg);background-attachment:fixed;color:var(--ink);font:400 16px/1.7 Cairo,Tahoma,Arial,sans-serif;-webkit-font-smoothing:antialiased;padding-inline-start:236px}
-header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 22px;background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.05);-webkit-backdrop-filter:blur(16px) saturate(1.05);color:var(--ink);border-top:4px solid var(--pri);border-bottom:1px solid var(--ln);box-shadow:0 10px 30px rgba(30,64,175,.06);position:relative;z-index:5}
+body{background:#0B0F19;background-image:radial-gradient(900px 500px at 92% -10%,rgba(99,102,241,.12),transparent 62%),radial-gradient(760px 440px at 0% 4%,rgba(129,140,248,.18),transparent 58%),radial-gradient(820px 520px at 50% 112%,rgba(99,102,241,.10),transparent 60%);background-attachment:fixed;color:var(--ink);font:400 16px/1.7 Cairo,Tahoma,Arial,sans-serif;-webkit-font-smoothing:antialiased;padding-inline-start:236px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 22px;background:rgba(22,27,46,.92);backdrop-filter:blur(16px) saturate(1.05);-webkit-backdrop-filter:blur(16px) saturate(1.05);color:var(--ink);border-top:4px solid var(--pri);border-bottom:1px solid var(--ln);box-shadow:0 10px 30px rgba(0,0,0,.35);position:relative;z-index:5}
 header h1{margin:0;font-size:21px;font-weight:800;letter-spacing:0;display:flex;align-items:center;gap:10px}
 header h1::before{content:'';width:11px;height:11px;border-radius:3px;background:var(--pri);box-shadow:0 0 0 5px var(--accb);flex:0 0 auto}
 header .ubar{font-size:13.5px;font-weight:600;display:flex;gap:10px;align-items:center}
-nav{position:fixed;inset-block:0;inset-inline-start:0;z-index:60;display:flex;flex-direction:column;align-items:stretch;gap:4px;width:236px;padding:calc(18px + env(safe-area-inset-top,0px)) 12px calc(18px + env(safe-area-inset-bottom,0px));background:rgba(255,255,255,.86);backdrop-filter:blur(14px) saturate(1.05);-webkit-backdrop-filter:blur(14px) saturate(1.05);border-inline-end:1px solid var(--ln);overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;box-shadow:-8px 0 30px rgba(30,64,175,.06)}
+nav{position:fixed;inset-block:0;inset-inline-start:0;z-index:60;display:flex;flex-direction:column;align-items:stretch;gap:4px;width:236px;padding:calc(18px + env(safe-area-inset-top,0px)) 12px calc(18px + env(safe-area-inset-bottom,0px));background:rgba(22,27,46,.92);backdrop-filter:blur(14px) saturate(1.05);-webkit-backdrop-filter:blur(14px) saturate(1.05);border-inline-end:1px solid var(--ln);overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;box-shadow:-8px 0 30px rgba(0,0,0,.35)}
 nav button{display:flex;align-items:center;gap:9px;width:100%;text-align:start;background:none;border:1px solid transparent;border-radius:10px;padding:9px 12px;font:700 14.5px Cairo,Tahoma,sans-serif;color:var(--mut);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,border-color .15s,box-shadow .15s}
 nav:empty{display:none}
 body:has(nav:empty){padding-inline-start:0}
@@ -176,7 +176,13 @@ const STATE={token:localStorage.getItem('wh_token')||'',user:null};
 let CATS=[];const SER={};const CATINFO={};
 let items=[],branches=[],reqs=[],suppliers=[],DB={in:[],out:[]},MAINT={},SCRAP={},SCRAPLOG=[];
 let supEdit=null,pendSup=null;
-let role='junior',tab='stock',sel=null,q='';
+let role='junior',tab='stock',sel=null,q='',branchEditState=null;
+const SEARCH={itemsSearch:'',scrapQ:'',supSearch:'',branchSearch:'',maintQ:'',rqQ:'',rqbSearch:''};
+const normSearch=(a,b)=>{const n=String(a||'').toLowerCase();const x=String(b||'').toLowerCase();return n.includes(x);};
+const matchSearch=(arr,fields,txt)=>{const w=String(txt||'').trim();if(!w)return arr;return arr.filter(i=>fields.some(f=>normSearch(i[f],w)));};
+const _deb={};
+function debouncedSearch(name,val,pageVar){clearTimeout(_deb[name]);_deb[name]=setTimeout(()=>{SEARCH[name]=String(val||'');if(pageVar)window[pageVar]=1;go();setTimeout(()=>{const el=document.getElementById('s_'+name);if(el){el.focus();el.selectionStart=el.selectionEnd=el.value.length;}});},200);}
+function clearSearch(name,pageVar){clearTimeout(_deb[name]);SEARCH[name]='';if(pageVar)window[pageVar]=1;go();setTimeout(()=>{const el=document.getElementById('s_'+name);if(el){el.focus();el.value='';}});}
 const $=s=>document.querySelector(s);
 const e=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const ok=a=>CAN[a].includes(role);
@@ -405,10 +411,10 @@ function vStock(){
   const locs=[{id:null,n:'المخزن'}].concat(branches.map(b=>({id:b.id,n:b.n})));
   const btns=locs.map(l=>`<button class="btn ${stockLoc===l.id?'':'ghost'}" onclick="stockLoc=${l.id===null?'null':l.id};go()">${l.id===null?icon('stock'):icon('br')}${e(l.n)}</button>`).join('');
   return `<div class="row" style="margin-bottom:12px">${btns}</div>
-   <input class="search" placeholder="${stockLoc===null?'ابحث باسم الصنف أو الفئة':'ابحث في أصناف الفرع'}" value="${e(q)}" oninput="q=this.value;tbl()"><div class="box tw" id="tb"></div>`;
+    <input id="s_itemsSearch" class="search" placeholder="${stockLoc===null?'ابحث باسم الصنف أو الفئة':'ابحث في أصناف الفرع'}" value="${e(SEARCH.itemsSearch)}" oninput="debouncedSearch('itemsSearch',this.value,'P')"><button onclick="clearSearch('itemsSearch','P')" aria-label="مسح">×</button><div class="box tw" id="tb"></div>`;
 }
 function tbl(){
-  const f=items.filter(i=>(i.n+i.c).includes(q));
+  const q=SEARCH.itemsSearch;const f=items.filter(i=>(i.n+i.c).includes(q));
   if(stockLoc===null){
     $('#tb').innerHTML=f.length?`<table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>الحالة</th></tr>`+f.map(i=>`<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td>${e(i.n)}</td><td>${i.s}</td><td><span class="chip ${i.s>0?'ok':'bad'}">${i.s>0?'متوفر':'غير متوفر'}</span></td></tr>`).join('')+'</table>':'<p class="mut">لا توجد أصناف مطابقة. جرّب كلمة أخرى.</p>';
     return;
@@ -750,25 +756,41 @@ async function delDoc(id){
 
 function vBranches(){
   let h='';
-  if(ok('addBranch'))h+=`<div class="box"><h3>إضافة فرع</h3><div class="row"><label>اسم الفرع<input id="bn"></label><label>المحافظة<select id="bg">${opts(GOV)}</select></label></div>
+  if(ok('addBranch'))h+=`<div class="box"><h3>إضافة فرع</h3><div class="row"><label>اسم الفرع<input id="bn"></label><label>رقم الفرع<input id="bnum"></label><label>المحافظة<select id="bg">${opts(GOV)}</select></label></div>
+   <div class="row"><label>مسؤول الفرع<input id="bman"></label><label>هاتف<input id="bphone"></label></div>
+   <div class="row"><label>العنوان<input id="baddr"></label><label>الموقع<input id="bloc"></label></div>
    <p class="mut" style="margin:12px 0 0">اختر الأصناف التي تُستخدم في هذا الفرع:</p><div class="box" style="max-height:340px;overflow:auto">${itemPick('b')}</div><button class="btn" onclick="addBranch()">حفظ الفرع</button></div>`;
-  return h+`<h2>${icon('br')} الفروع (${branches.length})</h2><div class="bl">`+branches.map(b=>`<button class="bc" onclick="sel=${b.id};go()"><b>${icon('br')}${e(b.n)}</b><span>${e(b.g)} · ${Object.keys(b.q).length} صنف · ${Object.values(b.q).reduce((a,c)=>a+c,0)} قطعة</span>${b.by?`<span style="display:block">أضافه: ${e(b.by)}</span>`:''}</button>`).join('')+'</div>';
+  return h+`<h2>${icon('br')} الفروع (${branches.length})</h2><div class="bl">`+branches.map(b=>`<button class="bc" onclick="sel=${b.id};go()"><b>${icon('br')}${e(b.n)}</b><span>${b.number?e(b.number)+' · ':''}${e(b.g)} · ${Object.keys(b.q).length} صنف · ${Object.values(b.q).reduce((a,c)=>a+c,0)} قطعة</span>${b.by?`<span style="display:block">أضافه: ${e(b.by)}</span>`:''}</button>`).join('')+'</div>';
 }
 async function addBranch(){
   const n=$('#bn').value.trim();if(!n)return toast('اكتب اسم الفرع');
-  try{await api('/branches','POST',{name:n,gov:$('#bg').value,item_ids:readPick('b')});await refresh();toast('تمت إضافة الفرع');go()}catch(err){toast(err.message)}
+  const num=($('#bnum')||{}).value.trim();if(num){if(num.length<1||num.length>20)return toast('رقم الفرع 1-20 حرفًا');if(!/^[A-Za-z0-9_-]+$/.test(num))return toast('رقم الفرع أحرف/أرقام/-/_ فقط');const dup=branches.find(b=>String(b.number||'').trim().toLowerCase()==num.toLowerCase());if(dup)return toast('رقم الفرع موجود مسبقًا');}
+  const ph=($('#bphone')||{}).value.trim();if(ph){if(!/^[0-9+\s-]*$/.test(ph))return toast('هاتف غير صالح');const digs=ph.replace(/[^0-9]/g,'');if(digs.length<7||digs.length>15)return toast('هاتف 7-15 رقمًا');}
+  try{await api('/branches','POST',{name:n,number:num||null,gov:$('#bg').value,manager:($('#bman')||{}).value.trim()||null,phone:ph||null,address:($('#baddr')||{}).value.trim()||null,location:($('#bloc')||{}).value.trim()||null,item_ids:readPick('b')});await refresh();toast('تمت إضافة الفرع');go()}catch(err){toast(err.message)}
 }
 async function setBranchQty(bid,iid,v){
   try{await api('/branches/'+bid+'/qty','PUT',{item_id:+iid,qty:+v||0});await refresh();toast('تم حفظ العدد')}catch(err){toast(err.message)}
 }
 function vBranch(){
-  const b=br(sel),ed=ok('branchEdit');
+  const b=br(sel),ed=ok('branchEdit'),editAllowed=ok('addBranch');
   const assigned=items.filter(i=>b.q[i.id]!=null);
   const rows=assigned.map(i=>`<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td>${e(i.n)}</td><td>${ed?`<input type="number" min="0" value="${b.q[i.id]||0}" style="width:80px" onchange="setBranchQty(${b.id},${i.id},this.value)">`:b.q[i.id]||0}</td>${ed?`<td><button class="btn ghost" onclick="rmBranchItem(${b.id},${i.id})">إزالة</button></td>`:''}</tr>`).join('');
   const free=items.filter(i=>b.q[i.id]==null);
   const add=ed&&free.length?`<div class="row" style="margin-top:12px"><label>إضافة صنف<select id="bai">${free.map(i=>`<option value="${i.id}">${e(i.n)} — ${e(i.c)}</option>`).join('')}</select></label><button class="btn" onclick="addBranchItem(${b.id})">إضافة للفرع</button></div>`:'';
-  return `<button class="btn ghost" onclick="sel=null;go()">رجوع للفروع</button><h2 style="margin-top:14px">${icon('br')} ${e(b.n)} <span class="mut">${e(b.g)}</span></h2>${b.by?`<div class="mut" style="margin:-6px 0 12px">تمت الإضافة بواسطة ${e(b.by)} · ${dcell(b.d)}</div>`:''}
+  const editing=branchEditState&&branchEditState.id==b.id;
+  return `<button class="btn ghost" onclick="sel=null;go()">رجوع للفروع</button><h2 style="margin-top:14px">${icon('br')} ${editing?e(branchEditState.name):e(b.n)} <span class="mut">${e(b.g)}</span> ${b.number&&!editing?`<span style="color:var(--pri)">(${e(b.number)})</span>`:''}</h2>${b.by&&!editing?`<div class="mut" style="margin:-6px 0 12px">تمت الإضافة بواسطة ${e(b.by)} · ${dcell(b.d)}</div>`:''}
+  ${editing?`<div class="box tw" style="margin-bottom:10px"><h3>تعديل بيانات الفرع</h3>
+  <div class="row"><label>اسم الفرع<input id="bed_n" value="${e(branchEditState.name)}"></label><label>رقم الفرع<input id="bed_num" value="${e(branchEditState.number||'')}"></label><label>المحافظة<select id="bed_g">${opts(GOV,branchEditState.gov)}</select></label></div>
+  <div class="row"><label>مسؤول الفرع<input id="bed_man" value="${e(branchEditState.manager||'')}"></label><label>هاتف<input id="bed_phone" value="${e(branchEditState.phone||'')}"></label></div>
+  <div class="row"><label>العنوان<input id="bed_addr" value="${e(branchEditState.address||'')}"></label><label>الموقع<input id="bed_loc" value="${e(branchEditState.location||'')}"></label></div>
+  <div class="row"><button class="btn" onclick="saveBranchEdit()">حفظ</button><button class="btn ghost" onclick="branchEditState=null;go()">إلغاء</button></div></div>`:`<div class="box tw" style="margin-bottom:10px"><h3>بيانات الفرع</h3><table><tr><th>المسؤول</th><td>${b.manager?e(b.manager):'-'}</td></tr><tr><th>الهاتف</th><td>${b.phone?e(b.phone):'-'}</td></tr><tr><th>العنوان</th><td>${b.address?e(b.address):'-'}</td></tr><tr><th>الموقع</th><td>${b.location?(b.location.match(/^https?:\/\//)?`<a href="${e(b.location)}" target="_blank" rel="noopener noreferrer">فتح الخريطة</a>`:e(b.location)):'-'}</td></tr></table>${ok('addBranch')?`<button class="btn ghost" onclick="branchEditState={id:${b.id},name:'${e(b.n)}',number:'${e(b.number||'')}',gov:'${e(b.g)}',manager:'${e(b.manager||'')}',phone:'${e(b.phone||'')}',address:'${e(b.address||'')}',location:'${e(b.location||'')}',unsaved:true};go()">تعديل بيانات الفرع</button>`:''}</div>`}
   <div class="box tw"><h3>أصناف الفرع (${assigned.length})</h3>${assigned.length?`<table><tr><th>الفئة</th><th>الصنف</th><th>العدد</th>${ed?'<th></th>':''}</tr>${rows}</table>`:'<p class="mut">لا توجد أصناف مخصصة لهذا الفرع بعد.</p>'}${add}</div>`;
+}
+async function saveBranchEdit(){
+  if(!branchEditState)return;
+  const id=branchEditState.id;const n=($('#bed_n')||{}).value.trim();if(!n)return toast('اكتب اسم الفرع');const num=($('#bed_num')||{}).value.trim();if(num){if(num.length>20)return toast('رقم الفرع 1-20');if(!/^[A-Za-z0-9_-]+$/.test(num))return toast('رقم الفرع أحرف/أرقام فقط');const dup=branches.find(b=>b.id!=id&&String(b.number||'').trim().toLowerCase()==num.toLowerCase());if(dup)return toast('رقم الفرع موجود');}
+  const ph=($('#bed_phone')||{}).value.trim();if(ph){if(!/^[0-9+\s-]*$/.test(ph))return toast('هاتف غير صالح');const digs=ph.replace(/[^0-9]/g,'');if(digs.length<7||digs.length>15)return toast('هاتف 7-15 رقمًا');}
+  try{await api('/branches/'+id,'PUT',{name:n,number:num||null,gov:$('#bed_g').value,manager:($('#bed_man')||{}).value.trim()||null,phone:ph||null,address:($('#bed_addr')||{}).value.trim()||null,location:($('#bed_loc')||{}).value.trim()||null});branchEditState=null;await refresh();toast('تم حفظ التعديل');go()}catch(err){toast(err.message)}
 }
 async function addBranchItem(bid){
   const id=(($('#bai')||{}).value||0);if(!+id)return toast('اختر صنفًا');
