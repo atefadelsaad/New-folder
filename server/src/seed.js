@@ -48,7 +48,7 @@ async function ensureDomainSeed() {
     await pool.request()
       .input('n', sql.NVarChar(160), b.name)
       .input('g', sql.NVarChar(80), b.gov)
-      .query('INSERT INTO branches (name, gov, created_by) VALUES (@n, @g, N\'Warehouse Keeper\')');
+      .query(`IF NOT EXISTS (SELECT 1 FROM branches WHERE LOWER(REPLACE(LTRIM(RTRIM(name)),' ',' ')) = LOWER(REPLACE(LTRIM(RTRIM(@n)),' ',' ')) AND gov = @g) INSERT INTO branches (name, gov, created_by) VALUES (@n, @g, N'Warehouse Keeper')`);
   }
 }
 

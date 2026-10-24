@@ -177,7 +177,7 @@ let CATS=[];const SER={};const CATINFO={};
 let items=[],branches=[],reqs=[],suppliers=[],DB={in:[],out:[]},MAINT={},SCRAP={},SCRAPLOG=[];
 let supEdit=null,pendSup=null;
 let role='junior',tab='stock',sel=null,q='',branchEditState=null;
-const SEARCH={itemsSearch:'',scrapQ:'',supSearch:'',branchSearch:'',maintQ:'',rqQ:'',rqbSearch:''};
+const SEARCH={itemsSearch:'',scrapQ:'',scrapLogQ:'',docQ:'',supSearch:'',branchSearch:'',maintQ:'',rqQ:'',rqbSearch:'',catQ:''};
 const normSearch=(a,b)=>{const n=String(a||'').toLowerCase();const x=String(b||'').toLowerCase();return n.includes(x);};
 const matchSearch=(arr,fields,txt)=>{const w=String(txt||'').trim();if(!w)return arr;return arr.filter(i=>fields.some(f=>normSearch(i[f],w)));};
 const _deb={};
@@ -269,7 +269,7 @@ async function refresh(){const d=await api('/bootstrap');hydrate(d)}
 
 function grid(p){return '<div class="grid">'+items.map(i=>`<label>${e(i.n)}<input type="number" min="0" id="${p}${i.id}" placeholder="0"></label>`).join('')+'</div>'}
 function read(p){const o={};items.forEach(i=>{const el=$('#'+p+i.id);const v=el?+el.value:0;if(v>0)o[i.id]=v});return o}
-function itemPick(p){return CATS.map(c=>{const g=items.filter(i=>i.c==c);return g.length?`<div style="margin-bottom:8px"><b>${e(c)}</b><div class="grid">`+g.map(i=>`<label class="ln"><input type="checkbox" id="${p}${i.id}"> ${e(i.n)}</label>`).join('')+'</div></div>':''}).join('')||'<p class="mut">لا توجد أصناف.</p>'}
+function itemPick(p){return CATS.filter(c=>!q||((String(c||'')+String(supName(c)||'')+String([...new Set(items.filter(i=>i.c==c).map(i=>i.t))].filter(Boolean).join(' '))).toLowerCase().includes(q.toLowerCase()))).map(c=>{const g=items.filter(i=>i.c==c);return g.length?`<div style="margin-bottom:8px"><b>${e(c)}</b><div class="grid">`+g.map(i=>`<label class="ln"><input type="checkbox" id="${p}${i.id}"> ${e(i.n)}</label>`).join('')+'</div></div>':''}).join('')||'<p class="mut">لا توجد أصناف.</p>'}
 function readPick(p){return items.filter(i=>{const el=$('#'+p+i.id);return el&&el.checked}).map(i=>i.id)}
 
 function go(){
@@ -283,12 +283,12 @@ function vItems(){
   const adm=role=='admin',cs=i=>opts(CATS.includes(i.c)?CATS:[...CATS,i.c],i.c);
   return `<div class="box"><h3>إضافة صنف جديد</h3><div class="row"><label>اسم الصنف<input id="nn"></label><label>الفئة<select id="nc">${opts(CATS)}</select></label><label>انتهاء الضمان (اختياري)<input type="date" id="nw"></label><button class="btn" onclick="newItem()">حفظ الصنف</button></div>
   <p class="mut" style="margin:10px 0 0">تُضاف الكميات من أذون الاستلام فقط، ولا يمكن إدخال رصيد يدويًا. يوضّح عمود الضمان إن كان الصنف تحت الضمان وتاريخ انتهائه.</p></div>
-  <div class="box tw"><h3>الأصناف (${items.length})</h3><table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>الضمان</th><th>أضافه</th><th></th></tr>`+items.map(i=>editId==i.id
+  <div class="bl" style="margin-bottom:14px"><input id="s_itemsSearch" class="search" placeholder="بحث: اسم، فئة، ملاحظات" value="${e(SEARCH.itemsSearch||'')}" oninput="debouncedSearch('itemsSearch',this.value)"><button onclick="clearSearch('itemsSearch')" aria-label="x">x</button></div><div class="box tw"><h3>الأصناف (${items.filter(i=>{const q=String(SEARCH.itemsSearch||'').trim();return !q||((String(i.n||'')+String(i.c||'')+String(i.note||'')).toLowerCase().includes(q.toLowerCase()));}).length})</h3><table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>الضمان</th><th>أضافه</th><th></th></tr>`+items.filter(i=>{const q=String(SEARCH.itemsSearch||'').trim();return !q||((String(i.n||'')+String(i.c||'')+String(i.note||'')).toLowerCase().includes(q.toLowerCase()));}).map(i=>editId==i.id
    ?`<tr><td><select id="eic">${cs(i)}</select></td><td><input id="ein" value="${e(i.n)}"></td><td>${i.s}</td><td><input type="date" id="eiw" value="${e(i.w)}"></td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn" onclick="saveItem(${i.id})">تأكيد</button><button class="btn ghost" onclick="editId=null;go()">إلغاء</button></div></td></tr>`
    :`<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td>${e(i.n)}</td><td>${i.s}</td><td>${warrantyBadge(i.id)}</td><td class="mut">${e(i.by||'-')}</td><td><div class="acts"><button class="btn ghost" onclick="editId=${i.id};pendDel=null;go()">تعديل</button>${adm?`<button class="btn bad" onclick="del(${i.id})">${pendDel==i.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></td></tr>`).join('')+'</table></div>';
 }
 function vCats(){
-  return `<div class="box"><h3>إضافة فئة</h3><div class="row">
+  const q=String(SEARCH.branchSearch||'').trim();<div class="row">
    <label style="min-width:220px">اسم الفئة<input id="cn"></label>
    <label style="min-width:200px">المورد<select id="csu">${supplierOptions('')}</select></label>
    <label>السيريال<select id="cs"><option value="yes">يوجد سيريال</option><option value="no">بدون سيريال</option></select></label>
@@ -371,7 +371,7 @@ function vSuppliers(){
    <label class="ln"><input type="checkbox" id="supMaint"${ed&&ed.maint?' checked':''}> يقبل الصيانة</label>
   </div><div class="row"><button class="btn" onclick="saveSup()">${ed?'حفظ التعديل':'حفظ المورد'}</button>${ed?'<button class="btn ghost" onclick="supEdit=null;go()">إلغاء</button>':''}</div>
    <p class="mut" style="margin:10px 0 0">تُستخدم أسماء الموردين المسجلين في أذون الاستلام والصرف. تاريخ الإنشاء واسم المُنشئ يُسجَّلان تلقائيًا.</p></div>
-  <div class="box tw"><h3>الموردون (${rows.length})</h3>${rows.length
+  <div class="bl" style="margin-bottom:14px"><input id="s_supSearch" class="search" placeholder="بحث: اسم، شركة، هاتف، عنوان" value="${e(SEARCH.supSearch||'')}" oninput="debouncedSearch('supSearch',this.value)"><button onclick="clearSearch('supSearch')" aria-label="x">x</button></div><div class="box tw"><h3>الموردون (${rows.length})</h3>${rows.length
    ?'<table><tr><th>اسم المورد</th><th>الشركة</th><th>العنوان</th><th>هاتف الشركة</th><th>الأرضي</th><th>يقبل الصيانة</th><th>أُنشئ بواسطة</th><th>تاريخ الإنشاء</th><th></th></tr>'+rows.map(r=>`<tr><td>${e(r.n)}${r.used?' <span class="chip">من الأذونات</span>':''}</td><td>${e(r.company||'-')}</td><td>${e(r.address||'-')}</td><td>${e(r.phone||'-')}</td><td>${e(r.landline||'-')}</td><td>${r.maint?'<span class="chip ok">نعم</span>':'لا'}</td><td>${e(r.by||'-')}</td><td>${r.d?dcell(r.d):'-'}</td><td>${r.id?`<div class="acts"><button class="btn ghost" onclick="editSup(${r.id})">تعديل</button>${role=='admin'?`<button class="btn bad" onclick="delSup(${r.id})">${pendSup==r.id?'تأكيد الحذف':'حذف'}</button>`:''}</div>`:''}</td></tr>`).join('')+'</table>'
    :'<p class="mut">لا يوجد موردون مسجلون بعد.</p>'}</div>`;
 }
@@ -408,19 +408,12 @@ function snList(sns){
 }
 function vStock(){
   if(stockLoc!==null&&!br(stockLoc))stockLoc=null;
-  const locs=[{id:null,n:'المخزن'}].concat(branches.map(b=>({id:b.id,n:b.n})));
-  const btns=locs.map(l=>`<button class="btn ${stockLoc===l.id?'':'ghost'}" onclick="stockLoc=${l.id===null?'null':l.id};go()">${l.id===null?icon('stock'):icon('br')}${e(l.n)}</button>`).join('');
-  return `<div class="row" style="margin-bottom:12px">${btns}</div>
-    <input id="s_itemsSearch" class="search" placeholder="${stockLoc===null?'ابحث باسم الصنف أو الفئة':'ابحث في أصناف الفرع'}" value="${e(SEARCH.itemsSearch)}" oninput="debouncedSearch('itemsSearch',this.value,'P')"><button onclick="clearSearch('itemsSearch','P')" aria-label="مسح">×</button><div class="box tw" id="tb"></div>`;
+  stockLoc=null;
+  return `<input id="s_itemsSearch" class="search" placeholder="ابحث باسم الصنف أو الفئة" value="${e(SEARCH.itemsSearch)}" oninput="debouncedSearch('itemsSearch',this.value,'P')"><button onclick="clearSearch('itemsSearch','P')" aria-label="مسح">×</button><div class="box tw" id="tb"></div>`;
 }
 function tbl(){
   const q=SEARCH.itemsSearch;const f=items.filter(i=>(i.n+i.c).includes(q));
-  if(stockLoc===null){
-    $('#tb').innerHTML=f.length?`<table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>الحالة</th></tr>`+f.map(i=>`<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td>${e(i.n)}</td><td>${i.s}</td><td><span class="chip ${i.s>0?'ok':'bad'}">${i.s>0?'متوفر':'غير متوفر'}</span></td></tr>`).join('')+'</table>':'<p class="mut">لا توجد أصناف مطابقة. جرّب كلمة أخرى.</p>';
-    return;
-  }
-  const b=br(stockLoc),rows=f.filter(i=>b.q[i.id]!=null);
-  $('#tb').innerHTML=rows.length?`<table><tr><th>الفئة</th><th>الصنف</th><th>العدد في الفرع</th></tr>`+rows.map(i=>`<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td>${e(i.n)}</td><td>${b.q[i.id]||0}</td></tr>`).join('')+'</table>':'<p class="mut">لا توجد أصناف مطابقة في هذا الفرع.</p>';
+  $('#tb').innerHTML=f.length?`<table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>الحالة</th></tr>`+f.map(i=>`<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td>${e(i.n)}</td><td>${i.s}</td><td><span class="chip ${i.s>0?'ok':'bad'}">${i.s>0?'متوفر':'غير متوفر'}</span></td></tr>`).join('')+'</table>':'<p class="mut">لا توجد أصناف مطابقة. جرّب كلمة أخرى.</p>';
 }
 function trackTable(map,empty){
   const rows=items.filter(i=>map[i.id]).map(i=>`<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td>${e(i.n)}</td><td>${map[i.id]}</td></tr>`).join('');
@@ -430,13 +423,14 @@ function maintItems(){return items.filter(i=>MAINT[i.id]>0)}
 function vMaint(){
   if(maintView==='release')return vMaintRelease();
   if(maintView==='ack')return vMaintAck();
-  const rows=maintItems().map(i=>`<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td>${e(i.n)}</td><td>${MAINT[i.id]}</td><td>${warrantyBadge(i.id)}</td></tr>`).join('');
+  const q=String(SEARCH.maintQ||'').trim();const rows=maintItems().filter(i=>{if(!q)return true;const o=String(i.n||'')+String(i.c||'')+String((it(i.id)||{}).n||'')+String((it(i.id)||{}).c||'');return o.toLowerCase().includes(q.toLowerCase());}).map(i=>`<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td>${e(i.n)}</td><td>${MAINT[i.id]}</td><td>${warrantyBadge(i.id)}</td></tr>`).join('');
   return `<h2>${icon('maint')} تحت الصيانة</h2>
    <div class="bl" style="margin-bottom:14px">
      <button class="bc" onclick="openIssMaint()"><b>${icon('maint')}صرف إلى مورد الصيانة</b><span>إنشاء إذن خروج الأصناف إلى الصيانة</span></button>
      <button class="bc" onclick="maintView='release';go()"><b>${icon('rq')}إذن الخروج للصيانة</b><span>كل الأصناف الخارجة للصيانة: السيريال، الجهة، من سجّلها، والتاريخ</span></button>
      <button class="bc" onclick="MA=null;maintView='ack';go()"><b>${icon('recvbr')}إقرار استلام من الصيانة</b><span>تسجيل الأصناف الراجعة: النتيجة، السيريال، الجهة، والضمان مع تفاصيل إذن الخروج</span></button>
    </div>
+    <div class="bl" style="margin-bottom:14px"><input id="s_maintQ" class="search" placeholder="بحث: صنف، فئة، سيريال، جهة، رقم إذن" value="${e(SEARCH.maintQ)}" oninput="debouncedSearch('maintQ',this.value)"><button onclick="clearSearch('maintQ')" aria-label="x">x</button></div>
    ${rows?`<div class="box tw"><h3>الرصيد الحالي تحت الصيانة</h3><table><tr><th>الفئة</th><th>الصنف</th><th>العدد</th><th>الضمان</th></tr>${rows}</table></div>`:'<p class="mut">لا توجد أصناف تحت الصيانة حاليًا.</p>'}
    <p class="mut">تُضاف الأصناف من زر «صرف إلى مورد الصيانة»، ويُسجَّل استلامها من زر «إقرار استلام من الصيانة».</p>`;
 }
@@ -539,7 +533,7 @@ async function saveAck(){
   }catch(err){toast(err.message)}
 }
 function vMaintRelease(){
-  const rows=maintOutRows();
+  const q=String(SEARCH.maintQ||'').trim();const rows=maintOutRows().filter(({r,l})=>{if(!q)return true;const txt=String((it(l.i)||{n:'',c:''}).n||'')+String((it(l.i)||{c:''}).c||'')+String(l.sns?l.sns.join(' '):'')+String(r.sup||'')+String(r.p||'');return txt.toLowerCase().includes(q.toLowerCase());});
   return `<button class="btn ghost" onclick="maintView=null;go()">رجوع للصيانة</button>
    <h2 style="margin-top:14px">إذن الخروج للصيانة</h2>
    <p class="mut" style="margin:-6px 0 12px">أذون الصرف إلى مورد الصيانة التي لا تزال أصنافها تحت الصيانة: الصنف والسيريال والجهة والفرع المصدر وسبب الصيانة والشرح ومن سجّلها والتاريخ.</p>
@@ -562,7 +556,7 @@ function vScrap(){
       <span class="sact-arrow">‹</span>
     </button>
    </div>`:'';
-  return `<div class="hero">
+  return `<div class="bl" style="margin-bottom:14px"><input id="s_scrapQ" class="search" placeholder="بحث: صنف، فئة، سيريال، مسجل" value="${e(SEARCH.scrapQ||'')}" oninput="debouncedSearch('scrapQ',this.value)"><button onclick="clearSearch('scrapQ')" aria-label="x">x</button></div><div class="hero">
     <div><div class="eyebrow">إدارة المخزون</div><h2>${icon('scrap')} الخردة</h2><p>تسجيل الأصناف التالفة وخصمها من رصيد المخزن داخل معاملة واحدة، مع حفظ السيريالات وسجل كامل للحركات.</p></div>
     <button class="btn soft" onclick="scrapBal=!scrapBal;go()">${scrapBal?'إخفاء رصيد الخردة':'عرض رصيد الخردة'}</button>
    </div>
@@ -576,7 +570,7 @@ function logParts(at){
   return {d:x.toLocaleDateString('en-CA'),t:x.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})};
 }
 function scrapPanel(){
-  const balances=items.filter(i=>SCRAP[i.id]).sort((a,b)=>String(a.c).localeCompare(String(b.c),'ar')||String(a.n).localeCompare(String(b.n),'ar'));
+  const q=String(SEARCH.scrapQ||'').trim();const balances=items.filter(i=>SCRAP[i.id]&&(q?((String(i.c||'')+String(i.n||'')).toLowerCase().includes(q.toLowerCase())||String((SCRAPLOG.find(x=>x.i==i.id)?.by||'')).toLowerCase().includes(q.toLowerCase())):true)).sort((a,b)=>String(a.c).localeCompare(String(b.c),'ar')||String(a.n).localeCompare(String(b.n),'ar'));
   const total=balances.reduce((a,i)=>a+(SCRAP[i.id]||0),0);
   const last=SCRAPLOG.length?logParts(SCRAPLOG[0].at):{d:'',t:''};
   const balRows=balances.map(i=>`<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td>${e(i.n)}</td><td><b>${SCRAP[i.id]}</b></td></tr>`).join('');
@@ -632,7 +626,8 @@ function vScrapForm(){
 }
 function scrapLogTable(){
   if(!SCRAPLOG.length)return '<div class="empty">لا توجد حركات خردة مسجلة بعد. ابدأ بإضافة صنف تالف من الأزرار أعلاه.</div>';
-  const rows=SCRAPLOG.map((r,k)=>{
+  const q=String(SEARCH.scrapQ||'').trim();
+  const rows=SCRAPLOG.filter(r=>{if(!q)return true;const x=it(r.i)||{};const txt=String(x.c||'')+String(x.n||'')+String(r.sns?r.sns.join(' '):'')+String(r.by||'');return txt.toLowerCase().includes(q.toLowerCase());}).map((r,k)=>{
     const x=it(r.i)||{},when=logParts(r.at),serialised=r.sns.length>0;
     const sns=serialised?`<div class="snlist">${r.sns.map(s=>`<span class="snchip">${e(s)}</span>`).join('')}</div>`:'<span class="mut">—</span>';
     return `<tr>
@@ -700,10 +695,10 @@ function vDoc(key){
   <p class="mut" style="margin:0 0 10px">${hint}</p>
   <h3 style="margin-top:12px">الأصناف في الإذن (${D.lines.length})</h3>${lines}
   <div class="row"><button class="btn ghost" onclick="DR[KK()].lines.push(nl());go()">إضافة صنف للإذن</button><button class="btn" onclick="saveDoc()">${ed?'حفظ التعديل':'تسجيل الإذن'}</button>${ed?'<button class="btn ghost" onclick="resetDoc();go()">إلغاء التعديل</button>':''}</div></div>
-  <h2>${icon(key)} ${S.t} (${list.length})</h2>${cards(key)}`;
+  <div class="bl" style="margin-bottom:14px"><input id="s_docQ" class="search" placeholder="بحث: رقم إذن، جهة، صنف، سيريال، مستخدم، تاريخ" value="${e(SEARCH.docQ||'')}" oninput="debouncedSearch('docQ',this.value)"><button onclick="clearSearch('docQ')" aria-label="x">x</button></div><h2>${icon(key)} ${S.t} (${list.length})</h2>${cards(key)}`;
 }
 function cards(key){
-  const S=DS[key],K=S.dir,list=DB[K].filter(r=>r.k==S.kind);
+  const S=DS[key],K=S.dir,q=String(SEARCH.docQ||'').trim();const list=DB[K].filter(r=>r.k==S.kind&&(q?((String(r.p||'')+String(partyName(r)||'')+String(r.d||'')+String(r.by||'')+r.lines.map(l=>String((it(l.i)||{n:''}).n||'')+String(l.sns?l.sns.join(' '):'')).join(' ')).toLowerCase().includes(q.toLowerCase()):true));
   if(!list.length)return '<p class="mut">لا توجد أذونات بعد.</p>';
   return list.map(r=>{const inn=K=='in',party=partyName(r);return `<div class="box"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>إذن رقم ${e(r.p)}</b> <span class="chip ok">${SRC[K][r.k]}</span><div class="mut">الجهة: ${e(party)}${r.sb?' · من فرع '+e(r.sb):''} · ${dcell(r.d)} · ${e(r.by)}${r.ed?' · عدّله '+e(r.ed):''}</div></div>
    <div class="acts" style="flex-wrap:wrap">${ok('stock')?`<button class="btn ghost" onclick="editDoc(${r.id})">تعديل</button>`:''}${ok('delRecv')?`<button class="btn bad" onclick="delDoc(${r.id})">${pend==K+r.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></div>
@@ -760,7 +755,7 @@ function vBranches(){
    <div class="row"><label>مسؤول الفرع<input id="bman"></label><label>هاتف<input id="bphone"></label></div>
    <div class="row"><label>العنوان<input id="baddr"></label><label>الموقع<input id="bloc"></label></div>
    <p class="mut" style="margin:12px 0 0">اختر الأصناف التي تُستخدم في هذا الفرع:</p><div class="box" style="max-height:340px;overflow:auto">${itemPick('b')}</div><button class="btn" onclick="addBranch()">حفظ الفرع</button></div>`;
-  return h+`<h2>${icon('br')} الفروع (${branches.length})</h2><div class="bl">`+branches.map(b=>`<button class="bc" onclick="sel=${b.id};go()"><b>${icon('br')}${e(b.n)}</b><span>${b.number?e(b.number)+' · ':''}${e(b.g)} · ${Object.keys(b.q).length} صنف · ${Object.values(b.q).reduce((a,c)=>a+c,0)} قطعة</span>${b.by?`<span style="display:block">أضافه: ${e(b.by)}</span>`:''}</button>`).join('')+'</div>';
+  return h+`<h2>${icon('br')} الفروع (${branches.length})</h2><div class="bl">`+branches.map(b=>`<button class="bc" onclick="sel=${b.id};go()"><b>${icon('br')}${e(b.n)}</b><span>${b.number?e(b.number)+' · ':''}${e(b.g)} · ${Object.keys(b.q).length} صنف · ${Object.values(b.q).reduce((a,c)=>a+c,0)} قطعة</span>${b.by?`<span style="display:block">أضافه: ${e(b.by)}</span>`:''}</button>${ok('addBranch')?`<div style="display:inline-block;vertical-align:middle;margin-left:4px"><button class="btn ghost" ${SAVING?'disabled':''} onclick="askDelBranch(${b.id})" aria-label="حذف">${pendDelBranch==b.id?'<b>تأكيد الحذف</b>':'حذف'}</button>${pendDelBranch==b.id?`<button class="btn ghost" ${SAVING?'disabled':''} onclick="pendDelBranch=null;go()">إلغاء</button>`:''}</div>`:''}`).join('')+'</div>';
 }
 async function addBranch(){
   const n=$('#bn').value.trim();if(!n)return toast('اكتب اسم الفرع');
@@ -778,7 +773,7 @@ function vBranch(){
   const free=items.filter(i=>b.q[i.id]==null);
   const add=ed&&free.length?`<div class="row" style="margin-top:12px"><label>إضافة صنف<select id="bai">${free.map(i=>`<option value="${i.id}">${e(i.n)} — ${e(i.c)}</option>`).join('')}</select></label><button class="btn" onclick="addBranchItem(${b.id})">إضافة للفرع</button></div>`:'';
   const editing=branchEditState&&branchEditState.id==b.id;
-  return `<button class="btn ghost" onclick="sel=null;go()">رجوع للفروع</button><h2 style="margin-top:14px">${icon('br')} ${editing?e(branchEditState.name):e(b.n)} <span class="mut">${e(b.g)}</span> ${b.number&&!editing?`<span style="color:var(--pri)">(${e(b.number)})</span>`:''}</h2>${b.by&&!editing?`<div class="mut" style="margin:-6px 0 12px">تمت الإضافة بواسطة ${e(b.by)} · ${dcell(b.d)}</div>`:''}
+  return `<button class="btn ghost" onclick="sel=null;go()">رجوع للفروع</button>${ok('addBranch')?`<div style="float:right">${pendDelBranch==b.id?`<b>حذف الفرع «${e(b.n)}»؟ لا يمكن التراجع.</b> <button class="btn bad" ${SAVING?'disabled':''} onclick="confirmDelBranch(${b.id})">تأكيد الحذف</button> <button class="btn ghost" ${SAVING?'disabled':''} onclick="pendDelBranch=null;go()">إلغاء</button>`:`<button class="btn bad" ${SAVING?'disabled':''} onclick="askDelBranch(${b.id})" aria-label="حذف">حذف الفرع</button>`}</div>`:''}<h2 style="margin-top:14px">${icon('br')} ${editing?e(branchEditState.name):e(b.n)} <span class="mut">${e(b.g)}</span> ${b.number&&!editing?`<span style="color:var(--pri)">(${e(b.number)})</span>`:''}</h2>${b.by&&!editing?`<div class="mut" style="margin:-6px 0 12px">تمت الإضافة بواسطة ${e(b.by)} · ${dcell(b.d)}</div>`:''}
   ${editing?`<div class="box tw" style="margin-bottom:10px"><h3>تعديل بيانات الفرع</h3>
   <div class="row"><label>اسم الفرع<input id="bed_n" value="${e(branchEditState.name)}"></label><label>رقم الفرع<input id="bed_num" value="${e(branchEditState.number||'')}"></label><label>المحافظة<select id="bed_g">${opts(GOV,branchEditState.gov)}</select></label></div>
   <div class="row"><label>مسؤول الفرع<input id="bed_man" value="${e(branchEditState.manager||'')}"></label><label>هاتف<input id="bed_phone" value="${e(branchEditState.phone||'')}"></label></div>
@@ -796,6 +791,10 @@ async function addBranchItem(bid){
   const id=(($('#bai')||{}).value||0);if(!+id)return toast('اختر صنفًا');
   try{await api('/branches/'+bid+'/items','POST',{item_id:+id});await refresh();toast('تمت إضافة الصنف للفرع');go()}catch(err){toast(err.message)}
 }
+let pendDelBranch=null;
+function askDelBranch(id){pendDelBranch=id;go();setTimeout(()=>{const el=document.getElementById('s_delBranch'+id);if(el){el.focus();el.selectionStart=el.selectionEnd=el.value.length;}},200);}
+function confirmDelBranch(id){if(pendDelBranch!==id)return;SAVING=true;api('/branches/'+id,'DELETE').then(async()=>{await refresh();toast('تم حذف الفرع');stockLoc=null;pendDelBranch=null;go()}).catch(err=>{toast(err.message||err);pendDelBranch=null;go()}).finally(()=>{SAVING=false;});}
+
 async function rmBranchItem(bid,iid){
   try{await api('/branches/'+bid+'/items/'+iid,'DELETE');await refresh();toast('تمت إزالة الصنف من الفرع');go()}catch(err){toast(err.message)}
 }

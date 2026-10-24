@@ -26,12 +26,12 @@ services:
       DB_PASSWORD: "Your_password123"
       DB_ENCRYPT: "false"
       JWT_SECRET: change-me-in-production
-      PORT: "3000"
+      PORT: "3002"
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "3000:3002"
 
 volumes:
   mssql_data:

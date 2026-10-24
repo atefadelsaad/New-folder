@@ -323,6 +323,10 @@ router.post('/branches', guard('addBranch'), async (req, res, next) => {
   try {
     const name = String(req.body.name || '').trim();
     if (!name) return res.status(400).json({ error: 'اكتب اسم الفرع' });
+    const g = String(req.body.gov || '').trim();
+    const dupCheck = await pool.request().input('n', sql.NVarChar(160), name).input('g', sql.NVarChar(80), g)
+      .query(`SELECT id FROM branches WHERE LOWER(REPLACE(LTRIM(RTRIM(name)),' ',' ')) = LOWER(REPLACE(LTRIM(RTRIM(@n)),' ',' ')) AND gov = @g`);
+    if (dupCheck.recordset.length) return res.status(409).json({ error: 'هذا الفرع موجود مسبقاً (نفس الاسم والمحافظة)' });
     await tx.begin();
     const r = await sqlReq(tx)
       .input('n', sql.NVarChar(160), name)
@@ -404,6 +408,32 @@ router.put('/branches/:id/qty', guard('branchEdit'), async (req, res, next) => {
       .query(`IF EXISTS (SELECT 1 FROM branch_items WHERE branch_id = @b AND item_id = @i)
                 UPDATE branch_items SET qty = @q WHERE branch_id = @b AND item_id = @i
               ELSE INSERT INTO branch_items (branch_id, item_id, qty) VALUES (@b, @i, @q)`);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/branches/:id', guard('addBranch'), async (req, res, next) => {
+  try {
+    const bid = asInt(req.params.id);
+    const pool = await getPool();
+    // Check usage: vouchers referencing branch_id, requests, scrap, items qty>0
+    const vRef = await pool.request().input('b', sql.Int, bid).query('SELECT COUNT(*) AS c FROM vouchers WHERE branch_id = @b OR source_branch = @b');
+    const rRef = await pool.request().input('b', sql.Int, bid).query('SELECT COUNT(*) AS c FROM requests WHERE branch_id = @b');
+    const sRef = await pool.request().input('b', sql.Int, bid).query('SELECT COUNT(*) AS c FROM scrap WHERE branch_id = @b');
+    const iRef = await pool.request().input('b', sql.Int, bid).query('SELECT COUNT(*) AS c FROM branch_items WHERE branch_id = @b AND qty > 0');
+    const blocks = [];
+    if (vRef.recordset[0].c > 0) blocks.push('أذون: ' + vRef.recordset[0].c);
+    if (rRef.recordset[0].c > 0) blocks.push('طلبات: ' + rRef.recordset[0].c);
+    if (sRef.recordset[0].c > 0) blocks.push('خردة: ' + sRef.recordset[0].c);
+    if (iRef.recordset[0].c > 0) blocks.push('أصناف بالفرع: ' + iRef.recordset[0].c);
+    if (blocks.length) return res.status(409).json({ error: 'لا يمكن الحذف، هنالك مراجع: ' + blocks.join('، ') });
+    const before = (await pool.request().input('b', sql.Int, bid).query('SELECT name, gov FROM branches WHERE id = @b')).recordset[0];
+    await pool.request().input('b', sql.Int, bid).query('DELETE FROM branches WHERE id = @b');
+    // Audit file
+    const fs = require('fs');
+    const audit = JSON.parse(fs.readFileSync('data/audit.json', 'utf8') || '[]');
+    audit.push({ user: req.user?.name || null, action: 'delete-branch', entity: 'branch', entity_id: bid, before: before || null, at: new Date().toISOString() });
+    fs.writeFileSync('data/audit.json', JSON.stringify(audit, null, 2));
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
