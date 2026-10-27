@@ -1,5 +1,6 @@
 'use strict';
 const express = require('express');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const { getPool, sql } = require('./db');
@@ -69,9 +70,9 @@ async function loadBootstrap(role) {
   const pool = await getPool();
   const cats = await pool.request().query('SELECT c.id, c.name, c.has_serial, c.created_by, c.created_at, s.name AS supplier FROM categories c LEFT JOIN suppliers s ON s.id = c.supplier_id ORDER BY c.id');
   const items = await pool.request().query(
-    'SELECT i.id, i.name, i.stock, i.maint_qty, i.scrap_qty, i.created_by, i.warranty_until, c.name AS category FROM items i JOIN categories c ON c.id = i.category_id ORDER BY i.id'
+    'SELECT i.id, i.name, i.stock, i.maint_qty, i.scrap_qty, i.created_by, i.created_at, i.warranty_until, i.notes, i.has_warranty, c.name AS category FROM items i JOIN categories c ON c.id = i.category_id ORDER BY i.id'
   );
-  const branches = await pool.request().query('SELECT id, name, gov, created_by, created_at FROM branches ORDER BY id');
+  const branches = await pool.request().query('SELECT id, name, number, gov, manager, phone, address, location, created_by, created_at FROM branches ORDER BY id');
   const branchItems = await pool.request().query('SELECT branch_id, item_id, qty FROM branch_items');
   const suppliers = await pool.request().query('SELECT id, name, company, address, phone, landline, accepts_maintenance, created_by, created_at FROM suppliers ORDER BY name');
   const vouchers = await pool.request().query(
@@ -87,7 +88,7 @@ async function loadBootstrap(role) {
   const scrapLog = await pool.request().query(
     'SELECT id, item_id, qty, serials, created_by, created_at FROM scrap_entries ORDER BY id DESC'
   );
-  const requests = await pool.request().query('SELECT id, branch_id, requested_by, status FROM requests ORDER BY id DESC');
+  const requests = await pool.request().query('SELECT id, branch_id, requested_by, status, created_at FROM requests ORDER BY id DESC');
   const reqLines = await pool.request().query('SELECT request_id, item_id, qty FROM request_lines ORDER BY id');
   const logs = await pool.request().query('SELECT request_id, by_name, action, kind, note FROM request_logs ORDER BY id');
 
@@ -131,10 +132,15 @@ async function loadBootstrap(role) {
     })),
     items: items.recordset.map((r) => ({
       id: r.id, n: r.name, c: r.category, s: junior ? 0 : r.stock, by: r.created_by,
-      w: r.warranty_until ? new Date(r.warranty_until).toISOString().slice(0, 10) : ''
+      w: r.warranty_until ? new Date(r.warranty_until).toISOString().slice(0, 10) : '',
+      note: r.notes || '',
+      hw: r.has_warranty == null ? null : !!r.has_warranty,
+      d: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : ''
     })),
     branches: branches.recordset.map((r) => ({
-      id: r.id, n: r.name, g: r.gov, by: r.created_by,
+      id: r.id, n: r.name, number: r.number || '', g: r.gov, manager: r.manager || '',
+      phone: r.phone || '', address: r.address || '', location: r.location || '',
+      by: r.created_by,
       d: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : '',
       q: q[r.id] || {}
     })),
@@ -156,6 +162,7 @@ async function loadBootstrap(role) {
     })),
     requests: requests.recordset.map((r) => ({
       id: r.id, b: r.branch_id, by: r.requested_by, st: r.status,
+      d: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : '',
       l: linesByRequest[r.id] || [], log: logsByRequest[r.id] || []
     }))
   };
@@ -261,14 +268,23 @@ router.post('/items', guard('stock'), async (req, res, next) => {
   try {
     const name = String(req.body.name || '').trim();
     if (!name) return res.status(400).json({ error: 'اكتب اسم الصنف' });
+    if (name.length > 160) return res.status(400).json({ error: 'اسم الصنف أطول من 160 حرفًا' });
+    const notes = String(req.body.notes == null ? '' : req.body.notes).trim();
+    if (notes.length > 500) return res.status(400).json({ error: 'الملاحظات يجب ألا تتجاوز 500 حرف' });
+    const hw = req.body.has_warranty;
+    if (hw !== true && hw !== false) return res.status(400).json({ error: 'اختر بضمان أو بدون ضمان' });
     const pool = await getPool();
     const cid = await categoryIdOn(pool, req.body.category);
     const r = await pool.request()
       .input('n', sql.NVarChar(160), name)
       .input('c', sql.Int, cid)
       .input('by', sql.NVarChar(120), req.user.name)
+      .input('nt', sql.NVarChar(500), notes || null)
+      .input('hw', sql.Bit, hw ? 1 : 0)
       .input('w', sql.Date, asDate(req.body.warranty_until))
-      .query('INSERT INTO items (name, category_id, stock, maint_qty, scrap_qty, created_by, warranty_until) OUTPUT INSERTED.id VALUES (@n, @c, 0, 0, 0, @by, @w)');
+      .query(`INSERT INTO items (name, category_id, stock, maint_qty, scrap_qty, created_by, created_at, notes, has_warranty, warranty_until)
+              OUTPUT INSERTED.id
+              VALUES (@n, @c, 0, 0, 0, @by, SYSUTCDATETIME(), @nt, @hw, @w)`);
     res.json({ ok: true, id: r.recordset[0].id });
   } catch (err) { next(err); }
 });
@@ -277,6 +293,15 @@ router.put('/items/:id', guard('stock'), async (req, res, next) => {
   try {
     const name = String(req.body.name || '').trim();
     if (!name) return res.status(400).json({ error: 'اسم الصنف لا يمكن أن يكون فارغًا' });
+    if (name.length > 160) return res.status(400).json({ error: 'اسم الصنف أطول من 160 حرفًا' });
+    if (Object.prototype.hasOwnProperty.call(req.body, 'notes')) {
+      const notes = String(req.body.notes == null ? '' : req.body.notes).trim();
+      if (notes.length > 500) return res.status(400).json({ error: 'الملاحظات يجب ألا تتجاوز 500 حرف' });
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'has_warranty')
+        && req.body.has_warranty !== true && req.body.has_warranty !== false) {
+      return res.status(400).json({ error: 'اختر بضمان أو بدون ضمان' });
+    }
     const pool = await getPool();
     const hasCat = Object.prototype.hasOwnProperty.call(req.body, 'category') && String(req.body.category || '').trim();
     const sets = ['name = @n'];
@@ -285,6 +310,14 @@ router.put('/items/:id', guard('stock'), async (req, res, next) => {
     if (hasCat) {
       request.input('c', sql.Int, await categoryIdOn(pool, req.body.category));
       sets.push('category_id = @c');
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'notes')) {
+      request.input('nt', sql.NVarChar(500), String(req.body.notes == null ? '' : req.body.notes).trim() || null);
+      sets.push('notes = @nt');
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'has_warranty')) {
+      request.input('hw', sql.Bit, req.body.has_warranty ? 1 : 0);
+      sets.push('has_warranty = @hw');
     }
     if (Object.prototype.hasOwnProperty.call(req.body, 'warranty_until')) {
       request.input('w', sql.Date, asDate(req.body.warranty_until));
@@ -298,7 +331,8 @@ router.put('/items/:id', guard('stock'), async (req, res, next) => {
 const ITEM_IN_USE_SQL = `
   SELECT TOP 1 1 AS x FROM items i WHERE i.id = @id AND (
     EXISTS (SELECT 1 FROM branch_items bi WHERE bi.item_id = i.id AND bi.qty > 0)
-    OR EXISTS (SELECT 1 FROM voucher_lines vl JOIN vouchers v ON v.id = vl.voucher_id WHERE vl.item_id = i.id AND v.deleted_at IS NULL)
+    OR EXISTS (SELECT 1 FROM voucher_lines vl WHERE vl.item_id = i.id)
+    OR EXISTS (SELECT 1 FROM scrap_entries se WHERE se.item_id = i.id)
     OR EXISTS (SELECT 1 FROM request_lines rl WHERE rl.item_id = i.id))`;
 
 router.delete('/items/:id', guard('stock'), async (req, res, next) => {
@@ -309,11 +343,16 @@ router.delete('/items/:id', guard('stock'), async (req, res, next) => {
     const used = await pool.request().input('id', sql.Int, id).query(ITEM_IN_USE_SQL);
     if (used.recordset.length) return res.status(400).json({ error: 'لا يمكن حذف الصنف لأنه مستخدم في فروع أو أذونات أو طلبات' });
     const tx = new sql.Transaction(pool);
-    await tx.begin();
-    await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM branch_items WHERE item_id = @id');
-    await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM items WHERE id = @id');
-    await tx.commit();
-    res.json({ ok: true });
+    try {
+      await tx.begin();
+      await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM branch_items WHERE item_id = @id');
+      await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM items WHERE id = @id');
+      await tx.commit();
+      res.json({ ok: true });
+    } catch (err) {
+      try { await tx.rollback(); } catch (_) {}
+      throw err;
+    }
   } catch (err) { next(err); }
 });
 
@@ -417,23 +456,37 @@ router.delete('/branches/:id', guard('addBranch'), async (req, res, next) => {
     const bid = asInt(req.params.id);
     const pool = await getPool();
     // Check usage: vouchers referencing branch_id, requests, scrap, items qty>0
-    const vRef = await pool.request().input('b', sql.Int, bid).query('SELECT COUNT(*) AS c FROM vouchers WHERE branch_id = @b OR source_branch = @b');
+    const before = (await pool.request().input('b', sql.Int, bid).query('SELECT name, gov FROM branches WHERE id = @b')).recordset[0];
+    const bname = before ? before.name : '';
+    const vRef = await pool.request().input('b', sql.Int, bid).input('n', sql.NVarChar(160), bname)
+      .query('SELECT COUNT(*) AS c FROM vouchers WHERE branch_id = @b OR source_branch = @n');
     const rRef = await pool.request().input('b', sql.Int, bid).query('SELECT COUNT(*) AS c FROM requests WHERE branch_id = @b');
-    const sRef = await pool.request().input('b', sql.Int, bid).query('SELECT COUNT(*) AS c FROM scrap WHERE branch_id = @b');
     const iRef = await pool.request().input('b', sql.Int, bid).query('SELECT COUNT(*) AS c FROM branch_items WHERE branch_id = @b AND qty > 0');
     const blocks = [];
     if (vRef.recordset[0].c > 0) blocks.push('أذون: ' + vRef.recordset[0].c);
     if (rRef.recordset[0].c > 0) blocks.push('طلبات: ' + rRef.recordset[0].c);
-    if (sRef.recordset[0].c > 0) blocks.push('خردة: ' + sRef.recordset[0].c);
     if (iRef.recordset[0].c > 0) blocks.push('أصناف بالفرع: ' + iRef.recordset[0].c);
     if (blocks.length) return res.status(409).json({ error: 'لا يمكن الحذف، هنالك مراجع: ' + blocks.join('، ') });
-    const before = (await pool.request().input('b', sql.Int, bid).query('SELECT name, gov FROM branches WHERE id = @b')).recordset[0];
-    await pool.request().input('b', sql.Int, bid).query('DELETE FROM branches WHERE id = @b');
-    // Audit file
-    const fs = require('fs');
-    const audit = JSON.parse(fs.readFileSync('data/audit.json', 'utf8') || '[]');
-    audit.push({ user: req.user?.name || null, action: 'delete-branch', entity: 'branch', entity_id: bid, before: before || null, at: new Date().toISOString() });
-    fs.writeFileSync('data/audit.json', JSON.stringify(audit, null, 2));
+    const tx = new sql.Transaction(pool);
+    try {
+      await tx.begin();
+      await sqlReq(tx).input('b', sql.Int, bid).query('DELETE FROM branch_items WHERE branch_id = @b');
+      await sqlReq(tx).input('b', sql.Int, bid).query('DELETE FROM branches WHERE id = @b');
+      await tx.commit();
+    } catch (err) {
+      try { await tx.rollback(); } catch (_) {}
+      throw err;
+    }
+    // Audit trail is best effort: the branch is already deleted, so a missing
+    // or unwritable file must never turn a successful delete into a 500.
+    try {
+      fs.mkdirSync('data', { recursive: true });
+      let audit = [];
+      try { audit = JSON.parse(fs.readFileSync('data/audit.json', 'utf8') || '[]'); } catch (_) { audit = []; }
+      if (!Array.isArray(audit)) audit = [];
+      audit.push({ user: req.user?.name || null, action: 'delete-branch', entity: 'branch', entity_id: bid, before: before || null, at: new Date().toISOString() });
+      fs.writeFileSync('data/audit.json', JSON.stringify(audit, null, 2));
+    } catch (_) { /* audit is non-critical */ }
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
@@ -578,16 +631,16 @@ function normalize(b) {
   const supplierName = String(b.supplier_name || '').trim();
   const number = String(b.number || '').trim();
   const sourceBranch = String(b.source_branch || '').trim();
-  const lines = (b.lines || []).map((l) => ({
-    itemId: asInt(l.item_id),
-    qty: asInt(l.qty),
+  const lines = (Array.isArray(b.lines) ? b.lines : []).map((l) => ({
+    itemId: Number(l.item_id),
+    qty: Number(l.qty),
     state: receiptState(direction, l.state),
-    serials: Array.isArray(l.serials) ? l.serials : [],
+    serials: Array.isArray(l.serials) ? l.serials.map((s) => String(s).trim()) : [],
     reason: String(l.reason || '').trim(),
     note: String(l.note || '').trim(),
     hasWarranty: !!l.has_warranty,
     warrantyUntil: asDate(l.warranty_until)
-  })).filter((l) => l.itemId && l.qty > 0);
+  }));
   // Branch receipts no longer feed the scrap pool: a unit coming back from a
   // branch is always stored as good. Damaged units are written off from the
   // Scrap screen, which deducts them from the warehouse balance.
@@ -597,10 +650,98 @@ function normalize(b) {
 
 function validate(n) {
   if (!n.number) return 'اكتب رقم الإذن';
+  if (n.number.length > 60) return 'رقم الإذن أطول من 60 حرفًا';
   if (n.direction === 'out' && n.kind === 'maint') return 'لا يمكن الصرف إلى الصيانة';
   if (n.kind === 'br' && !n.branchId) return 'اختر فرعًا مسجلًا';
-  if (n.kind === 'sup' && !n.supplierName) return 'اكتب اسم المورد';
-  if (!n.lines.length) return 'أضف صنفًا واحدًا على الأقل بعدد صحيح';
+  if (n.kind === 'sup' && !n.supplierName) return 'اختر المورد';
+  if (!n.lines.length) return 'أضف صنفًا واحدًا على الأقل';
+  for (const l of n.lines) {
+    if (!Number.isInteger(l.itemId) || l.itemId <= 0) return 'اختر الصنف في كل سطر';
+    if (!Number.isInteger(l.qty) || l.qty <= 0) return 'اكتب عددًا صحيحًا أكبر من صفر في كل سطر';
+  }
+  return null;
+}
+
+// Current serial ledger for the given items: replays every live voucher line in
+// order plus scrap entries so we know where each serial is right now
+// (stock / branch:<id> / maint / scrap). A voucher being edited is excluded so
+// its own lines do not block the replacement.
+async function serialLedger(client, itemIds, excludeVoucherId) {
+  const ledger = new Map();
+  if (!itemIds.length) return ledger;
+  const put = (itemId, sn, state, branchId) => {
+    const key = itemId + '|' + String(sn).toLowerCase();
+    ledger.set(key, { state, branchId: branchId == null ? null : Number(branchId) });
+  };
+  const rows = await sqlReq(client)
+    .input('ids', sql.NVarChar(sql.MAX), JSON.stringify(itemIds))
+    .input('ex', sql.Int, excludeVoucherId || null)
+    .query(`SELECT vl.item_id, vl.serials, vl.state, v.direction, v.kind, v.branch_id
+              FROM voucher_lines vl JOIN vouchers v ON v.id = vl.voucher_id
+             WHERE v.deleted_at IS NULL
+               AND vl.item_id IN (SELECT CAST(value AS INT) FROM OPENJSON(@ids))
+               AND (@ex IS NULL OR v.id <> @ex)
+             ORDER BY vl.id`);
+  for (const r of rows.recordset) {
+    for (const sn of parseSerials(r.serials)) {
+      if (!String(sn || '').trim()) continue;
+      if (r.direction === 'out') {
+        put(r.item_id, sn, r.kind === 'br' ? 'branch' : 'maint', r.kind === 'br' ? r.branch_id : null);
+      } else {
+        put(r.item_id, sn, String(r.state) === 'scrap' ? 'scrap' : 'stock', null);
+      }
+    }
+  }
+  const scrap = await sqlReq(client)
+    .input('ids', sql.NVarChar(sql.MAX), JSON.stringify(itemIds))
+    .query('SELECT item_id, serials FROM scrap_entries WHERE item_id IN (SELECT CAST(value AS INT) FROM OPENJSON(@ids))');
+  for (const r of scrap.recordset) {
+    for (const sn of parseSerials(r.serials)) if (String(sn || '').trim()) put(r.item_id, sn, 'scrap', null);
+  }
+  return ledger;
+}
+
+// Validates serial rules for a voucher inside its transaction. Returns an
+// Arabic error message or null. Duplicates are checked across every line of the
+// same item (repeated lines are treated as one aggregate request).
+async function validateVoucherSerials(client, n, excludeVoucherId) {
+  const itemIds = [...new Set(n.lines.map((l) => l.itemId))];
+  if (!itemIds.length) return null;
+  const rows = await sqlReq(client)
+    .input('ids', sql.NVarChar(sql.MAX), JSON.stringify(itemIds))
+    .query(`SELECT i.id, i.name, c.has_serial FROM items i JOIN categories c ON c.id = i.category_id
+             WHERE i.id IN (SELECT CAST(value AS INT) FROM OPENJSON(@ids))`);
+  const info = new Map(rows.recordset.map((r) => [r.id, { serial: !!r.has_serial, name: r.name }]));
+  for (const id of itemIds) if (!info.has(id)) return 'الصنف المحدد غير موجود';
+
+  const ledger = await serialLedger(client, itemIds, excludeVoucherId);
+  const seen = new Map(); // itemId -> Set(lowercase serial)
+
+  for (const l of n.lines) {
+    const meta = info.get(l.itemId);
+    if (!meta.serial) { l.serials = []; continue; }
+    if (l.serials.length !== l.qty) return `اكتب سيريال لكل قطعة من صنف ${meta.name}`;
+    if (l.serials.some((s) => !s)) return `اكتب كل سيريالات صنف ${meta.name}`;
+    if (!seen.has(l.itemId)) seen.set(l.itemId, new Set());
+    const itemSeen = seen.get(l.itemId);
+    for (const sn of l.serials) {
+      const key = sn.toLowerCase();
+      if (itemSeen.has(key)) return `سيريال مكرر: ${sn}`;
+      itemSeen.add(key);
+      const cur = ledger.get(l.itemId + '|' + key);
+      if (n.direction === 'out') {
+        if (!cur || cur.state !== 'stock') return `السيريال ${sn} غير متاح في المخزن للصنف ${meta.name}`;
+      } else if (n.kind === 'maint') {
+        if (!cur || cur.state !== 'maint') return `السيريال ${sn} غير موجود تحت الصيانة للصنف ${meta.name}`;
+      } else if (n.kind === 'br') {
+        if (!cur || cur.state !== 'branch' || cur.branchId !== Number(n.branchId)) {
+          return `السيريال ${sn} غير موجود في الفرع المحدد للصنف ${meta.name}`;
+        }
+      } else if (cur) {
+        return `السيريال ${sn} مسجل من قبل للصنف ${meta.name}`;
+      }
+    }
+  }
   return null;
 }
 
@@ -647,6 +788,8 @@ router.post('/vouchers', guard('stock'), async (req, res, next) => {
     const { itemIds, branchIds } = collectIds([newVoucher]);
 
     await tx.begin();
+    const serialError = await validateVoucherSerials(tx, n, null);
+    if (serialError) { await tx.rollback(); return res.status(400).json({ error: serialError }); }
     const applied = await applyAndPersist(tx, planChange(null, newVoucher), itemIds, branchIds);
     if (!applied.ok) { await tx.rollback(); return res.status(400).json(stockError(applied)); }
 
@@ -704,6 +847,8 @@ router.put('/vouchers/:id', guard('stock'), async (req, res, next) => {
       return res.status(403).json({ error: 'حركات الصيانة والخردة متاحة لمدير النظام والمدير الفني فقط' });
     }
     const { itemIds, branchIds } = collectIds([old.voucher, newVoucher]);
+    const serialError = await validateVoucherSerials(tx, n, id);
+    if (serialError) { await tx.rollback(); return res.status(400).json({ error: serialError }); }
     const applied = await applyAndPersist(tx, planChange(old.voucher, newVoucher), itemIds, branchIds);
     if (!applied.ok) { await tx.rollback(); return res.status(400).json(stockError(applied)); }
 
@@ -760,12 +905,17 @@ router.post('/scrap', guard('pool'), async (req, res, next) => {
   const tx = new sql.Transaction(pool);
   try {
     const mode = req.body.mode === 'plain' ? 'plain' : 'serial';
-    const lines = (req.body.lines || []).map((l) => ({
-      itemId: asInt(l.item_id),
-      qty: asInt(l.qty),
+    const rawLines = Array.isArray(req.body.lines) ? req.body.lines : [];
+    if (!rawLines.length) return res.status(400).json({ error: 'أضف صنفًا واحدًا على الأقل' });
+    const lines = rawLines.map((l) => ({
+      itemId: Number(l.item_id),
+      qty: Number(l.qty),
       serials: Array.isArray(l.serials) ? l.serials.map((s) => String(s).trim()) : []
-    })).filter((l) => l.itemId && l.qty > 0);
-    if (!lines.length) return res.status(400).json({ error: 'أضف صنفًا واحدًا على الأقل بعدد صحيح' });
+    }));
+    for (const l of lines) {
+      if (!Number.isInteger(l.itemId) || l.itemId <= 0) return res.status(400).json({ error: 'اختر الصنف في كل سطر' });
+      if (!Number.isInteger(l.qty) || l.qty <= 0) return res.status(400).json({ error: 'اكتب عددًا صحيحًا أكبر من صفر في كل سطر' });
+    }
 
     const ids = [...new Set(lines.map((l) => l.itemId))];
     await tx.begin();
@@ -774,7 +924,12 @@ router.post('/scrap', guard('pool'), async (req, res, next) => {
       .query(`SELECT i.id, c.has_serial FROM items i JOIN categories c ON c.id = i.category_id
                WHERE i.id IN (SELECT CAST(value AS INT) FROM OPENJSON(@ids))`);
     const serialised = new Map(cats.recordset.map((r) => [r.id, !!r.has_serial]));
+    for (const id of ids) {
+      if (!serialised.has(id)) { await tx.rollback(); return res.status(400).json({ error: 'الصنف المحدد غير موجود' }); }
+    }
 
+    // Serial checks are aggregated per item across repeated lines.
+    const ledger = mode === 'serial' ? await serialLedger(tx, ids, null) : new Map();
     const seen = new Set();
     for (const l of lines) {
       // `plain` write-offs are quantity-only even for serialised categories.
@@ -788,12 +943,17 @@ router.post('/scrap', guard('pool'), async (req, res, next) => {
           return res.status(400).json({ error: 'اكتب كل السيريالات' });
         }
         for (const s of l.serials) {
-          const key = s.toLowerCase();
+          const key = l.itemId + '|' + s.toLowerCase();
           if (seen.has(key)) {
             await tx.rollback();
             return res.status(400).json({ error: 'سيريال مكرر: ' + s });
           }
           seen.add(key);
+          const cur = ledger.get(key);
+          if (!cur || cur.state !== 'stock') {
+            await tx.rollback();
+            return res.status(400).json({ error: 'السيريال ' + s + ' غير متاح في المخزن' });
+          }
         }
       } else {
         l.serials = [];
@@ -829,9 +989,14 @@ router.post('/requests', guard('request'), async (req, res, next) => {
   const tx = new sql.Transaction(pool);
   try {
     const branchId = asInt(req.body.branch_id);
-    const lines = (req.body.lines || []).filter((l) => asInt(l.qty) > 0);
+    const rawLines = Array.isArray(req.body.lines) ? req.body.lines : [];
+    const lines = rawLines.map((l) => ({ item_id: Number(l.item_id), qty: Number(l.qty) }));
     if (!branchId) return res.status(400).json({ error: 'اختر الفرع' });
     if (!lines.length) return res.status(400).json({ error: 'اختر صنفًا واحدًا على الأقل' });
+    for (const l of lines) {
+      if (!Number.isInteger(l.item_id) || l.item_id <= 0) return res.status(400).json({ error: 'اختر الصنف في كل سطر' });
+      if (!Number.isInteger(l.qty) || l.qty <= 0) return res.status(400).json({ error: 'اكتب عددًا صحيحًا أكبر من صفر في كل سطر' });
+    }
     await tx.begin();
     const r = await sqlReq(tx)
       .input('b', sql.Int, branchId)
@@ -878,11 +1043,15 @@ router.post('/requests/:id/action', async (req, res, next) => {
       await sqlReq(tx).input('id', sql.Int, id).query("UPDATE requests SET status = 'rejected' WHERE id = @id");
     } else if (action === 'save') {
       if (!can(role, 'edit')) { await tx.rollback(); return res.status(403).json({ error: 'لا تملك صلاحية هذا الإجراء' }); }
-      const lines = (req.body.lines || []).filter((l) => asInt(l.qty) > 0);
+      const lines = (Array.isArray(req.body.lines) ? req.body.lines : []).map((l) => ({ item_id: Number(l.item_id), qty: Number(l.qty) }));
       if (!lines.length) { await tx.rollback(); return res.status(400).json({ error: 'اترك صنفًا واحدًا على الأقل أو ارفض الطلب' }); }
+      for (const l of lines) {
+        if (!Number.isInteger(l.item_id) || l.item_id <= 0) { await tx.rollback(); return res.status(400).json({ error: 'اختر الصنف في كل سطر' }); }
+        if (!Number.isInteger(l.qty) || l.qty <= 0) { await tx.rollback(); return res.status(400).json({ error: 'اكتب عددًا صحيحًا أكبر من صفر في كل سطر' }); }
+      }
       await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM request_lines WHERE request_id = @id');
       for (const l of lines) {
-        await sqlReq(tx).input('r', sql.Int, id).input('i', sql.Int, asInt(l.item_id)).input('q', sql.Int, asInt(l.qty))
+        await sqlReq(tx).input('r', sql.Int, id).input('i', sql.Int, l.item_id).input('q', sql.Int, l.qty)
           .query('INSERT INTO request_lines (request_id, item_id, qty) VALUES (@r, @i, @q)');
       }
       await log('عدّل الطلب', '', String(req.body.note || 'تم التعديل'));

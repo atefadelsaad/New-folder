@@ -53,6 +53,14 @@ GO
 IF COL_LENGTH('dbo.items', 'warranty_until') IS NULL
   ALTER TABLE dbo.items ADD warranty_until DATE NULL;
 GO
+/* Item notes and the explicit بضمان / بدون ضمان choice. NULL = not recorded
+   for items created before this field existed (kept readable, shown as "-"). */
+IF COL_LENGTH('dbo.items', 'notes') IS NULL
+  ALTER TABLE dbo.items ADD notes NVARCHAR(500) NULL;
+GO
+IF COL_LENGTH('dbo.items', 'has_warranty') IS NULL
+  ALTER TABLE dbo.items ADD has_warranty BIT NULL;
+GO
 
 /* ------------------------------ branches -------------------------------- */
 IF OBJECT_ID('dbo.branches', 'U') IS NULL
@@ -63,6 +71,23 @@ CREATE TABLE dbo.branches (
   created_by NVARCHAR(120) NULL,
   created_at DATE          NOT NULL CONSTRAINT df_branches_created DEFAULT CAST(GETDATE() AS DATE)
 );
+GO
+/* Optional branch profile fields used by the branches screen. Added in place,
+   nullable, so existing branches keep working and no data is rewritten. */
+IF COL_LENGTH('dbo.branches', 'number') IS NULL
+  ALTER TABLE dbo.branches ADD number NVARCHAR(20) NULL;
+GO
+IF COL_LENGTH('dbo.branches', 'manager') IS NULL
+  ALTER TABLE dbo.branches ADD manager NVARCHAR(120) NULL;
+GO
+IF COL_LENGTH('dbo.branches', 'phone') IS NULL
+  ALTER TABLE dbo.branches ADD phone NVARCHAR(30) NULL;
+GO
+IF COL_LENGTH('dbo.branches', 'address') IS NULL
+  ALTER TABLE dbo.branches ADD address NVARCHAR(500) NULL;
+GO
+IF COL_LENGTH('dbo.branches', 'location') IS NULL
+  ALTER TABLE dbo.branches ADD location NVARCHAR(500) NULL;
 GO
 
 /* ---------------------------- branch_items ------------------------------ */
