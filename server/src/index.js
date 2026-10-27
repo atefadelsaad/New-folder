@@ -8,7 +8,7 @@ const cors = require('cors');
 
 const { getPool, ensureDatabase } = require('./db');
 const routes = require('./routes');
-const { ensureUsersSeed, ensureDomainSeed } = require('./seed');
+const { ensureUsersSeed, ensureDomainSeed, ensureNoDuplicateBranches } = require('./seed');
 
 // Resolve the project root both in local dev (cwd = server/) and in Docker (cwd = /app).
 const ROOT = fs.existsSync(path.join(process.cwd(), 'db', 'schema.mssql.sql'))
@@ -30,6 +30,7 @@ async function init() {
   await runSchema();
   await ensureUsersSeed();
   await ensureDomainSeed();
+  await ensureNoDuplicateBranches();
 }
 
 const app = express();
