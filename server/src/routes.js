@@ -7,6 +7,7 @@ const { getPool, sql } = require('./db');
 const { sign, auth } = require('./auth');
 const { can } = require('./roles');
 const { voucherDeltas, scrapDeltas, applyDeltas, planChange } = require('./stock');
+const store = require('./filestore');
 
 const router = express.Router();
 
@@ -81,7 +82,7 @@ async function loadBootstrap(role) {
       WHERE v.deleted_at IS NULL ORDER BY v.id DESC`
   );
   const lines = await pool.request().query(
-    `SELECT vl.voucher_id, vl.item_id, vl.qty, vl.serials, vl.state, vl.reason, vl.line_note, vl.has_warranty, vl.line_warranty_until
+    `SELECT vl.voucher_id, vl.item_id, vl.qty, vl.item_condition, vl.serials, vl.state, vl.reason, vl.line_note, vl.has_warranty, vl.line_warranty_until
        FROM voucher_lines vl JOIN vouchers v ON v.id = vl.voucher_id
       WHERE v.deleted_at IS NULL ORDER BY vl.id`
   );
@@ -91,6 +92,8 @@ async function loadBootstrap(role) {
   const requests = await pool.request().query('SELECT id, branch_id, requested_by, status, created_at FROM requests ORDER BY id DESC');
   const reqLines = await pool.request().query('SELECT request_id, item_id, qty FROM request_lines ORDER BY id');
   const logs = await pool.request().query('SELECT request_id, by_name, action, kind, note FROM request_logs ORDER BY id');
+  const maintenanceForms = store.readList('maintenance_forms.json');
+  const dispatchMeta = role === 'junior' ? {} : store.readMap('dispatch_meta.json');
 
   const q = {};
   branchItems.recordset.forEach((r) => { (q[r.branch_id] = q[r.branch_id] || {})[r.item_id] = r.qty; });
@@ -164,7 +167,9 @@ async function loadBootstrap(role) {
       id: r.id, b: r.branch_id, by: r.requested_by, st: r.status,
       d: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : '',
       l: linesByRequest[r.id] || [], log: logsByRequest[r.id] || []
-    }))
+    })),
+    maintenanceForms,
+    dispatchMeta
   };
 }
 
@@ -631,6 +636,7 @@ function normalize(b) {
   const supplierName = String(b.supplier_name || '').trim();
   const number = String(b.number || '').trim();
   const sourceBranch = String(b.source_branch || '').trim();
+  const docDate = asDate(b.doc_date);
   const lines = (Array.isArray(b.lines) ? b.lines : []).map((l) => ({
     itemId: Number(l.item_id),
     qty: Number(l.qty),
@@ -638,6 +644,7 @@ function normalize(b) {
     serials: Array.isArray(l.serials) ? l.serials.map((s) => String(s).trim()) : [],
     reason: String(l.reason || '').trim(),
     note: String(l.note || '').trim(),
+    condition: String(l.condition || l.item_condition || '').trim().slice(0, 200),
     hasWarranty: !!l.has_warranty,
     warrantyUntil: asDate(l.warranty_until)
   }));
@@ -645,7 +652,7 @@ function normalize(b) {
   // branch is always stored as good. Damaged units are written off from the
   // Scrap screen, which deducts them from the warehouse balance.
   if (direction === 'in' && kind === 'br') lines.forEach((l) => { l.state = 'stock'; });
-  return { direction, kind, branchId, supplierName, number, sourceBranch, lines };
+  return { direction, kind, branchId, supplierName, number, sourceBranch, docDate, lines };
 }
 
 function validate(n) {
@@ -756,10 +763,11 @@ async function insertLine(client, voucherId, l) {
     .input('st', sql.NVarChar(8), l.state).input('sn', sql.NVarChar(sql.MAX), JSON.stringify(l.serials))
     .input('rs', sql.NVarChar(200), l.reason || null)
     .input('nt', sql.NVarChar(sql.MAX), l.note || null)
+    .input('cd', sql.NVarChar(200), l.condition || null)
     .input('hw', sql.Bit, l.hasWarranty ? 1 : 0)
     .input('wu', sql.Date, l.warrantyUntil || null)
-    .query(`INSERT INTO voucher_lines (voucher_id, item_id, qty, state, serials, reason, line_note, has_warranty, line_warranty_until)
-            VALUES (@v, @i, @q, @st, @sn, @rs, @nt, @hw, @wu)`);
+    .query(`INSERT INTO voucher_lines (voucher_id, item_id, qty, item_condition, state, serials, reason, line_note, has_warranty, line_warranty_until)
+            VALUES (@v, @i, @q, @cd, @st, @sn, @rs, @nt, @hw, @wu)`);
 }
 
 // A warranty captured on a receipt that is not from a supplier (a unit back
@@ -784,10 +792,19 @@ router.post('/vouchers', guard('stock'), async (req, res, next) => {
     if (touchesPool(n) && !can(req.user.role, 'pool')) {
       return res.status(403).json({ error: 'حركات الصيانة والخردة متاحة لمدير النظام والمدير الفني فقط' });
     }
+    const requestId = n.direction === 'out' && n.kind === 'br' ? asInt(req.body.request_id) || null : null;
     const newVoucher = { direction: n.direction, kind: n.kind, branch_id: n.branchId, lines: n.lines };
     const { itemIds, branchIds } = collectIds([newVoucher]);
 
     await tx.begin();
+    if (requestId) {
+      const rr = await sqlReq(tx).input('id', sql.Int, requestId)
+        .query('SELECT status FROM requests WITH (UPDLOCK) WHERE id = @id');
+      if (!rr.recordset.length || rr.recordset[0].status !== 'approved') {
+        await tx.rollback();
+        return res.status(400).json({ error: 'الطلب غير معتمد أو تم صرفه من قبل' });
+      }
+    }
     const serialError = await validateVoucherSerials(tx, n, null);
     if (serialError) { await tx.rollback(); return res.status(400).json({ error: serialError }); }
     const applied = await applyAndPersist(tx, planChange(null, newVoucher), itemIds, branchIds);
@@ -798,12 +815,17 @@ router.post('/vouchers', guard('stock'), async (req, res, next) => {
       .input('d', sql.NVarChar(3), n.direction).input('k', sql.NVarChar(8), n.kind)
       .input('s', sql.Int, supId).input('b', sql.Int, n.branchId).input('n', sql.NVarChar(60), n.number)
       .input('sb', sql.NVarChar(160), n.sourceBranch || null)
-      .input('dt', sql.NVarChar(40), new Date().toLocaleDateString('en-CA'))
+      .input('dt', sql.NVarChar(40), n.docDate || new Date().toLocaleDateString('en-CA'))
       .input('by', sql.NVarChar(120), req.user.name)
       .query('INSERT INTO vouchers (direction, kind, supplier_id, branch_id, number, source_branch, doc_date, created_by) OUTPUT INSERTED.id VALUES (@d, @k, @s, @b, @n, @sb, @dt, @by)');
     const vid = vr.recordset[0].id;
     for (const l of n.lines) await insertLine(tx, vid, l);
     await applyLineWarranty(tx, n);
+    if (requestId) {
+      await sqlReq(tx).input('id', sql.Int, requestId).query("UPDATE requests SET status = 'released' WHERE id = @id");
+      await sqlReq(tx).input('r', sql.Int, requestId).input('by', sql.NVarChar(120), req.user.name)
+        .query("INSERT INTO request_logs (request_id, by_name, action, kind, note) VALUES (@r, @by, N'أكد الصرف', N'ok', N'')");
+    }
     await tx.commit();
     res.json({ ok: true, id: vid });
   } catch (err) {
@@ -857,8 +879,9 @@ router.put('/vouchers/:id', guard('stock'), async (req, res, next) => {
       .input('d', sql.NVarChar(3), n.direction).input('k', sql.NVarChar(8), n.kind)
       .input('s', sql.Int, supId).input('b', sql.Int, n.branchId).input('n', sql.NVarChar(60), n.number)
       .input('sb', sql.NVarChar(160), n.sourceBranch || null)
+      .input('dt', sql.NVarChar(40), n.docDate || null)
       .input('ed', sql.NVarChar(120), req.user.name).input('id', sql.Int, id)
-      .query('UPDATE vouchers SET direction = @d, kind = @k, supplier_id = @s, branch_id = @b, number = @n, source_branch = @sb, edited_by = @ed WHERE id = @id');
+      .query('UPDATE vouchers SET direction = @d, kind = @k, supplier_id = @s, branch_id = @b, number = @n, source_branch = @sb, doc_date = COALESCE(@dt, doc_date), edited_by = @ed WHERE id = @id');
     await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM voucher_lines WHERE voucher_id = @id');
     for (const l of n.lines) await insertLine(tx, id, l);
     await applyLineWarranty(tx, n);
@@ -888,6 +911,20 @@ router.delete('/vouchers/:id', guard('delRecv'), async (req, res, next) => {
     if (!applied.ok) { await tx.rollback(); return res.status(400).json(stockError(applied)); }
     await sqlReq(tx).input('id', sql.Int, id).query('UPDATE vouchers SET deleted_at = SYSUTCDATETIME() WHERE id = @id');
     await tx.commit();
+    try {
+      const meta = store.readMap('dispatch_meta.json');
+      if (meta[id]) { delete meta[id]; store.writeMap('dispatch_meta.json', meta); }
+      const forms = store.readList('maintenance_forms.json');
+      let changed = false;
+      for (const f of forms) {
+        if (String(f.issuePermitId || '') === String(id)) {
+          f.issuePermitId = null; f.issuePermitNumber = '';
+          if (f.status === 'sent_external') f.status = 'received';
+          changed = true;
+        }
+      }
+      if (changed) store.writeJson('maintenance_forms.json', forms);
+    } catch (_) { /* file metadata is best-effort */ }
     res.json({ ok: true });
   } catch (err) {
     try { await tx.rollback(); } catch (_) {}
@@ -1086,6 +1123,170 @@ router.post('/requests/:id/action', async (req, res, next) => {
     try { await tx.rollback(); } catch (_) {}
     next(err);
   }
+});
+
+/* ---------------------- maintenance forms (JSON files) ------------------ */
+
+const MF_TYPES = new Set(['internal', 'external']);
+const MF_STATUS = new Set(['received', 'internal_check', 'sent_external', 'received_after_maintenance', 'returned_to_branch']);
+const MF_TEXT_FIELDS = [
+  'branchName', 'ownerName', 'employeeCode', 'department', 'deviceType', 'serial',
+  'faultDescription', 'accessoriesNotes', 'permitNumber', 'supportOfficer', 'signature',
+  'inspectionResult', 'actionTaken', 'permitNumber2', 'inspector', 'signature2',
+  'maintenanceEntity', 'recipientName', 'signature3', 'warrantyStatus', 'accessoriesNotes2',
+  'inspector3', 'signature4', 'issuePermitNumber', 'inspectionResult2', 'actionTaken2',
+  'technicianName', 'signature5', 'inspectionResult3', 'actionTaken3',
+  'maintenanceDeliveryOfficer', 'signature6', 'inspector4', 'signature7', 'entryPermitNumber',
+  'receiptVoucherNumber'
+];
+const MF_DATE_FIELDS = ['deliveryDate', 'receivedDate', 'inspectionDate', 'releaseToBranchDate', 'deliveryDate2', 'date3', 'receivedDate2'];
+const MF_ID_FIELDS = ['itemId', 'branchId', 'issuePermitId', 'entryPermitId', 'receiptVoucherId'];
+
+const mfText = (v, max = 2000) => String(v == null ? '' : v).trim().slice(0, max);
+const mfInt = (v) => {
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+
+function maintenanceFields(body) {
+  const out = {};
+  MF_TEXT_FIELDS.forEach((k) => { if (Object.prototype.hasOwnProperty.call(body, k)) out[k] = mfText(body[k]); });
+  MF_DATE_FIELDS.forEach((k) => { if (Object.prototype.hasOwnProperty.call(body, k)) out[k] = asDate(body[k]) || ''; });
+  MF_ID_FIELDS.forEach((k) => { if (Object.prototype.hasOwnProperty.call(body, k)) out[k] = mfInt(body[k]); });
+  if (Object.prototype.hasOwnProperty.call(body, 'dispatchLinks')) {
+    out.dispatchLinks = (Array.isArray(body.dispatchLinks) ? body.dispatchLinks : []).slice(0, 50).map((x) => ({
+      permitId: mfInt(x && x.permitId),
+      permitNumber: mfText(x && x.permitNumber, 60),
+      date: asDate(x && x.date) || ''
+    }));
+  }
+  return out;
+}
+
+router.get('/maintenance-forms', (req, res) => {
+  res.json({ forms: store.readList('maintenance_forms.json') });
+});
+
+router.post('/maintenance-forms', guard('maintCreate'), (req, res) => {
+  try {
+    const body = req.body || {};
+    const rows = store.readList('maintenance_forms.json');
+    const nextId = rows.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) + 1;
+    const nextNo = rows.reduce((m, r) => {
+      const n = parseInt(String(r.number || '').replace(/\D/g, ''), 10);
+      return Math.max(m, Number.isFinite(n) ? n : 0);
+    }, 0) + 1;
+    const type = MF_TYPES.has(body.maintenanceType) ? body.maintenanceType : 'internal';
+    let status = MF_STATUS.has(body.status) ? body.status : 'received';
+    if (req.user.role === 'junior') status = 'received';
+    const now = new Date().toISOString();
+    const rec = Object.assign({
+      id: nextId,
+      number: 'MF-' + String(nextNo).padStart(4, '0'),
+      maintenanceType: type,
+      status
+    }, maintenanceFields(body), {
+      requestOnly: req.user.role === 'junior',
+      createdBy: req.user.name,
+      createdAt: now,
+      updatedBy: req.user.name,
+      updatedAt: now
+    });
+    rows.push(rec);
+    store.writeJson('maintenance_forms.json', rows);
+    res.json({ ok: true, form: rec });
+  } catch (err) { next(err); }
+});
+
+router.put('/maintenance-forms/:id', guard('maintEdit'), (req, res) => {
+  try {
+    const id = mfInt(req.params.id);
+    const rows = store.readList('maintenance_forms.json');
+    const idx = rows.findIndex((r) => Number(r.id) === Number(id));
+    if (idx < 0) return res.status(404).json({ error: 'نموذج الصيانة غير موجود' });
+    const body = req.body || {};
+    if (Object.prototype.hasOwnProperty.call(body, 'maintenanceType') && !MF_TYPES.has(body.maintenanceType)) {
+      return res.status(400).json({ error: 'نوع صيانة غير صالح' });
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'status') && !MF_STATUS.has(body.status)) {
+      return res.status(400).json({ error: 'حالة نموذج غير صالحة' });
+    }
+    const rec = Object.assign({}, rows[idx], maintenanceFields(body), {
+      updatedBy: req.user.name,
+      updatedAt: new Date().toISOString()
+    });
+    if (Object.prototype.hasOwnProperty.call(body, 'maintenanceType')) rec.maintenanceType = body.maintenanceType;
+    if (Object.prototype.hasOwnProperty.call(body, 'status')) rec.status = body.status;
+    rows[idx] = rec;
+    store.writeJson('maintenance_forms.json', rows);
+    res.json({ ok: true, form: rec });
+  } catch (err) { next(err); }
+});
+
+router.delete('/maintenance-forms/:id', guard('maintDelete'), (req, res) => {
+  try {
+    const id = mfInt(req.params.id);
+    const rows = store.readList('maintenance_forms.json');
+    const next = rows.filter((r) => Number(r.id) !== Number(id));
+    if (next.length === rows.length) return res.status(404).json({ error: 'نموذج الصيانة غير موجود' });
+    store.writeJson('maintenance_forms.json', next);
+    const meta = store.readMap('dispatch_meta.json');
+    let changed = false;
+    Object.keys(meta).forEach((key) => {
+      if (Number(meta[key] && meta[key].maintenanceFormId) === Number(id)) {
+        meta[key].maintenanceFormId = null;
+        changed = true;
+      }
+    });
+    if (changed) store.writeMap('dispatch_meta.json', meta);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+/* ------------------- dispatch printable metadata (file) ------------------ */
+
+router.get('/dispatch-meta', (req, res) => {
+  res.json({ meta: store.readMap('dispatch_meta.json') });
+});
+
+router.put('/dispatch-meta/:id', guard('stock'), (req, res) => {
+  try {
+    const id = mfInt(req.params.id);
+    if (!id) return res.status(400).json({ error: 'رقم الإذن غير صالح' });
+    const body = req.body || {};
+    const map = store.readMap('dispatch_meta.json');
+    const prev = map[id] && typeof map[id] === 'object' ? map[id] : {};
+    const dest = ['branch', 'supplier', 'maintenance'].includes(body.destType) ? body.destType : (prev.destType || 'branch');
+    const next = Object.assign({}, prev, {
+      destType: dest,
+      maintenanceFormId: Object.prototype.hasOwnProperty.call(body, 'maintenanceFormId') ? mfInt(body.maintenanceFormId) : (prev.maintenanceFormId || null),
+      requestId: Object.prototype.hasOwnProperty.call(body, 'requestId') ? mfInt(body.requestId) : (prev.requestId || null),
+      note: Object.prototype.hasOwnProperty.call(body, 'note') ? mfText(body.note, 4000) : (prev.note || ''),
+      stockOfficer: Object.prototype.hasOwnProperty.call(body, 'stockOfficer') ? mfText(body.stockOfficer, 160) : (prev.stockOfficer || ''),
+      stockOfficerSignature: Object.prototype.hasOwnProperty.call(body, 'stockOfficerSignature') ? mfText(body.stockOfficerSignature, 160) : (prev.stockOfficerSignature || ''),
+      receiverName: Object.prototype.hasOwnProperty.call(body, 'receiverName') ? mfText(body.receiverName, 160) : (prev.receiverName || ''),
+      receiverSignature: Object.prototype.hasOwnProperty.call(body, 'receiverSignature') ? mfText(body.receiverSignature, 160) : (prev.receiverSignature || ''),
+      gov: Object.prototype.hasOwnProperty.call(body, 'gov') ? mfText(body.gov, 160) : (prev.gov || ''),
+      address: Object.prototype.hasOwnProperty.call(body, 'address') ? mfText(body.address, 500) : (prev.address || ''),
+      partyName: Object.prototype.hasOwnProperty.call(body, 'partyName') ? mfText(body.partyName, 200) : (prev.partyName || ''),
+      receiveDate: Object.prototype.hasOwnProperty.call(body, 'receiveDate') ? (asDate(body.receiveDate) || '') : (prev.receiveDate || ''),
+      updatedBy: req.user.name,
+      updatedAt: new Date().toISOString()
+    });
+    map[id] = next;
+    store.writeMap('dispatch_meta.json', map);
+    res.json({ ok: true, meta: next });
+  } catch (err) { next(err); }
+});
+
+router.delete('/dispatch-meta/:id', guard('delRecv'), (req, res) => {
+  try {
+    const id = mfInt(req.params.id);
+    const map = store.readMap('dispatch_meta.json');
+    delete map[id];
+    store.writeMap('dispatch_meta.json', map);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

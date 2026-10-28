@@ -32,6 +32,9 @@ services:
         condition: service_healthy
     ports:
       - "3000:3002"
+    volumes:
+      - warehouse_data:/app/data
 
 volumes:
   mssql_data:
+  warehouse_data:
