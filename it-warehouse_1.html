@@ -155,48 +155,58 @@ body:has(nav:empty) #t{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 .mf-bar select,.mf-bar input{min-height:34px;padding:5px 8px;font-size:13px;background:var(--sf)}
 .mf-bar .mf-no{font-size:12.5px;font-weight:800;color:var(--acc);white-space:nowrap}
 .mf-hint{font-size:12.5px;color:var(--mut);line-height:1.7;margin:0}
+.print-only{display:none}
 .paper-wrap{width:100%;overflow-x:auto;padding:4px 0 18px;-webkit-overflow-scrolling:touch}
-.paper-sheet{width:210mm;min-height:296mm;background:#fff;color:#000;margin:0 auto;padding:7mm 8mm 6mm;box-shadow:0 18px 42px rgba(0,0,0,.42);border-radius:2px;font-family:Cairo,Tahoma,Arial,sans-serif;font-size:8.2pt;line-height:1.35;direction:rtl}
+.paper-sheet{width:210mm;min-height:296mm;background:#fff;color:#000;margin:0 auto;padding:7mm 8mm 6mm;box-shadow:0 18px 42px rgba(0,0,0,.42);border-radius:2px;font-family:Cairo,Tahoma,Arial,sans-serif;font-size:8.8pt;line-height:1.35;direction:rtl}
 .paper-sheet *{box-sizing:border-box}
 .mf-head{position:relative;background:#000;color:#fff;height:11.5mm;display:flex;align-items:center;justify-content:center;margin-bottom:2.2mm;border:1px solid #000}
 .mf-head .mf-title{font-size:12pt;font-weight:800;letter-spacing:0;text-align:center;padding:0 28mm}
 .mf-head .mf-logo{position:absolute;right:2.2mm;top:50%;transform:translateY(-50%);height:9mm;max-width:24mm;object-fit:contain;background:#000}
 .mf-sec{margin-bottom:2.3mm}
-.mf-sec-head{border:1px solid #000;background:#c9d6e8;color:#000;text-align:center;font-weight:800;font-size:8.4pt;padding:.55mm 2mm;line-height:1.5}
+.mf-sec-head{border:1px solid #000;background:#c9d6e8;color:#000;text-align:center;font-weight:800;font-size:9.3pt;padding:.55mm 2mm;line-height:1.5}
 .mf-table{border:1px solid #000;border-top:0}
 .mf-row{display:grid;border-top:1px solid #000}
 .mf-row:first-child{border-top:0}
 .mf-cell{display:flex;align-items:flex-end;gap:1.2mm;padding:1.1mm 1.8mm;border-inline-start:1px solid #000;min-height:6.6mm;min-width:0;overflow:hidden}
 .mf-row>.mf-cell:first-child{border-inline-start:0}
-.mf-label{font-weight:800;white-space:nowrap;font-size:8pt;line-height:1.2;flex:0 0 auto}
-.mf-line{flex:1 1 auto;width:100%;min-width:0;border:0!important;border-bottom:1px dotted #000!important;border-radius:0!important;background:transparent!important;color:#000!important;padding:0 1mm .2mm!important;font:700 8pt Cairo,Tahoma,Arial,sans-serif!important;min-height:0!important;height:5.2mm!important;line-height:1.15!important;box-shadow:none!important}
+.mf-label{font-weight:800;white-space:nowrap;font-size:8.7pt;line-height:1.2;flex:0 0 auto}
+.mf-line{flex:1 1 auto;width:100%;min-width:0;border:0!important;border-bottom:1px dotted #000!important;border-radius:0!important;background:transparent!important;color:#000!important;padding:0 1mm .2mm!important;font:700 8.7pt Cairo,Tahoma,Arial,sans-serif!important;min-height:0!important;height:5.2mm!important;line-height:1.15!important;box-shadow:none!important}
 .mf-line:focus{outline:0!important;background:#eef4ff!important}
 .paper-sheet select.mf-line{cursor:pointer;appearance:auto}
 .mf-block{display:block}
 .mf-block>.mf-label{display:block;margin-bottom:.35mm}
-.mf-area{width:100%;border:0!important;border-bottom:1px dotted #000!important;border-radius:0!important;background:transparent!important;color:#000!important;padding:0 1mm!important;font:700 8pt Cairo,Tahoma,Arial,sans-serif!important;resize:none!important;min-height:8.6mm!important;line-height:1.65!important;box-shadow:none!important;display:block}
+.mf-area{width:100%;border:0!important;border-bottom:1px dotted #000!important;border-radius:0!important;background:transparent!important;color:#000!important;padding:0 1mm!important;font:700 8.7pt Cairo,Tahoma,Arial,sans-serif!important;resize:none!important;min-height:8.6mm!important;line-height:1.65!important;box-shadow:none!important;display:block}
 .mf-area:focus{outline:0!important;background:#eef4ff!important}
 .mf-date{position:relative;flex:1 1 auto;min-width:0;display:flex;align-items:center}
 .mf-date>input{width:100%}
 .mf-date .mirror{display:none;border-bottom:1px dotted #000;min-height:5mm;line-height:5mm;padding:0 1mm;font-weight:700;white-space:nowrap;flex:1 1 auto}
 .mf-stamp{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;min-height:25mm}
-.mf-stamp>.mf-label{text-align:center;font-size:7.8pt;margin-top:.5mm}
+.mf-stamp>.mf-label{text-align:center;font-size:8.5pt;margin-top:.5mm}
 .mf-stamp .space{flex:1 1 auto;min-height:19mm}
+.mf-val{flex:1 1 auto;min-width:0;border-bottom:1px dotted #000;padding:0 1mm;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:4.8mm;line-height:1.35;text-align:center;display:block}
+.paper-sheet .dsp-table tbody tr{height:7mm}
+.paper-sheet .dsp-table tbody td{height:7mm;padding-top:0;padding-bottom:0;position:relative}
+.paper-sheet .dsp-table .dsp-del{position:absolute;top:.1mm;left:.1mm;width:3.4mm;height:3.4mm;padding:0;min-height:0;font:700 8pt/1 Cairo,Tahoma,Arial,sans-serif;border:0;border-radius:50%;background:transparent;color:#b00;box-shadow:none;cursor:pointer}
+.paper-sheet .dsp-table tr.fill td{height:7mm}
+.paper-sheet .dsp-table.tall tr.fill td{height:9mm}
 .mf-stack{display:flex;flex-direction:column;gap:.35mm;width:100%;min-width:0}
 .mf-stack .sub{display:flex;align-items:flex-end;gap:1mm}
-.mf-stack .sub .mf-label{font-size:7.6pt;min-width:15mm}
+.mf-stack .sub .mf-label{font-size:8.3pt;min-width:15mm}
 .mf-stack .mf-line{height:4.8mm!important}
 .dsp-table{width:100%;border-collapse:collapse;table-layout:fixed}
-.paper-sheet .dsp-table th,.paper-sheet .dsp-table td{border:1px solid #000;padding:.75mm .8mm;font-size:7.5pt;color:#000;background:transparent;white-space:normal;vertical-align:middle;text-align:center;font-weight:600}
+.paper-sheet .dsp-table th,.paper-sheet .dsp-table td{border:1px solid #000;padding:.75mm .8mm;font-size:8.1pt;color:#000;background:transparent;white-space:normal;vertical-align:middle;text-align:center;font-weight:600}
 .paper-sheet .dsp-table th{font-weight:800;background:#e8eef7}
 .dsp-table td.dsp-item{text-align:right;padding:.4mm}
 .dsp-table td.dsp-sncell{padding:.35mm}
-.dsp-sn{display:grid;gap:.3mm}
-.dsp-sn input{height:4.8mm!important;font-size:7.2pt!important}
+.dsp-sn{display:flex;flex-wrap:wrap;gap:.3mm}
+.dsp-sn input{height:4.8mm!important;font-size:7.9pt!important;flex:1 1 44%;min-width:0}
 .dsp-table .dsp-actions{border:0;background:transparent;padding:0}
 .dsp-table .dsp-actions .btn{padding:3px 6px;min-height:0;font-size:12px;box-shadow:none}
 .dsp-row-actions{margin-top:1.5mm;display:flex;gap:6px;flex-wrap:wrap}
 .dsp-type-note{font-size:11.5px;color:var(--mut);margin:0}
+.paper-sheet .dsp-type-note{color:#3b4453}
+.paper-sheet .dsp-row-actions{margin-top:1.5mm}
+.paper-sheet .dsp-row-actions .btn.ghost{border:1px solid #000;background:#e8edf5;color:#000;box-shadow:none;min-height:0;padding:.9mm 3mm;font-size:8pt}
 .dsp-list-types{display:flex;gap:5px;flex-wrap:wrap}
 .tw .acts{gap:6px}
 .tw .acts .btn{padding:6px 9px;font-size:12px;min-height:30px}
@@ -213,13 +223,16 @@ body:has(nav:empty) #t{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
  #m>.mf-page>.print-root{display:block!important;margin:0!important;padding:0!important}
  .print-root{display:block!important;margin:0!important;padding:0!important}
  .paper-wrap{overflow:visible!important;padding:0!important}
- .paper-sheet{width:210mm!important;min-height:0!important;height:297mm!important;margin:0!important;padding:7mm 8mm 6mm!important;box-shadow:none!important;border:0!important;border-radius:0!important;page-break-after:avoid;break-after:avoid;font-size:8pt!important}
+ .paper-sheet{width:210mm!important;min-height:0!important;height:297mm!important;margin:0!important;padding:7mm 8mm 6mm!important;box-shadow:none!important;border:0!important;border-radius:0!important;page-break-after:avoid;break-after:avoid;font-size:8.6pt!important}
  .mf-page{display:block!important;gap:0!important}
  .mf-page>.no-print{display:none!important}
  .paper-sheet input,.paper-sheet textarea,.paper-sheet select{appearance:none!important;-webkit-appearance:none!important;background:transparent!important;color:#000!important;box-shadow:none!important}
+ .paper-sheet input::placeholder,.paper-sheet textarea::placeholder{color:transparent!important;opacity:0!important}
  .paper-sheet input[type=date]::-webkit-calendar-picker-indicator{display:none!important}
  .mf-date>input{display:none!important}
  .mf-date .mirror{display:inline-block!important}
+ .print-only{display:inline!important}
+ .paper-sheet input[type=checkbox]{display:none!important}
  .mf-sec,.mf-row,.dsp-table tr{break-inside:avoid;page-break-inside:avoid}
  .dsp-table .dsp-actions,.dsp-row-actions{display:none!important}
  .paper-sheet .mf-line:focus,.paper-sheet .mf-area:focus{background:transparent!important}
@@ -280,6 +293,8 @@ let items=[],branches=[],reqs=[],suppliers=[],DB={in:[],out:[]},MAINT={},SCRAP={
 let MFORMS=[],DSPMETA={};
 let MF=null,mfView='list',mfBlank=false,mfFilterStatus='',mfFilterDate='',mfPendDel=null;
 let DSP=null,dspView='list',dspPendDel=null,dspPrintFlag=false;
+let docView='list';
+let rqView='list',RQ=null;
 let supEdit=null,pendSup=null;
 let role='junior',tab='stock',sel=null,q='',branchEditState=null;
 let SAVING=false;
@@ -341,6 +356,7 @@ function currentPageKey(){
   if(tab==='recvsup'||tab==='recvbr'||tab==='issbr')return 'doc_'+tab;
   if(tab==='mf')return 'mf';
   if(tab==='dispatch')return 'dispatch';
+  if(tab==='docprint')return PRINT?(PRINT.mode==='scrap'?'scrap':'doc_'+PRINT.key):'';
   if(tab==='br')return sel?'britems':'br';
   return SEARCH.hasOwnProperty(tab)?tab:'';
 }
@@ -447,8 +463,8 @@ function go(){
     if(t[0]=='mf')return ok('maintView');
     if(t[0]=='dispatch')return ok('stock');
     return (t[0]=='items'||t[0]=='recvsup'||t[0]=='recvbr'||t[0]=='issbr'||t[0]=='sup'||t[0]=='cats')?ok('stock'):ok('view');
-  });if(!tabs.some(t=>t[0]==tab))tab='rq';$('#nav').innerHTML=tabs.map(([k,v])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';sel=null;maintView=null;scrapMode=null;SCR=null;scrapBal=true;mfView='list';MF=null;dspView='list';DSP=null;go()">${icon(k)}<span>${v}</span></button>`).join('');
-  $('#m').innerHTML=tab=='stock'?vStock():tab=='maint'?(maintView==='out'?vDoc('issmaint'):vMaint()):tab=='mf'?vMaintForms():tab=='scrap'?vScrap():tab=='recvsup'?vDoc('recvsup'):tab=='recvbr'?vDoc('recvbr'):tab=='issbr'?vDoc('issbr'):tab=='dispatch'?vDispatch():tab=='items'?vItems():tab=='cats'?vCats():tab=='sup'?vSuppliers():tab=='br'?(sel?vBranch():vBranches()):tab=='reqbr'?vBranchReqs():vReqs();
+  });if(tab!=='docprint'&&!tabs.some(t=>t[0]==tab))tab='rq';$('#nav').innerHTML=tabs.map(([k,v])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';sel=null;maintView=null;scrapMode=null;SCR=null;scrapBal=true;mfView='list';MF=null;dspView='list';DSP=null;docView='list';rqView='list';RQ=null;PRINT=null;go()">${icon(k)}<span>${v}</span></button>`).join('');
+  $('#m').innerHTML=tab=='docprint'?vDocPrint():tab=='stock'?vStock():tab=='maint'?(maintView==='out'?vDoc('issmaint'):vMaint()):tab=='mf'?vMaintForms():tab=='scrap'?vScrap():tab=='recvsup'?vDoc('recvsup'):tab=='recvbr'?vDoc('recvbr'):tab=='issbr'?vDoc('issbr'):tab=='dispatch'?vDispatch():tab=='items'?vItems():tab=='cats'?vCats():tab=='sup'?vSuppliers():tab=='br'?(sel?vBranch():vBranches()):tab=='reqbr'?vBranchReqs():vReqs();
 }
 
 function itemWarranty(i){
@@ -560,8 +576,8 @@ const DS={recvsup:{dir:'in',kind:'sup',t:'استلام من مورد'},recvbr:{d
 let docKey='recvsup';
 const KK=()=>docKey;
 const hasSer=id=>{const x=it(id);return !!(x&&SER[x.c])};
-const nl=(dir=DS[KK()].dir)=>{const p=dir=='out'?items.filter(i=>i.s>0):items;return {i:p.length?p[0].id:'',q:1,sns:[''],st:'stock',rs:'',nt:'',hw:false,wu:''}};
-const nd=key=>{const S=DS[key];return {k:S.kind,sup:'',b:branches[0]?branches[0].id:null,p:'',sb:'',lines:[nl(S.dir)]}};
+const nl=(dir=DS[KK()].dir)=>{const p=dir=='out'?items.filter(i=>i.s>0):items;return {i:p.length?p[0].id:'',q:1,sns:[''],st:'stock',rs:'',nt:'',cd:'سليم',hw:false,wu:''}};
+const nd=key=>{const S=DS[key];return {k:S.kind,sup:'',b:branches[0]?branches[0].id:null,p:'',d:isoToday(),sb:'',note:'',by:(STATE.user||{}).name||'',stockOfficer:(STATE.user||{}).name||'',stockOfficerSig:'',receiverName:'',receiverSig:'',receiveDate:isoToday(),gov:'',addr:'',original:{},lines:[nl(S.dir)]}};
 const DR={},E={};Object.keys(DS).forEach(key=>{DR[key]=nd(key);E[key]=null});
 function partyName(r){const b=br(r.b);return r.k=='br'?(b?b.n:'فرع غير محدد'):(r.sup||'مورد غير محدد')}
 function registeredSuppliers(){const used=[...DB.in,...DB.out].map(r=>String(r.sup||'').trim()).filter(Boolean);return [...new Set([...suppliers.map(s=>s.n),...used])]}
@@ -800,6 +816,7 @@ const SCRAP_ICONS={
   box:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8.5 12 3 3 8.5v7L12 21l9-5.5v-7Z"/><path d="M3.5 8.7 12 13.5l8.5-4.8M12 13.5V21"/></svg>'
 };
 function vScrap(){
+  if(scrapMode)return vScrapEditor();
   const actions=ok('pool')?`<div class="sacts">
     <button class="sact" onclick="openScrap('serial')">
       <span class="sact-ico">${SCRAP_ICONS.serial}</span>
@@ -815,9 +832,9 @@ function vScrap(){
   const d=resScrap();
   return `<div class="hero">
     <div><div class="eyebrow">إدارة المخزون</div><h2>${icon('scrap')} الخردة</h2><p>تسجيل الأصناف التالفة وخصمها من رصيد المخزن داخل معاملة واحدة، مع حفظ السيريالات وسجل كامل للحركات.</p></div>
-    <button class="btn soft" onclick="scrapBal=!scrapBal;go()">${scrapBal?'إخفاء رصيد الخردة':'عرض رصيد الخردة'}</button>
+    <div class="acts"><button class="btn soft" onclick="printBlankScrap()">طباعة نموذج فارغ</button><button class="btn ghost" onclick="scrapBal=!scrapBal;go()">${scrapBal?'إخفاء رصيد الخردة':'عرض رصيد الخردة'}</button></div>
    </div>
-   ${actions}${scrapMode?vScrapForm():''}${scrapBal?scrapPanel(d):''}
+   ${actions}${scrapBal?scrapPanel(d):''}
    <p class="mut">الخردة نهائية ولا تُصرف. تُخصم كل كمية من رصيد المخزن قبل تسجيلها.</p>`;
 }
 function logParts(at){
@@ -853,6 +870,7 @@ function resScrap(){
       <td><span class="chip ${serialised?'ok':''}">${serialised?'بسيريال':'بدون سيريال'}</span></td>
       <td>${sns}</td>
       <td>${e(r.by||'-')}</td>
+      <td><button class="btn soft" style="padding:4px 8px;font-size:12px" onclick="printScrap(${r.id})">طباعة</button></td>
     </tr>`;
   }).join('');
   const html=`<div class="kpis">
@@ -864,7 +882,7 @@ function resScrap(){
     <h4 class="sub">الأرصدة الحالية حسب الصنف</h4>
     ${balances.length?`<div class="tw"><table class="pro"><thead><tr><th>الفئة</th><th>الصنف</th><th>العدد</th></tr></thead><tbody>${balRows}</tbody></table></div>`+pager('scrap',PV.scrap,pgB.p,pgB.n):'<div class="empty">لا توجد أصناف في الخردة حاليًا.</div>'}
     <h4 class="sub">سجل حركات الخردة</h4>
-    ${logs.length?`<div class="tw"><table class="pro"><thead><tr><th>#</th><th>التاريخ والوقت</th><th>الفئة</th><th>الصنف</th><th>العدد</th><th>نوع التسجيل</th><th>السيريالات</th><th>سجّله</th></tr></thead><tbody>${logRows}</tbody></table></div>`+pager('scrap',PV.scraplog,pgL.p,pgL.n):'<div class="empty">لا توجد حركات خردة مسجلة بعد. ابدأ بإضافة صنف تالف من الأزرار أعلاه.</div>'}`;
+    ${logs.length?`<div class="tw"><table class="pro"><thead><tr><th>#</th><th>التاريخ والوقت</th><th>الفئة</th><th>الصنف</th><th>العدد</th><th>نوع التسجيل</th><th>السيريالات</th><th>سجّله</th><th>طباعة</th></tr></thead><tbody>${logRows}</tbody></table></div>`+pager('scrap',PV.scraplog,pgL.p,pgL.n):'<div class="empty">لا توجد حركات خردة مسجلة بعد. ابدأ بإضافة صنف تالف من الأزرار أعلاه.</div>'}`;
   return {html,total};
 }
 function scrapPanel(d){
@@ -876,39 +894,89 @@ function scrapPanel(d){
     </div>
   </section>`;
 }
-function openScrap(mode){scrapMode=mode;SCR={mode,lines:[scrapLine()]};go()}
+function openScrap(mode){
+  scrapMode=mode;
+  SCR={mode,no:'',d:isoToday(),t:new Date().toTimeString().slice(0,5),reason:'',note:'',by:(STATE.user||{}).name||'',stockOfficer:(STATE.user||{}).name||'',stockOfficerSig:'',manager:'',managerSig:'',lines:[scrapLine()]};
+  go();window.scrollTo(0,0);
+}
+function closeScrap(){scrapMode=null;SCR=null;go()}
 function scrapCandidates(){return items.filter(i=>i.s>0&&(scrapMode=='serial'?!!SER[i.c]:true))}
-function scrapLine(){const p=scrapCandidates(),id=p.length?p[0].id:0;const L={i:id,q:1,sns:[]};fixSn(L);return L}
-function setScrapItem(j,v){const L=SCR.lines[j];L.i=+v||0;L.q=1;L.sns=[];fixSn(L);go()}
-function setScrapQ(j,v){const L=SCR.lines[j],max=Math.max(1,(it(L.i)||{}).s||1);L.q=Math.min(Math.max(1,Math.floor(+v||1)),max);fixSn(L);go()}
-function vScrapForm(){
+function scrapLine(){const p=scrapCandidates(),id=p.length?p[0].id:0;const L={i:id,q:1,sns:[],nt:''};fixSn(L);return L}
+function setScrapItem(j,v){const L=SCR&&SCR.lines[j];if(!L)return;L.i=+v||0;L.q=1;L.sns=[];fixSn(L);go()}
+function setScrapQ(j,v){const L=SCR&&SCR.lines[j];if(!L)return;const max=Math.max(1,(it(L.i)||{}).s||1);L.q=Math.min(Math.max(1,Math.floor(+v||1)),max);fixSn(L);go()}
+function addScrapLine(){if(!SCR)return;SCR.lines.push(scrapLine());go()}
+function scrapFillRows(cols,n){
+  let h='';
+  for(let i=0;i<n;i++)h+=`<tr class="fill" style="cursor:pointer" title="إضافة صنف" onclick="addScrapLine()">${cols.map(()=>'<td>&nbsp;</td>').join('')}</tr>`;
+  return h;
+}
+function delScrapLine(j){if(!SCR)return;SCR.lines.splice(j,1);if(!SCR.lines.length)SCR.lines.push(scrapLine());go()}
+function scrapEditableSheet(){
   const serial=scrapMode=='serial',cands=scrapCandidates();
-  const title=serial?'تالف بسيريال':'تالف بدون سيريال';
-  if(!cands.length)return `<div class="sheet"><div class="sheet-head"><h3>${title}</h3><button class="btn ghost" onclick="scrapMode=null;SCR=null;go()">إغلاق</button></div><div class="sheet-body"><p class="mut" style="margin:0">لا توجد أصناف ${serial?'بسيريال':'لها رصيد'} متاحة في المخزن.</p></div></div>`;
-  const lines=SCR.lines.map((l,j)=>{
+  const cols=['م','التصنيف','اسم الصنف','السيريال','الكمية','ملاحظات'];
+  const widths=['5%','14%','27%','30%','8%','16%'];
+  const rows=SCR.lines.map((l,j)=>{
     fixSn(l);
-    const groups=CATS.map(c=>{const g=cands.filter(i=>i.c==c);return g.length?`<optgroup label="${e(c)}">`+g.map(i=>`<option value="${i.id}"${i.id==l.i?' selected':''}>${e(i.n)}</option>`).join('')+'</optgroup>':''}).join('');
-    const avail=(it(l.i)||{}).s||0,after=Math.max(0,avail-(+l.q||0));
-    return `<div class="sline"><div class="grid">
-      <label>الصنف<select onchange="setScrapItem(${j},this.value)">${groups||'<option value="">لا توجد أصناف متاحة</option>'}</select></label>
-      <label>العدد<input type="number" min="1" max="${avail}" value="${l.q}" onchange="setScrapQ(${j},this.value)"></label>
-    </div>
-    <div class="calc"><span>المتاح في المخزن: <b>${avail}</b></span><span>المتبقي بعد الخصم: <b>${after}</b></span></div>
-    ${serial?'<div class="grid sngrid" style="margin-top:10px;'+snGrid(l.sns)+'">'+l.sns.map((s,n)=>`<label>سيريال ${n+1}<input value="${e(s)}" oninput="SCR.lines[${j}].sns[${n}]=this.value;snGrow(this)"></label>`).join('')+'</div>':'<p class="mut" style="margin:8px 0 0">بدون سيريال — تُسجَّل الكمية فقط.</p>'}
-    ${SCR.lines.length>1?`<button class="btn ghost" style="margin-top:10px" onclick="SCR.lines.splice(${j},1);go()">حذف السطر</button>`:''}</div>`;
+    const x=it(l.i)||{},avail=(x.s||0),after=Math.max(0,avail-(+l.q||0));
+    const groups=CATS.map(c=>{const g=cands.filter(i=>i.c==c);return g.length?`<optgroup label="${e(c)}">`+g.map(i=>`<option value="${i.id}"${i.id==l.i?' selected':''}>${e(i.n)} — متاح ${i.s}</option>`).join('')+'</optgroup>':''}).join('');
+    const sn=(serial&&hasSer(l.i))
+      ?`<div class="dsp-sn">${l.sns.map((s,n)=>`<input class="mf-line" value="${e(s)}" placeholder="سيريال ${n+1}" oninput="SCR.lines[${j}].sns[${n}]=this.value">`).join('')}</div>`
+      :'<span class="mut">بدون سيريال</span>';
+    return `<tr>
+      <td>${j+1}${SCR.lines.length>1?`<button class="dsp-del no-print" onclick="delScrapLine(${j})" title="حذف السطر">×</button>`:''}</td>
+      <td>${e(x.c||'-')}</td>
+      <td class="dsp-item"><select class="mf-line no-print" title="المتاح: ${avail}" onchange="setScrapItem(${j},this.value)">${groups||'<option value="">لا توجد أصناف متاحة</option>'}</select><span class="print-only" style="font-weight:700">${e(x.n||'-')}</span></td>
+      <td class="dsp-sncell">${sn}</td>
+      <td><input class="mf-line" type="number" min="1" max="${avail}" value="${l.q}" onchange="setScrapQ(${j},this.value)"></td>
+      <td><input class="mf-line" value="${e(l.nt||'')}" oninput="SCR.lines[${j}].nt=this.value"></td>
+    </tr>`;
   }).join('');
   const total=SCR.lines.reduce((a,l)=>a+(+l.q||0),0);
-  return `<div class="sheet"><div class="sheet-head"><div><h3>${title}</h3><div class="mut">خصم مباشر من رصيد المخزن</div></div><button class="btn ghost" onclick="scrapMode=null;SCR=null;go()">إغلاق</button></div>
-    <div class="sheet-body">
-      <div class="meta">
-        <div><b>المصدر</b>المخزن</div>
-        <div><b>التاريخ</b>${dcell(isoToday())}</div>
-        <div><b>سجّله</b>${e((STATE.user||{}).name||'')}</div>
-        <div><b>إجمالي القطع</b>${total}</div>
+  return `${mfTitleBar('محضر خردة / إتلاف أصناف')}
+    <div class="mf-sec"><div class="mf-sec-head">بيانات المحضر</div><div class="mf-table">
+      <div class="mf-row" style="grid-template-columns:1.1fr 1fr .9fr 1.45fr">
+        <div class="mf-cell"><span class="mf-label">رقم المحضر</span><input class="mf-line" value="${e(SCR.no||'')}" placeholder="يُكتب يدويًا" oninput="SCR.no=this.value"></div>
+        <div class="mf-cell"><span class="mf-label">التاريخ</span><span class="mf-date"><input class="mf-line" id="scr_date" type="date" value="${e(SCR.d||'')}" data-mirror="mfm_scr_date" oninput="mfDateSync(this);SCR.d=this.value"><span class="mirror" id="mfm_scr_date">${SCR.d?e(mfDMY(SCR.d)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div>
+        <div class="mf-cell"><span class="mf-label">الوقت</span><span class="mf-date"><input class="mf-line" type="time" value="${e(SCR.t||'')}" oninput="SCR.t=this.value"><span class="mirror" dir="ltr">${e(SCR.t||'&nbsp;/&nbsp;')}</span></span></div>
+        <div class="mf-cell"><span class="mf-label">المسؤول</span><input class="mf-line" value="${e(SCR.by||'')}" oninput="SCR.by=this.value"></div>
       </div>
-      ${lines}
-      <div class="row" style="margin-top:14px"><button class="btn ghost" onclick="SCR.lines.push(scrapLine());go()">إضافة سطر</button><button class="btn" onclick="saveScrap()">تسجيل في الخردة</button></div>
-    </div></div>`;
+      <div class="mf-row" style="grid-template-columns:1fr 2.9fr">
+        <div class="mf-cell"><span class="mf-label">المصدر</span><input class="mf-line" value="المخزن" disabled></div>
+        <div class="mf-cell"><span class="mf-label">سبب الإتلاف</span><input class="mf-line" value="${e(SCR.reason||'')}" oninput="SCR.reason=this.value"></div>
+      </div>
+     </div></div>
+    <div class="mf-sec"><div class="mf-sec-head">الأصناف</div>
+      <table class="dsp-table"><colgroup>${widths.map(w=>`<col style="width:${w}">`).join('')}</colgroup>
+       <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+       <tbody>${rows}${scrapFillRows(cols,Math.max(0,22-SCR.lines.length))}</tbody></table>
+      <div class="dsp-row-actions no-print"><button class="btn ghost" onclick="addScrapLine()">إضافة صنف</button><span class="dsp-type-note">${serial?'كل قطعة تحتاج سيريالًا.':'تُسجَّل الكمية فقط بدون سيريال.'} إجمالي القطع: ${total}. الخردة نهائية وتُخصم من المخزن فور الحفظ.</span></div>
+    </div>
+    <div class="mf-sec"><div class="mf-sec-head">ملاحظات</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1fr"><div class="mf-cell mf-block"><textarea class="mf-area" rows="2" oninput="SCR.note=this.value">${e(SCR.note||'')}</textarea></div></div></div></div>
+    <div class="mf-sec"><div class="mf-sec-head">التسليم والاعتماد</div><div class="mf-table">
+      <div class="mf-row" style="grid-template-columns:1.45fr 1.45fr 1fr 1.35fr">
+        <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">مسؤول المخزن</span><input class="mf-line" value="${e(SCR.stockOfficer||'')}" oninput="SCR.stockOfficer=this.value"></div><div class="sub"><span class="mf-label">التوقيع</span><input class="mf-line" value="${e(SCR.stockOfficerSig||'')}" oninput="SCR.stockOfficerSig=this.value"></div></div></div>
+        <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">المدير الفني</span><input class="mf-line" value="${e(SCR.manager||'')}" oninput="SCR.manager=this.value"></div><div class="sub"><span class="mf-label">التوقيع</span><input class="mf-line" value="${e(SCR.managerSig||'')}" oninput="SCR.managerSig=this.value"></div></div></div>
+        <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">تاريخ الإتلاف</span></div><div class="sub"><span class="mf-date"><input class="mf-line" id="scr_sign_date" type="date" value="${e(SCR.d||'')}" data-mirror="mfm_scr_sign_date" oninput="mfDateSync(this);SCR.d=this.value"><span class="mirror" id="mfm_scr_sign_date">${SCR.d?e(mfDMY(SCR.d)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div></div></div>
+        ${mfStamp('ختم مخزن النظم')}
+      </div>
+     </div></div>`;
+}
+function vScrapEditor(){
+  if(!SCR)return vScrap();
+  const serial=scrapMode=='serial';
+  if(!scrapCandidates().length)return `<div class="mf-page"><div class="mf-bar no-print"><div class="grp"><button class="btn ghost" onclick="closeScrap()">رجوع للخردة</button></div></div><div class="box"><p class="mut" style="margin:0">لا توجد أصناف ${serial?'بسيريال':'لها رصيد'} متاحة في المخزن.</p></div></div>`;
+  return `<div class="mf-page">
+    <div class="mf-bar no-print">
+      <div class="grp">
+        <button class="btn ghost" onclick="closeScrap()">رجوع للخردة</button>
+        <button class="btn" onclick="saveScrap()">تسجيل في الخردة</button>
+        <button class="btn soft" onclick="window.print()">طباعة</button>
+      </div>
+      <div class="grp"><span class="mf-no">${serial?'محضر خردة بسيريال':'محضر خردة بدون سيريال'}</span></div>
+    </div>
+    <p class="mf-hint no-print">املأ المحضر على هذه الورقة مباشرة ثم اضغط «تسجيل في الخردة» ليُخصم من المخزون، أو «طباعة» لطباعة الورقة كما هي. اكتب رقم المحضر في ترويسته قبل الطباعة.</p>
+    <div class="print-root"><div class="paper-wrap"><div class="paper-sheet">${scrapEditableSheet()}</div></div></div>
+  </div>`;
 }
 async function saveScrap(){
   if(!SCR||!SCR.lines.length)return toast('أضف صنفًا واحدًا على الأقل');
@@ -929,6 +997,150 @@ async function saveScrap(){
   try{await api('/scrap','POST',{mode,lines});scrapMode=null;SCR=null;await refresh();toast('تم تسجيل الأصناف في الخردة');go()}catch(err){toast(err.message)}
 }
 function vDoc(key){
+  if(key==='issmaint')return vDocLegacy(key);
+  docKey=key;
+  return docView==='edit'?vDocEditor(key):vDocList(key);
+}
+function vDocList(key){
+  const S=DS[key],d=resDoc(key),inn=S.dir==='in';
+  const flow=inn
+    ?('يُعبأ النموذج على ورقة A4 مباشرة، وعند الحفظ يُضاف للمخزون'+(S.kind==='br'?' ويُنقص رصيد الفرع':'')+'.')
+    :('يُعبأ النموذج على ورقة A4 مباشرة، وعند الحفظ تُخصم الكميات من المخزون'+(S.kind==='br'?' وتُضاف لرصيد الفرع':'')+'.');
+  return `<div class="hero">
+    <div><div class="eyebrow">المخزن</div><h2>${icon(key)} ${S.t}</h2><p>${flow}</p></div>
+    <div class="acts"><button class="btn" onclick="newDoc()">${inn?'إذن استلام جديد':'إذن صرف جديد'}</button><button class="btn soft" onclick="printBlankDoc('${key}')">طباعة نموذج فارغ</button></div>
+   </div>
+   ${sbox('doc_'+key,'بحث: رقم إذن، جهة، صنف، سيريال، مستخدم، تاريخ',d.total)}
+   <h2>${icon(key)} ${S.t} (${d.total})</h2><div id="res_doc_${key}">${d.html}</div>`;
+}
+function newDoc(){
+  const key=KK(),D=nd(key);
+  if(DS[key].kind==='br'&&D.b){const b=br(D.b);if(b){D.gov=b.g||'';D.addr=b.address||'';D.receiverName=b.manager||b.n}}
+  DR[key]=D;E[key]=null;docView='edit';go();window.scrollTo(0,0);
+}
+function docBack(){docView='list';go();window.scrollTo(0,0)}
+function docPartyLabel(key){return key==='recvsup'?'المورد':key==='recvbr'?'الفرع المُسلِّم':'الفرع المستلم'}
+function docPartyValue(key,D){
+  return DS[key].kind==='br'?((br(D.b)||{}).n||''):(D.sup||'');
+}
+function docSetBranch(v){
+  const D=DR[KK()],b=br(+v);if(!D||!b)return;
+  D.b=b.id;D.gov=b.g||'';D.addr=b.address||'';D.receiverName=b.manager||b.n;go();
+}
+function docSetSupplier(v){
+  const D=DR[KK()],s=suppliers.find(x=>x.n===v);if(!D)return;
+  D.sup=v;D.gov='';D.addr=s?(s.address||''):'';D.receiverName=v;go();
+}
+function docItemOptions(sel,dir){
+  const pool=dir==='out'?items.filter(i=>i.s>0||Number(i.id)===Number(sel)):items;
+  return CATS.map(c=>{
+    const g=pool.filter(i=>i.c===c);
+    return g.length?`<optgroup label="${e(c)}">`+g.map(i=>`<option value="${i.id}"${Number(i.id)===Number(sel)?' selected':''}>${e(i.n)}${dir==='out'?' — متاح '+i.s:''}</option>`).join('')+'</optgroup>':'';
+  }).join('')||'<option value="">لا توجد أصناف</option>';
+}
+function docFixLine(l){
+  const q=Math.max(1,Math.floor(+l.q||1));l.q=q;l.sns=l.sns||[];l.cd=l.cd||'سليم';l.nt=l.nt||'';
+  if(hasSer(l.i)){while(l.sns.length<q)l.sns.push('');l.sns.length=q}else l.sns=[];
+}
+function docSetItem(j,v){
+  const D=DR[KK()],l=D&&D.lines[j];if(!l)return;
+  l.i=+v||0;l.q=1;l.sns=[];docFixLine(l);go();
+}
+function docSetQty(j,v){
+  const D=DR[KK()],l=D&&D.lines[j];if(!l)return;
+  l.q=Math.max(1,Math.floor(+v||1));docFixLine(l);go();
+}
+function addDocLine(){const D=DR[KK()];if(!D)return;D.lines.push(nl(DS[KK()].dir));go()}
+function docFillRows(cols,n){
+  let h='';
+  for(let i=0;i<n;i++)h+=`<tr class="fill" style="cursor:pointer" title="إضافة صنف" onclick="addDocLine()">${cols.map(()=>'<td>&nbsp;</td>').join('')}</tr>`;
+  return h;
+}
+function delDocLine(j){
+  const D=DR[KK()];if(!D)return;
+  D.lines.splice(j,1);if(!D.lines.length)D.lines.push(nl(DS[KK()].dir));go();
+}
+function docLineRows(key){
+  const S=DS[key],D=DR[key],inn=S.dir==='in';
+  return D.lines.map((l,j)=>{
+    docFixLine(l);
+    const x=it(l.i)||{},avail=(x.s||0)+(D.original[l.i]||0);
+    const sn=hasSer(l.i)
+      ?`<div class="dsp-sn">${l.sns.map((s,n)=>`<input class="mf-line" value="${e(s)}" placeholder="سيريال ${n+1}" oninput="DR[KK()].lines[${j}].sns[${n}]=this.value">`).join('')}</div>`
+      :'<span class="mut">بدون سيريال</span>';
+    const war=inn
+      ?`<div class="dsp-sn"><label class="no-print" style="display:flex;align-items:center;gap:2mm;font-size:7.6pt"><input type="checkbox" ${l.hw?'checked':''} onchange="DR[KK()].lines[${j}].hw=this.checked;go()"> بضمان</label><span class="print-only">${l.hw?'بضمان':'بدون ضمان'}</span>${l.hw?`<span class="mf-date"><input class="mf-line" id="doc_wu_${j}" type="date" value="${e(l.wu||'')}" data-mirror="mfm_doc_wu_${j}" oninput="mfDateSync(this);DR[KK()].lines[${j}].wu=this.value"><span class="mirror" id="mfm_doc_wu_${j}">${l.wu?e(mfDMY(l.wu)):'&nbsp;/&nbsp;/&nbsp;'}</span></span>`:''}</div>`
+      :'';
+    return `<tr>
+      <td>${j+1}${D.lines.length>1?`<button class="dsp-del no-print" onclick="delDocLine(${j})" title="حذف السطر">×</button>`:''}</td>
+      <td>${e(x.c||'-')}</td>
+      <td class="dsp-item"><select class="mf-line no-print" title="${inn?'':'المتاح: '+avail}" onchange="docSetItem(${j},this.value)">${docItemOptions(l.i,S.dir)}</select><span class="print-only" style="font-weight:700">${e(x.n||'-')}</span></td>
+      <td class="dsp-sncell">${sn}</td>
+      <td><input class="mf-line" type="number" min="1" value="${l.q}" onchange="docSetQty(${j},this.value)"></td>
+      <td><select class="mf-line" onchange="DR[KK()].lines[${j}].cd=this.value">${opts(['سليم','يحتاج صيانة','تالف'],l.cd)}</select></td>
+      ${inn?`<td>${war}</td>`:''}
+      <td><input class="mf-line" value="${e(l.nt||'')}" oninput="DR[KK()].lines[${j}].nt=this.value"></td>
+    </tr>`;
+  }).join('');
+}
+function docDateCell(label,D){
+  const v=D&&D.d?dispDate(D.d):'';
+  return `<div class="mf-cell"><span class="mf-label">${e(label)}</span><span class="mf-date"><input class="mf-line" id="doc_date" type="date" value="${e(v)}" data-mirror="mfm_doc_date" oninput="mfDateSync(this);DR[KK()].d=this.value"><span class="mirror" id="mfm_doc_date">${v?e(mfDMY(v)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div>`;
+}
+function docSheet(key){
+  const S=DS[key],D=DR[key],inn=S.dir==='in',isb=S.kind==='br';
+  const cols=inn?['م','التصنيف','اسم الصنف','السيريال','الكمية','الحالة','الضمان','ملاحظات']:['م','التصنيف','اسم الصنف','السيريال','الكمية','الحالة','ملاحظات'];
+  const widths=inn?['4%','11%','19%','22%','6%','9%','18%','11%']:['4%','13%','23%','28%','7%','13%','12%'];
+  const party=isb
+    ?`<div class="mf-cell"><span class="mf-label">${e(docPartyLabel(key))}</span><select class="mf-line" onchange="docSetBranch(this.value)">${branches.map(b=>`<option value="${b.id}"${Number(b.id)===Number(D.b)?' selected':''}>${e(b.n)}</option>`).join('')}</select></div>`
+    :`<div class="mf-cell"><span class="mf-label">${e(docPartyLabel(key))}</span><select class="mf-line" onchange="docSetSupplier(this.value)">${supplierOptions(D.sup)}</select></div>`;
+  const secondLbl=key==='recvsup'?'المورد / المسلّم':isb&&inn?'مسؤول الفرع':'اسم المستلم';
+  return `${mfTitleBar(VFORM_TITLE[key]||S.t)}
+    <div class="mf-sec"><div class="mf-sec-head">بيانات الإذن</div><div class="mf-table">
+      <div class="mf-row" style="grid-template-columns:1.15fr 1fr 1.5fr 1.5fr">
+        <div class="mf-cell"><span class="mf-label">رقم الإذن</span><input class="mf-line" value="${e(D.p||'')}" oninput="DR[KK()].p=this.value"></div>
+        ${docDateCell('التاريخ',D)}
+        ${party}
+        <div class="mf-cell"><span class="mf-label">المسؤول عن الحركة</span><input class="mf-line" value="${e(D.by||'')}" oninput="DR[KK()].by=this.value"></div>
+      </div>
+      <div class="mf-row" style="grid-template-columns:.9fr 2.6fr">
+        <div class="mf-cell"><span class="mf-label">المحافظة</span><input class="mf-line" value="${e(D.gov||'')}" oninput="DR[KK()].gov=this.value"></div>
+        <div class="mf-cell"><span class="mf-label">العنوان</span><input class="mf-line" value="${e(D.addr||'')}" oninput="DR[KK()].addr=this.value"></div>
+      </div>
+     </div></div>
+    <div class="mf-sec"><div class="mf-sec-head">بيانات الأصناف</div>
+      <table class="dsp-table"><colgroup>${widths.map(w=>`<col style="width:${w}">`).join('')}</colgroup>
+       <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+       <tbody>${docLineRows(key)}${docFillRows(cols,Math.max(0,20-D.lines.length))}</tbody></table>
+      <div class="dsp-row-actions no-print"><button class="btn ghost" onclick="addDocLine()">إضافة صنف</button><span class="dsp-type-note">${inn?'الاستلام يزيد المخزون.':'لا يمكن الصرف بأكثر من رصيد المخزن، ولا تكرار السيريال.'}</span></div>
+    </div>
+    <div class="mf-sec"><div class="mf-sec-head">ملاحظات</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1fr"><div class="mf-cell mf-block"><textarea class="mf-area" rows="2" oninput="DR[KK()].note=this.value">${e(D.note||'')}</textarea></div></div></div></div>
+    <div class="mf-sec"><div class="mf-sec-head">التسليم والاستلام</div><div class="mf-table">
+      <div class="mf-row" style="grid-template-columns:1.45fr 1.45fr 1fr 1.35fr">
+        <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">مسؤول المخزن</span><input class="mf-line" value="${e(D.stockOfficer||'')}" oninput="DR[KK()].stockOfficer=this.value"></div><div class="sub"><span class="mf-label">التوقيع</span><input class="mf-line" value="${e(D.stockOfficerSig||'')}" oninput="DR[KK()].stockOfficerSig=this.value"></div></div></div>
+        <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">${e(secondLbl)}</span><input class="mf-line" value="${e(D.receiverName||'')}" oninput="DR[KK()].receiverName=this.value"></div><div class="sub"><span class="mf-label">التوقيع</span><input class="mf-line" value="${e(D.receiverSig||'')}" oninput="DR[KK()].receiverSig=this.value"></div></div></div>
+        <div class="mf-cell"><span class="mf-label">${inn?'تاريخ الاستلام':'تاريخ التسليم'}</span><span class="mf-date"><input class="mf-line" id="doc_receiveDate" type="date" value="${e(D.receiveDate||'')}" data-mirror="mfm_doc_receiveDate" oninput="mfDateSync(this);DR[KK()].receiveDate=this.value"><span class="mirror" id="mfm_doc_receiveDate">${D.receiveDate?e(mfDMY(D.receiveDate)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div>
+        ${mfStamp('ختم مخزن النظم')}
+      </div>
+     </div></div>`;
+}
+function vDocEditor(key){
+  const S=DS[key],D=DR[key],ed=E[key];
+  return `<div class="mf-page">
+    <div class="mf-bar no-print">
+      <div class="grp">
+        <button class="btn ghost" onclick="docBack()">رجوع للقائمة</button>
+        <button class="btn" onclick="saveDoc()">${ed?'حفظ التعديل':'تسجيل الإذن'}</button>
+        <button class="btn soft" onclick="window.print()">طباعة</button>
+        ${ed&&ok('delRecv')?`<button class="btn bad" onclick="delDoc(${ed})">${pend==S.dir+ed?'تأكيد الحذف':'حذف'}</button>`:''}
+      </div>
+      <div class="grp"><span class="mf-no">${ed?'إذن رقم '+e(D.p):'إذن جديد'}</span></div>
+    </div>
+    <p class="mf-hint no-print">هذه هي صفحة الإدخال نفسها: املأ النموذج ثم اضغط «${ed?'حفظ التعديل':'تسجيل الإذن'}» ليُحدَّث المخزون، أو «طباعة» لطباعة الورقة كما هي.</p>
+    <div class="print-root"><div class="paper-wrap"><div class="paper-sheet">${docSheet(key)}</div></div></div>
+  </div>`;
+}
+function vDocLegacy(key){
   docKey=key;
   const S=DS[key],K=S.dir,D=DR[key],k=S.kind,inn=K=='in',ed=E[key];
   const sendMaint=!inn&&k=='sup',backNonSup=inn&&k!='sup';
@@ -951,7 +1163,7 @@ function vDoc(key){
    :key=='recvbr'?'إذن استلام من فرع: يُنقص رصيد الفرع، ويُضاف إلى المخزون. الأصناف التالفة تُسجَّل من شاشة الخردة.'
    :key=='issbr'?'إذن صرف إلى فرع: يُنقص المخزون، ويُضاف إلى رصيد الفرع.'
    :'إذن صرف إلى مورد الصيانة: تنتقل الكمية من المخزن إلى «تحت الصيانة»، ويصبح هذا الإذن هو إذن الخروج للصيانة.';
-  return `${key=='issmaint'?'<button class="btn ghost" onclick="maintView=null;go()">رجوع للصيانة</button>':''}
+  return `${key=='issmaint'?'<button class="btn ghost" onclick="maintView=null;go()">رجوع للصيانة</button>':`<div class="row" style="margin:0 0 10px"><button class="btn soft" onclick="printBlankDoc('${key}')">طباعة نموذج فارغ</button></div>`}
   <div class="box"${key=='issmaint'?' style="margin-top:14px"':''}><h3>${ed?'تعديل ':''}${S.t}</h3>
   <div class="grid">
     ${k=='br'?`<label>الفرع<select onchange="DR[KK()].b=+this.value">${branches.map(b=>`<option value="${b.id}"${b.id==D.b?' selected':''}>${e(b.n)}</option>`).join('')}</select></label>`:`<label>${sendMaint?'جهة الصيانة':'اسم المورد المسجل'}<select onchange="DR[KK()].sup=this.value">${supplierOptions(D.sup)}</select></label>`}
@@ -972,7 +1184,7 @@ function docCard(key,r){
   const S=DS[key],K=S.dir,inn=K=='in',party=partyName(r);
   const mfLink=key=='recvbr'||key=='issmaint';
   return `<div class="box"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>إذن رقم ${e(r.p)}</b> <span class="chip ok">${SRC[K][r.k]}</span><div class="mut">الجهة: ${e(party)}${r.sb?' · من فرع '+e(r.sb):''} · ${dcell(r.d)} · ${e(r.by)}${r.ed?' · عدّله '+e(r.ed):''}</div></div>
-   <div class="acts" style="flex-wrap:wrap">${ok('stock')?`<button class="btn ghost" onclick="editDoc(${r.id})">تعديل</button>`:''}${ok('delRecv')?`<button class="btn bad" onclick="delDoc(${r.id})">${pend==K+r.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></div>
+   <div class="acts" style="flex-wrap:wrap">${ok('stock')?`<button class="btn ghost" onclick="editDoc(${r.id})">تعديل</button>`:''}${key==='issmaint'?'':`<button class="btn soft" onclick="printVoucher('${key}',${r.id})">طباعة</button>`}${ok('delRecv')?`<button class="btn bad" onclick="delDoc(${r.id})">${pend==K+r.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></div>
    <div class="tw"><table><tr><th>الصنف</th><th>السيريال</th>${inn?'<th>الحالة</th>':'<th>سبب الصيانة</th><th>شرح</th>'}<th>العدد</th>${mfLink?'<th></th>':''}</tr>${r.lines.map((l,j)=>`<tr><td class="nmcell">${e((it(l.i)||{n:'-'}).n)}</td><td>${l.sns.length?snList(l.sns):'<span class="mut">بدون سيريال</span>'}</td>${inn?`<td>${e(SM[l.st]||SM.stock)}${l.hw?` · ضمان حتى ${e(l.wu||'')}`:''}</td>`:`<td>${e(l.rs||'-')}</td><td>${e(l.nt||'-')}</td>`}<td>${l.q}</td>${mfLink?`<td><button class="btn ghost" style="padding:5px 9px;font-size:12px" onclick="mfFromVoucher(${r.id},${j})">نموذج صيانة</button></td>`:''}</tr>`).join('')}</table></div></div>`;
 }
 function resDoc(key){
@@ -987,38 +1199,53 @@ function resDoc(key){
 function setQ(j,v){DR[KK()].lines[j].q=Math.max(0,Math.floor(+v||0));go()}
 function resetDoc(){const key=KK();E[key]=null;DR[key]=nd(key)}
 function editDoc(id){
-  const key=KK(),K=DS[key].dir,r=DB[K].find(x=>x.id==id);E[key]=id;pend=null;
-  DR[key]={k:DS[key].kind,sup:r.sup,b:r.b||(branches[0]?branches[0].id:null),p:r.p,sb:r.sb||'',lines:r.lines.map(l=>({i:l.i,q:l.q,sns:[...l.sns],st:l.st||'stock',rs:l.rs||'',nt:l.nt||'',hw:!!l.hw,wu:l.wu||''}))};
-  go();window.scrollTo(0,0);
+  const key=KK(),K=DS[key].dir,r=DB[K].find(x=>x.id==id);if(!r)return;
+  E[key]=id;pend=null;
+  const m=dspMeta(r.id),b=r.b?br(r.b):null;
+  DR[key]={k:DS[key].kind,sup:r.sup||'',b:r.b||(branches[0]?branches[0].id:null),p:r.p||'',d:r.d||isoToday(),sb:r.sb||'',note:m.note||'',by:m.stockOfficer||r.by||'',stockOfficer:m.stockOfficer||r.by||'',stockOfficerSig:m.stockOfficerSignature||'',receiverName:m.receiverName||'',receiverSig:m.receiverSignature||'',receiveDate:m.receiveDate||r.d||isoToday(),gov:m.gov||(b?(b.g||''):''),addr:m.address||(b?(b.address||''):''),original:{},lines:r.lines.map(l=>({i:l.i,q:l.q,sns:[...l.sns],st:l.st||'stock',rs:l.rs||'',nt:l.nt||'',cd:l.cd||'سليم',hw:!!l.hw,wu:l.wu||''}))};
+  r.lines.forEach(l=>{DR[key].original[l.i]=(DR[key].original[l.i]||0)+(+l.q||0)});
+  docView='edit';go();window.scrollTo(0,0);
 }
 async function saveDoc(){
-  const key=KK(),S=DS[key],K=S.dir,D=DR[key],k=S.kind,isb=k=='br',inn=K=='in',sendMaint=K=='out'&&k=='sup',backNonSup=inn&&k!='sup',sup=(D.sup||'').trim(),p=D.p.trim(),editing=E[key];
-  if(isb&&!br(D.b))return toast('اختر فرعًا مسجلاً');
+  const key=KK(),S=DS[key],K=S.dir,D=DR[key],k=S.kind,isb=k=='br',inn=K=='in',sendMaint=K=='out'&&k=='sup',sup=(D.sup||'').trim(),p=(D.p||'').trim(),editing=E[key];
+  if(isb&&!br(D.b))return toast('اختر فرعًا مسجلًا');
   if(k=='sup'&&!sup)return toast('اختر المورد');
-  if(!p)return toast(K=='in'?'اكتب رقم إذن الإدخال':'اكتب رقم إذن الصرف');
-  const seen={};const lines=[];
+  if(!p)return toast(inn?'اكتب رقم إذن الإدخال':'اكتب رقم إذن الصرف');
+  if(!D.d)return toast('اختر تاريخ الإذن');
+  const seen={},used={};const lines=[];
   for(const l of D.lines){
     if(!l.i)return toast('اختر الصنف في كل سطر');
     if(!(l.q>0))return toast('اكتب العدد في كل سطر');
+    docFixLine(l);
     let sns=[];
     if(hasSer(l.i)){
-      fixSn(l);sns=l.sns.map(s=>s.trim());
+      sns=l.sns.map(s=>s.trim());
       for(const s of sns){const t=s.toLowerCase();if(!t)return toast('اكتب كل السيريالات لصنف '+it(l.i).n);if(seen[t])return toast('سيريال مكرر: '+s);seen[t]=1}
     }
-    if(backNonSup&&l.hw&&!l.wu)return toast('اكتب تاريخ انتهاء الضمان');
+    if(!inn){
+      used[l.i]=(used[l.i]||0)+(+l.q);
+      const avail=((it(l.i)||{}).s||0)+(D.original[l.i]||0);
+      if(used[l.i]>avail)return toast('الكمية أكبر من رصيد المخزن للصنف '+((it(l.i)||{}).n||''));
+    }
+    if(inn&&l.hw&&!l.wu)return toast('اكتب تاريخ انتهاء الضمان');
     lines.push({
       item_id:+l.i,qty:+l.q,serials:sns,
       state:'stock',
       reason:sendMaint?(l.rs||''):'',
-      note:sendMaint?(l.nt||''):'',
-      has_warranty:backNonSup?!!l.hw:false,
-      warranty_until:backNonSup&&l.hw?(l.wu||''):''
+      note:l.nt||'',
+      condition:l.cd||'سليم',
+      has_warranty:inn?!!l.hw:false,
+      warranty_until:inn&&l.hw?(l.wu||''):''
     });
   }
-  const body={direction:K,kind:k,number:p,supplier_name:isb?'':sup,branch_id:isb?+D.b:null,source_branch:sendMaint?(D.sb||''):'',lines};
+  const body={direction:K,kind:k,number:p,doc_date:D.d||'',supplier_name:isb?'':sup,branch_id:isb?+D.b:null,source_branch:sendMaint?(D.sb||''):'',lines};
   try{
-    if(editing)await api('/vouchers/'+editing,'PUT',body);else await api('/vouchers','POST',body);
-    resetDoc();if(document.activeElement)document.activeElement.blur();go();
+    const res=editing?await api('/vouchers/'+editing,'PUT',body):await api('/vouchers','POST',body);
+    const vid=(res&&res.id)||editing;
+    if(vid){
+      try{await api('/dispatch-meta/'+vid,'PUT',{destType:isb?'branch':'supplier',note:D.note||'',stockOfficer:D.stockOfficer||'',stockOfficerSignature:D.stockOfficerSig||'',receiverName:D.receiverName||'',receiverSignature:D.receiverSig||'',receiveDate:D.receiveDate||'',gov:D.gov||'',address:D.addr||'',partyName:docPartyValue(key,D)})}catch(_){}
+    }
+    resetDoc();docView='list';if(document.activeElement)document.activeElement.blur();
     await refresh();toast(editing?'تم حفظ تعديل الإذن':'تم تسجيل الإذن وتحديث الأرصدة');go();
   }catch(err){toast(err.message)}
 }
@@ -1026,7 +1253,7 @@ async function delDoc(id){
   const key=KK(),K=DS[key].dir;
   if(!ok('delRecv'))return;
   if(pend!=K+id){pend=K+id;toast('اضغط تأكيد الحذف للمتابعة');return go()}
-  try{await api('/vouchers/'+id,'DELETE');pend=null;if(E[key]==id)resetDoc();await refresh();toast('تم حذف الإذن وتعديل الأرصدة');go()}catch(err){pend=null;toast(err.message);go()}
+  try{await api('/vouchers/'+id,'DELETE');try{await api('/dispatch-meta/'+id,'DELETE')}catch(_){}pend=null;if(E[key]==id)resetDoc();docView='list';await refresh();toast('تم حذف الإذن وتعديل الأرصدة');go()}catch(err){pend=null;toast(err.message);go()}
 }
 
 function branchText(b){
@@ -1136,14 +1363,118 @@ function resRq(){
   return {html,total:rows.length};
 }
 function vReqs(){
+  if(rqView==='edit')return vRequestEditor();
+  const can=ok('request'),d=resRq();
+  return `<div class="hero">
+    <div><div class="eyebrow">المخزن</div><h2>${icon('rq')} الطلبات</h2><p>طلبات الفروع على نموذج A4: يُعبأ النموذج من صفحته ثم يُرسل للاعتماد، ويمكن طباعة أي طلب محفوظ أو نموذج فارغ.</p></div>
+    <div class="acts">${can?'<button class="btn" onclick="newRequest()">طلب جديد</button>':''}<button class="btn soft" onclick="printBlankRequest()">طباعة نموذج فارغ</button></div>
+  </div>
+  ${sbox('rq','بحث: فرع، مقدّم الطلب، الحالة، صنف، تاريخ',d.total)}
+  <div id="res_rq">${d.html}</div>`;
+}
+function newRequest(){
+  RQ={b:branches[0]?branches[0].id:null,by:(STATE.user||{}).name||'',d:isoToday(),note:'',lines:[requestLine()]};
+  rqView='edit';go();window.scrollTo(0,0);
+}
+function rqBack(){rqView='list';RQ=null;go();window.scrollTo(0,0)}
+function requestLine(){const x=items[0];return {i:x?x.id:0,q:1}}
+function rqFix(l){l.q=Math.max(1,Math.floor(+l.q||1))}
+function requestItemOptions(sel){
+  return CATS.map(c=>{
+    const g=items.filter(i=>i.c===c);
+    return g.length?`<optgroup label="${e(c)}">`+g.map(i=>`<option value="${i.id}"${Number(i.id)===Number(sel)?' selected':''}>${e(i.n)} — بالمخزن ${i.s}</option>`).join('')+'</optgroup>':'';
+  }).join('')||'<option value="">لا توجد أصناف</option>';
+}
+function rqSetItem(j,v){const l=RQ&&RQ.lines[j];if(!l)return;l.i=+v||0;go()}
+function rqSetQty(j,v){const l=RQ&&RQ.lines[j];if(!l)return;l.q=Math.max(1,Math.floor(+v||1));go()}
+function rqAddLine(){if(!RQ)return;RQ.lines.push(requestLine());go()}
+function rqDelLine(j){if(!RQ)return;RQ.lines.splice(j,1);if(!RQ.lines.length)RQ.lines.push(requestLine());go()}
+function requestFillRows(cols,total,used,click){
   let h='';
-  if(ok('request'))h+=`<div class="box"><h3>طلب جديد</h3><label style="max-width:260px">الفرع<select id="rb">${branches.map(b=>`<option value="${b.id}">${e(b.n)}</option>`).join('')}</select></label>
-   <p class="mut" style="margin:12px 0 0">الكميات المطلوبة:</p>${grid('rq')}
-   <label style="max-width:420px;margin-bottom:12px">ملاحظات (اختياري)<input id="rc"></label>
-   <button class="btn" onclick="send()">${role=='junior'?'إرسال للسينيور للمراجعة':'إرسال لمدير المنطقة'}</button></div>`;
-  h+=`<h2>${icon('rq')} الطلبات</h2>`;
-  const d=resRq();
-  return h+sbox('rq','بحث: فرع، مقدّم الطلب، الحالة، صنف، تاريخ',d.total)+`<div id="res_rq">${d.html}</div>`;
+  for(let i=0;i<Math.max(0,total-used);i++)h+=`<tr class="fill"${click?' style="cursor:pointer" title="إضافة صنف" onclick="rqAddLine()"':''}>${cols.map(()=>'<td>&nbsp;</td>').join('')}</tr>`;
+  return h;
+}
+function requestEditableSheet(){
+  const cols=['م','التصنيف','اسم الصنف','الكمية المطلوبة'];
+  const widths=['6%','18%','54%','22%'];
+  const rows=RQ.lines.map((l,j)=>{
+    rqFix(l);
+    const x=it(l.i)||{};
+    return `<tr>
+      <td>${j+1}${RQ.lines.length>1?`<button class="dsp-del no-print" onclick="rqDelLine(${j})" title="حذف السطر">×</button>`:''}</td>
+      <td>${e(x.c||'-')}</td>
+      <td class="dsp-item"><select class="mf-line no-print" onchange="rqSetItem(${j},this.value)">${requestItemOptions(l.i)}</select><span class="print-only" style="font-weight:700">${e(x.n||'-')}</span></td>
+      <td><input class="mf-line" type="number" min="1" value="${l.q}" onchange="rqSetQty(${j},this.value)"></td>
+    </tr>`;
+  }).join('');
+  const total=RQ.lines.reduce((a,l)=>a+(+l.q||0),0);
+  return `${mfTitleBar('نموذج طلب أصناف')}
+    <div class="mf-sec"><div class="mf-sec-head">بيانات الطلب</div><div class="mf-table">
+      <div class="mf-row" style="grid-template-columns:1fr 1fr 1.6fr 1.4fr">
+        <div class="mf-cell"><span class="mf-label">رقم الطلب</span><span class="mf-val">تلقائي</span></div>
+        <div class="mf-cell"><span class="mf-label">التاريخ</span><span class="mf-date"><input class="mf-line" id="rq_date" type="date" value="${e(RQ.d||'')}" data-mirror="mfm_rq_date" oninput="mfDateSync(this);RQ.d=this.value"><span class="mirror" id="mfm_rq_date">${RQ.d?e(mfDMY(RQ.d)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div>
+        <div class="mf-cell"><span class="mf-label">الفرع</span><select class="mf-line" onchange="RQ.b=+this.value;go()">${branches.map(b=>`<option value="${b.id}"${Number(b.id)===Number(RQ.b)?' selected':''}>${e(b.n)}</option>`).join('')}</select></div>
+        <div class="mf-cell"><span class="mf-label">مقدّم الطلب</span><input class="mf-line" value="${e(RQ.by||'')}" disabled></div>
+      </div>
+     </div></div>
+    <div class="mf-sec"><div class="mf-sec-head">الأصناف المطلوبة</div>
+      <table class="dsp-table"><colgroup>${widths.map(w=>`<col style="width:${w}">`).join('')}</colgroup>
+       <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+       <tbody>${rows}${requestFillRows(cols,20,RQ.lines.length,true)}</tbody></table>
+      <div class="dsp-row-actions no-print"><button class="btn ghost" onclick="rqAddLine()">إضافة صنف</button><span class="dsp-type-note">إجمالي الكميات المطلوبة: ${total}. الطلب لا يخصم من المخزون؛ يُخصم عند الصرف.</span></div>
+    </div>
+    <div class="mf-sec"><div class="mf-sec-head">ملاحظات</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1fr"><div class="mf-cell mf-block"><textarea class="mf-area" rows="3" oninput="RQ.note=this.value">${e(RQ.note||'')}</textarea></div></div></div></div>
+    <div class="mf-sec"><div class="mf-sec-head">الاعتماد</div><div class="mf-table">
+      <div class="mf-row" style="grid-template-columns:1.45fr 1.45fr 1fr 1.35fr">
+        <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">مقدّم الطلب</span><input class="mf-line" value="${e(RQ.by||'')}" disabled></div><div class="sub"><span class="mf-label">التوقيع</span><span class="mf-val">&nbsp;</span></div></div></div>
+        <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">مدير المنطقة</span><span class="mf-val">&nbsp;</span></div><div class="sub"><span class="mf-label">التوقيع</span><span class="mf-val">&nbsp;</span></div></div></div>
+        <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">تاريخ الطلب</span></div><div class="sub"><span class="mf-val">${RQ.d?e(mfDMY(RQ.d)):'&nbsp;/&nbsp;/&nbsp;'}</span></div></div></div>
+        ${mfStamp('ختم الفرع')}
+      </div>
+     </div></div>`;
+}
+function vRequestEditor(){
+  if(!RQ)return vReqs();
+  return `<div class="mf-page">
+    <div class="mf-bar no-print">
+      <div class="grp">
+        <button class="btn ghost" onclick="rqBack()">رجوع للقائمة</button>
+        <button class="btn" onclick="saveRequest()">${role=='junior'?'إرسال للسينيور للمراجعة':'إرسال لمدير المنطقة'}</button>
+        <button class="btn soft" onclick="window.print()">طباعة</button>
+      </div>
+      <div class="grp"><span class="mf-no">طلب جديد</span></div>
+    </div>
+    <p class="mf-hint no-print">هذه هي صفحة إدخال الطلب نفسها: املأ النموذج على الورقة ثم اضغط «${role=='junior'?'إرسال للسينيور للمراجعة':'إرسال لمدير المنطقة'}» ليُسجَّل الطلب ويُرسل للاعتماد، أو «طباعة» لطباعة الورقة كما هي. رقم الطلب يُحدَّد تلقائيًا بعد الإرسال.</p>
+    <div class="print-root"><div class="paper-wrap"><div class="paper-sheet">${requestEditableSheet()}</div></div></div>
+  </div>`;
+}
+async function saveRequest(){
+  if(!RQ)return;
+  if(!br(RQ.b))return toast('اختر فرعًا مسجلًا');
+  if(!RQ.lines.length)return toast('أضف صنفًا واحدًا على الأقل');
+  const lines=[];
+  for(const l of RQ.lines){
+    if(!l.i)return toast('اختر الصنف في كل سطر');
+    rqFix(l);
+    lines.push({item_id:+l.i,qty:+l.q});
+  }
+  try{
+    await api('/requests','POST',{branch_id:+RQ.b,lines,note:(RQ.note||'').trim()});
+    rqView='list';RQ=null;await refresh();
+    toast(role=='junior'?'تم إرسال الطلب لمراجعة السينيور':'تم إرسال الطلب لمدير المنطقة');go();
+  }catch(err){toast(err.message)}
+}
+function printRequest(id){
+  const r=reqs.find(x=>Number(x.id)===Number(id));
+  if(!r)return toast('الطلب غير موجود');
+  PRINT={mode:'request',id:r.id};
+  tab='docprint';go();window.scrollTo(0,0);
+  setTimeout(()=>window.print(),500);
+}
+function printBlankRequest(){
+  PRINT={mode:'requestblank'};
+  tab='docprint';go();window.scrollTo(0,0);
+  setTimeout(()=>window.print(),500);
 }
 function card(r){
   const [lb,cl]=ST[r.st],open=['review','pending','approved'].includes(r.st);
@@ -1159,6 +1490,7 @@ function card(r){
   }
   if(open&&u=='no')p=`<input class="cm" style="margin:0" id="c${r.id}" placeholder="سبب الرفض (إجباري)"><button class="btn bad" onclick="act(${r.id},'no')">تأكيد الرفض</button><button class="btn ghost" onclick="ui=null;go()">إلغاء</button>`;
   if(open&&u=='edit')p=`<input class="cm" style="margin:0" id="c${r.id}" value="تم التعديل"><button class="btn" onclick="act(${r.id},'save')">حفظ التعديل</button><button class="btn ghost" onclick="ui=null;go()">إلغاء</button>`;
+  p+=`<button class="btn soft" onclick="printRequest(${r.id})">طباعة النموذج</button>`;
   return `<div class="box"><b>${e(br(r.b).n)}</b> <span class="chip ${cl}">${lb}</span><div class="mut">${e(r.by)}</div><div style="margin-top:6px">${lines}</div>${log}${p?`<div class="acts" style="margin-top:10px;flex-wrap:wrap">${p}</div>`:''}</div>`;
 }
 async function send(){
@@ -1695,6 +2027,7 @@ function dspOpen(id,print){
   if(print)setTimeout(()=>window.print(),500);
 }
 function dspNew(){tab='dispatch';DSP=dspBlankRecord();dspView='edit';dspPendDel=null;go()}
+function dspBlankPrint(){tab='dispatch';DSP=dspBlankRecord();dspView='edit';dspPendDel=null;go();setTimeout(()=>window.print(),500)}
 function dspBack(){dspView='list';DSP=null;dspPendDel=null;go()}
 function dspPrintCurrent(){dspCollect();window.print()}
 async function dspDelete(id){
@@ -1719,7 +2052,7 @@ function vDispatch(){
   if(!ok('stock'))return '<div class="box"><h2>إرسال البضاعة</h2><p class="mut">هذه الصفحة متاحة لمسؤول المخزن ومدير النظام والمدير الفني.</p></div>';
   if(dspView==='edit')return vDispatchEditor();
   const d=resDispatch();
-  return `<div class="hero"><div><div class="eyebrow">المخزن</div><h2>${icon('dispatch')} إرسال البضاعة</h2><p>نموذج إرسال بضاعة مطابق لأذون الصرف الحالية: نفس الترقيم ونفس بيانات المخزون، مع نسخة A4 للطباعة.</p></div><div class="acts"><button class="btn" onclick="dspNew()">إذن صرف جديد</button></div></div>
+  return `<div class="hero"><div><div class="eyebrow">المخزن</div><h2>${icon('dispatch')} إرسال البضاعة</h2><p>نموذج إرسال بضاعة مطابق لأذون الصرف الحالية: نفس الترقيم ونفس بيانات المخزون، مع نسخة A4 للطباعة.</p></div><div class="acts"><button class="btn" onclick="dspNew()">إذن صرف جديد</button><button class="btn soft" onclick="dspBlankPrint()">طباعة نموذج فارغ</button></div></div>
    ${sbox('dispatch','بحث: رقم الإذن، الجهة، الصنف، السيريال، المستلم، التاريخ',d.total)}
    <div id="res_dispatch">${d.html}</div>
    <p class="mut">إذن الصرف يخصم الكميات من رصيد المخزن ويزيد رصيد الفرع عند اختيار «فرع»، أو يرسلها إلى المورد/جهة الصيانة. تُحفظ بيانات التسليم والاستلام مع الإذن نفسه.</p>`;
@@ -1727,7 +2060,7 @@ function vDispatch(){
 function dspItemOptions(sel){
   return CATS.map(c=>{
     const g=items.filter(i=>(i.s>0||Number(i.id)===Number(sel))&&i.c===c);
-    return g.length?`<optgroup label="${e(c)}">`+g.map(i=>`<option value="${i.id}"${Number(i.id)===Number(sel)?' selected':''}>${e(i.n)}</option>`).join('')+'</optgroup>':'';
+    return g.length?`<optgroup label="${e(c)}">`+g.map(i=>`<option value="${i.id}"${Number(i.id)===Number(sel)?' selected':''}>${e(i.n)} — متاح ${i.s}</option>`).join('')+'</optgroup>':'';
   }).join('')||'<option value="">لا توجد أصناف</option>';
 }
 function dspBranchOptions(sel){
@@ -1744,15 +2077,20 @@ function dspLineRows(){
     const x=it(l.i)||{},avail=(x.s||0)+(DSP.original[l.i]||0);
     const sn=l.sns.length?`<div class="dsp-sn">${l.sns.map((s,n)=>`<input class="mf-line" value="${e(s)}" placeholder="سيريال ${n+1}" oninput="DSP.lines[${j}].sns[${n}]=this.value">`).join('')}</div>`:(hasSer(l.i)?'<span class="mut">—</span>':'<span class="mut">بدون سيريال</span>');
     return `<tr>
-      <td>${j+1}${DSP.lines.length>1?`<div class="no-print"><button class="btn ghost" style="padding:0 4px;min-height:0;font-size:12px;margin-top:2px" onclick="dspDelLine(${j})" title="حذف السطر">×</button></div>`:''}</td>
+      <td>${j+1}${DSP.lines.length>1?`<button class="dsp-del no-print" onclick="dspDelLine(${j})" title="حذف السطر">×</button>`:''}</td>
       <td>${e(x.c||'-')}</td>
-      <td class="dsp-item"><select class="mf-line" onchange="dspSetItem(${j},this.value)">${dspItemOptions(l.i)}</select><div class="dsp-avail no-print">المتاح: ${avail}</div></td>
+      <td class="dsp-item"><select class="mf-line no-print" title="المتاح: ${avail}" onchange="dspSetItem(${j},this.value)">${dspItemOptions(l.i)}</select><span class="print-only" style="font-weight:700">${e(x.n||'-')}</span></td>
       <td class="dsp-sncell">${sn}</td>
       <td><input class="mf-line" type="number" min="1" value="${l.q}" onchange="dspSetQty(${j},this.value)"></td>
       <td><select class="mf-line" onchange="DSP.lines[${j}].cond=this.value">${opts(['سليم','يحتاج صيانة','تالف'],l.cond)}</select></td>
       <td><input class="mf-line" value="${e(l.nt||'')}" oninput="DSP.lines[${j}].nt=this.value"></td>
     </tr>`;
   }).join('');
+}
+function dspFillRows(n){
+  let h='';
+  for(let i=0;i<n;i++)h+=`<tr class="fill" style="cursor:pointer" title="إضافة صنف" onclick="dspAddLine()">${Array.from({length:7},()=>'<td>&nbsp;</td>').join('')}</tr>`;
+  return h;
 }
 function dspSheet(){
   const partyCell=DSP.destType==='branch'
@@ -1774,7 +2112,7 @@ function dspSheet(){
     <div class="mf-sec"><div class="mf-sec-head">بيانات الأصناف</div>
       <table class="dsp-table"><colgroup><col style="width:4%"><col style="width:13%"><col style="width:23%"><col style="width:28%"><col style="width:7%"><col style="width:13%"><col style="width:12%"></colgroup>
        <thead><tr><th>م</th><th>التصنيف</th><th>اسم الصنف</th><th>السيريال</th><th>الكمية</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
-       <tbody>${dspLineRows()}</tbody></table>
+       <tbody>${dspLineRows()}${dspFillRows(Math.max(0,20-DSP.lines.length))}</tbody></table>
       <div class="dsp-row-actions no-print"><button class="btn ghost" onclick="dspAddLine()">إضافة صنف</button><span class="dsp-type-note">تنبيه: لا يمكن الصرف بأكثر من رصيد المخزن، ولا تكرار السيريال.</span></div>
     </div>
     <div class="mf-sec"><div class="mf-sec-head">ملاحظات</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1fr"><div class="mf-cell mf-block"><textarea class="mf-area" id="dsp_note" rows="2" oninput="DSP.note=this.value">${e(DSP.note||'')}</textarea></div></div></div></div>
@@ -1782,7 +2120,7 @@ function dspSheet(){
       <div class="mf-row" style="grid-template-columns:1.45fr 1.45fr 1fr 1.35fr">
         <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">مسؤول المخزن</span><input class="mf-line" id="dsp_stockOfficer" value="${e(DSP.stockOfficer||'')}" oninput="DSP.stockOfficer=this.value"></div><div class="sub"><span class="mf-label">التوقيع</span><input class="mf-line" id="dsp_stockOfficerSig" value="${e(DSP.stockOfficerSignature||'')}" oninput="DSP.stockOfficerSignature=this.value"></div></div></div>
         <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">اسم المستلم</span><input class="mf-line" id="dsp_receiverName" value="${e(DSP.receiverName||'')}" oninput="DSP.receiverName=this.value"></div><div class="sub"><span class="mf-label">التوقيع</span><input class="mf-line" id="dsp_receiverSig" value="${e(DSP.receiverSignature||'')}" oninput="DSP.receiverSignature=this.value"></div></div></div>
-        <div class="mf-cell"><span class="mf-label">تاريخ الاستلام</span><span class="mf-date"><input class="mf-line" id="dsp_receiveDate" type="date" value="${e(DSP.receiveDate||'')}" oninput="mfDateSync(this);DSP.receiveDate=this.value"><span class="mirror" id="mfm_dsp_receiveDate">${DSP.receiveDate?e(mfDMY(DSP.receiveDate)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div>
+        <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">تاريخ الاستلام</span></div><div class="sub"><span class="mf-date"><input class="mf-line" id="dsp_receiveDate" type="date" value="${e(DSP.receiveDate||'')}" oninput="mfDateSync(this);DSP.receiveDate=this.value"><span class="mirror" id="mfm_dsp_receiveDate">${DSP.receiveDate?e(mfDMY(DSP.receiveDate)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div></div></div>
         ${mfStamp('ختم مخزن النظم')}
       </div>
      </div></div>`;
@@ -1810,6 +2148,196 @@ function vDispatchEditor(){
   </div>`;
 }
 
+/* ===================== A4 document forms (scrap / receiving / issuing) ===================== */
+const VFORM_TITLE={recvsup:'نموذج استلام أصناف من مورد',recvbr:'نموذج استلام أصناف من فرع',issbr:'نموذج صرف أصناف إلى فرع'};
+let PRINT=null;
+function printVoucher(key,id){
+  const rec=DB[DS[key].dir].find(x=>Number(x.id)===Number(id)&&x.k===DS[key].kind);
+  if(!rec)return toast('الإذن غير موجود');
+  PRINT={mode:'voucher',key,id:rec.id};
+  tab='docprint';go();window.scrollTo(0,0);
+  setTimeout(()=>window.print(),500);
+}
+function printScrap(id){
+  const r=SCRAPLOG.find(x=>Number(x.id)===Number(id));
+  if(!r)return toast('حركة الخردة غير موجودة');
+  PRINT={mode:'scrap',id:r.id};
+  tab='docprint';go();window.scrollTo(0,0);
+  setTimeout(()=>window.print(),500);
+}
+function printBlankDoc(key){
+  PRINT={mode:'blank',key};
+  tab='docprint';go();window.scrollTo(0,0);
+  setTimeout(()=>window.print(),500);
+}
+function printBlankScrap(){
+  PRINT={mode:'scrapblank'};
+  tab='docprint';go();window.scrollTo(0,0);
+  setTimeout(()=>window.print(),500);
+}
+function backFromPrint(){
+  const p=PRINT;PRINT=null;
+  tab=!p?'rq':((p.mode==='scrap'||p.mode==='scrapblank')?'scrap':(p.mode==='request'||p.mode==='requestblank')?'rq':p.key);
+  go();
+}
+function vDocPrint(){
+  if(!PRINT)return '<p class="mut">لا يوجد مستند للطباعة.</p>';
+  let sheet='';
+  if(PRINT.mode==='scrap')sheet=scrapDocSheet(PRINT.id,false);
+  else if(PRINT.mode==='scrapblank')sheet=scrapDocSheet(0,true);
+  else if(PRINT.mode==='blank')sheet=voucherDocSheet(PRINT.key,0,true);
+  else if(PRINT.mode==='request')sheet=requestDocSheet(PRINT.id,false);
+  else if(PRINT.mode==='requestblank')sheet=requestDocSheet(0,true);
+  else sheet=voucherDocSheet(PRINT.key,PRINT.id,false);
+  if(!sheet)return '<p class="mut">تعذر العثور على المستند.</p>';
+  return `<div class="mf-page">
+    <div class="mf-bar no-print">
+      <div class="grp"><button class="btn ghost" onclick="backFromPrint()">رجوع</button><button class="btn soft" onclick="window.print()">طباعة</button></div>
+      <span class="mf-no">${(PRINT.mode==='blank'||PRINT.mode==='scrapblank'||PRINT.mode==='requestblank')?'نموذج فارغ':'معاينة الطباعة'}</span>
+    </div>
+    <div class="print-root"><div class="paper-wrap"><div class="paper-sheet">${sheet}</div></div></div>
+  </div>`;
+}
+function vfCell(label,value){
+  const v=value===undefined||value===null||value===''?'&nbsp;':e(String(value));
+  return `<div class="mf-cell"><span class="mf-label">${e(label)}</span><span class="mf-val">${v}</span></div>`;
+}
+function vfDate(label,value){
+  return `<div class="mf-cell"><span class="mf-label">${e(label)}</span><span class="mf-val">${value?e(mfDMY(value)):'&nbsp;/&nbsp;/&nbsp;'}</span></div>`;
+}
+function vfFill(cols,n){
+  let h='';
+  for(let i=0;i<n;i++)h+=`<tr class="fill">${cols.map(()=>'<td>&nbsp;</td>').join('')}</tr>`;
+  return h;
+}
+function vfSignRow(firstName,secondLabel,secondName,dateLabel,date,firstLabel){
+  return `<div class="mf-row" style="grid-template-columns:1.45fr 1.45fr 1fr 1.35fr">
+    <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">${e(firstLabel||'مسؤول المخزن')}</span><span class="mf-val">${firstName?e(firstName):'&nbsp;'}</span></div><div class="sub"><span class="mf-label">التوقيع</span><span class="mf-val">&nbsp;</span></div></div></div>
+    <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">${e(secondLabel)}</span><span class="mf-val">${secondName?e(secondName):'&nbsp;'}</span></div><div class="sub"><span class="mf-label">التوقيع</span><span class="mf-val">&nbsp;</span></div></div></div>
+    <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">${e(dateLabel)}</span></div><div class="sub"><span class="mf-val">${date?e(mfDMY(date)):'&nbsp;/&nbsp;/&nbsp;'}</span></div></div></div>
+    ${mfStamp('ختم مخزن النظم')}
+  </div>`;
+}
+function voucherDocSheet(key,id,blank){
+  const rec=blank?{id:0,k:DS[key].kind,p:'',d:'',b:null,sup:'',by:'',lines:[]}:DB[DS[key].dir].find(x=>Number(x.id)===Number(id));
+  if(!rec)return '';
+  const isIn=DS[key].dir==='in';
+  const b=rec.b?br(rec.b):null;
+  const sup=suppliers.find(s=>s.n===rec.sup)||null;
+  const partyLbl=key==='recvsup'?'المورد':key==='issbr'?'الفرع المستلم':'الفرع';
+  const party=blank?'':(partyName(rec)||'');
+  const m=blank?{}:dspMeta(rec.id);
+  const gov=key==='recvsup'?(m.gov||''):(m.gov||((b&&b.g)||''));
+  const addr=key==='recvsup'?(m.address||(sup?(sup.address||''):'')):(m.address||((b&&b.address)||''));
+  const cols=isIn?['م','التصنيف','اسم الصنف','السيريال','الكمية','الحالة','الضمان','ملاحظات']:['م','التصنيف','اسم الصنف','السيريال','الكمية','الحالة','ملاحظات'];
+  const widths=isIn?['4%','12%','20%','22%','6%','9%','15%','12%']:['4%','13%','24%','28%','7%','12%','12%'];
+  const rows=rec.lines.map((l,j)=>{
+    const x=it(l.i)||{};
+    const cells=[`<td>${j+1}</td>`,`<td>${e(x.c||'-')}</td>`,`<td style="text-align:right">${e(x.n||'-')}</td>`,
+      `<td>${l.sns&&l.sns.length?e(l.sns.join('، ')):'بدون سيريال'}</td>`,`<td><b>${l.q}</b></td>`,
+      `<td>${e(isIn?(SM[l.st]||SM.stock):(l.cd||'سليم'))}</td>`];
+    if(isIn)cells.push(`<td>${l.hw?('بضمان'+(l.wu?' حتى '+mfDMY(l.wu):'')):'بدون ضمان'}</td>`);
+    cells.push(`<td style="text-align:right">${e(l.nt||'')}</td>`);
+    return `<tr>${cells.join('')}</tr>`;
+  }).join('');
+  const minRows=22;
+  const note=m.note||rec.lines.map(l=>l.nt).filter(Boolean).join(' | ');
+  const dateLbl=isIn?'تاريخ الاستلام':'تاريخ التسليم';
+  const secondLbl=key==='recvsup'?'المورد / المسلّم':isIn?'مسؤول الفرع':'اسم المستلم';
+  const secondName=m.receiverName||(isIn?party:((b&&b.manager)||''));
+  return `${mfTitleBar(VFORM_TITLE[key]||DS[key].t)}
+    <div class="mf-sec"><div class="mf-sec-head">بيانات الإذن</div><div class="mf-table">
+      <div class="mf-row" style="grid-template-columns:1.1fr 1fr 1.6fr 1.55fr">
+        ${vfCell('رقم الإذن',rec.p)}
+        ${vfDate('التاريخ',rec.d)}
+        ${vfCell(partyLbl,party)}
+        ${vfCell('المسؤول',m.stockOfficer||rec.by)}
+      </div>
+      <div class="mf-row" style="grid-template-columns:.9fr 2.6fr">
+        ${vfCell('المحافظة',gov)}
+        ${vfCell('العنوان',addr)}
+      </div>
+     </div></div>
+    <div class="mf-sec"><div class="mf-sec-head">بيانات الأصناف</div>
+      <table class="dsp-table"><colgroup>${widths.map(w=>`<col style="width:${w}">`).join('')}</colgroup>
+       <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+       <tbody>${rows}${vfFill(cols,Math.max(0,minRows-rec.lines.length))}</tbody></table>
+     </div>
+    <div class="mf-sec"><div class="mf-sec-head">ملاحظات</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1fr"><div class="mf-cell mf-block"><textarea class="mf-area" rows="6" readonly>${e(note)}</textarea></div></div></div></div>
+    <div class="mf-sec"><div class="mf-sec-head">التسليم والاستلام</div><div class="mf-table">
+      ${vfSignRow(rec.by,secondLbl,secondName,dateLbl,rec.d)}
+     </div></div>`;
+}
+function scrapDocSheet(id,blank){
+  const r=blank?{id:0,i:0,q:'',sns:[],by:'',at:''}:SCRAPLOG.find(x=>Number(x.id)===Number(id));
+  if(!r)return '';
+  const x=blank?{}:(it(r.i)||{});
+  const when=logParts(r.at);
+  const cols=['م','التصنيف','اسم الصنف','السيريال','الكمية','ملاحظات'];
+  const widths=['5%','15%','28%','30%','8%','14%'];
+  const serials=blank?'':((r.sns||[]).length?e(r.sns.join('، ')):'بدون سيريال');
+  return `${mfTitleBar('نموذج خردة / إتلاف أصناف')}
+    <div class="mf-sec"><div class="mf-sec-head">بيانات المحضر</div><div class="mf-table">
+      <div class="mf-row" style="grid-template-columns:1.1fr 1fr .9fr 1.7fr">
+        ${vfCell('رقم المحضر',blank?'':'SCR-'+String(r.id).padStart(4,'0'))}
+        ${vfDate('التاريخ',when.d)}
+        ${vfCell('الوقت',when.t)}
+        ${vfCell('المسؤول',r.by)}
+      </div>
+      <div class="mf-row" style="grid-template-columns:1fr 2.9fr">
+        ${vfCell('المصدر','المخزن')}
+        ${vfCell('سبب الإتلاف / ملاحظات','')}
+      </div>
+     </div></div>
+    <div class="mf-sec"><div class="mf-sec-head">الأصناف</div>
+      <table class="dsp-table tall"><colgroup>${widths.map(w=>`<col style="width:${w}">`).join('')}</colgroup>
+       <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+       <tbody>
+         <tr><td>1</td><td>${e(x.c||'')}</td><td style="text-align:right">${e(x.n||'')}</td><td>${serials}</td><td>${r.q===''?'':'<b>'+r.q+'</b>'}</td><td style="text-align:right"></td></tr>
+         ${vfFill(cols,17)}
+       </tbody></table>
+     </div>
+    <div class="mf-sec"><div class="mf-sec-head">ملاحظات</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1fr"><div class="mf-cell mf-block"><textarea class="mf-area" rows="4" readonly></textarea></div></div></div></div>
+    <div class="mf-sec"><div class="mf-sec-head">التسليم والاعتماد</div><div class="mf-table">
+      ${vfSignRow(r.by,'المدير الفني','','تاريخ الإتلاف',when.d)}
+     </div></div>`;
+}
+function requestDocSheet(id,blank){
+  const r=blank?null:reqs.find(x=>Number(x.id)===Number(id));
+  if(!blank&&!r)return '';
+  const b=r?br(r.b):null;
+  const st=r?(ST[r.st]||['',''])[0]:'';
+  const logs=r?(r.log||[]):[];
+  const last=logs.length?logs[logs.length-1]:null;
+  const cols=['م','التصنيف','اسم الصنف','الكمية المطلوبة'];
+  const widths=['6%','18%','54%','22%'];
+  const rows=(r?r.l:[]).map((l,j)=>{
+    const x=it(l.i)||{};
+    return `<tr><td>${j+1}</td><td>${e(x.c||'-')}</td><td style="text-align:right">${e(x.n||'-')}</td><td><b>${l.q}</b></td></tr>`;
+  }).join('');
+  return `${mfTitleBar('نموذج طلب أصناف')}
+    <div class="mf-sec"><div class="mf-sec-head">بيانات الطلب</div><div class="mf-table">
+      <div class="mf-row" style="grid-template-columns:1fr 1fr 1.6fr 1.4fr">
+        ${vfCell('رقم الطلب',r?('REQ-'+String(r.id).padStart(4,'0')):'')}
+        ${vfDate('التاريخ',r?r.d:'')}
+        ${vfCell('الفرع',r?((b&&b.n)||''):'')}
+        ${vfCell('مقدّم الطلب',r?r.by:'')}
+      </div>
+      <div class="mf-row" style="grid-template-columns:1fr 2.6fr">
+        ${vfCell('الحالة',st)}
+        ${vfCell('آخر إجراء',last?((last.by||'')+' — '+(last.a||'')):'')}
+      </div>
+     </div></div>
+    <div class="mf-sec"><div class="mf-sec-head">الأصناف المطلوبة</div>
+      <table class="dsp-table"><colgroup>${widths.map(w=>`<col style="width:${w}">`).join('')}</colgroup>
+       <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+       <tbody>${rows}${vfFill(cols,Math.max(0,20-(r?r.l.length:0)))}</tbody></table>
+     </div>
+    <div class="mf-sec"><div class="mf-sec-head">ملاحظات</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1fr"><div class="mf-cell mf-block"><textarea class="mf-area" rows="4" readonly>${e(last?(last.t||''):'')}</textarea></div></div></div></div>
+    <div class="mf-sec"><div class="mf-sec-head">الاعتماد</div><div class="mf-table">
+      ${vfSignRow(r?r.by:'','مدير المنطقة','','تاريخ الطلب',r?r.d:'','مقدّم الطلب')}
+     </div></div>`;
+}
 const DAT={stock:resStock,items:resItems,sup:resSup,cats:resCats,br:resBranches,britems:resBritems,rq:resRq,reqbr:resReqb,scrap:resScrap,maint:()=>maintView==='release'?resMaintRel():resMaintMain(),doc_recvsup:()=>resDoc('recvsup'),doc_recvbr:()=>resDoc('recvbr'),doc_issbr:()=>resDoc('issbr'),doc_issmaint:()=>resDoc('issmaint'),mf:resMaintForms,dispatch:resDispatch};
 boot();
 </script>
