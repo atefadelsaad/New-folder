@@ -179,9 +179,9 @@ body:has(nav:empty) #t{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 .mf-date{position:relative;flex:1 1 auto;min-width:0;display:flex;align-items:center}
 .mf-date>input{width:100%}
 .mf-date .mirror{display:none;border-bottom:1px dotted #000;min-height:5mm;line-height:5mm;padding:0 1mm;font-weight:700;white-space:nowrap;flex:1 1 auto}
-.mf-stamp{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;min-height:17mm}
+.mf-stamp{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;min-height:25mm}
 .mf-stamp>.mf-label{text-align:center;font-size:7.8pt;margin-top:.5mm}
-.mf-stamp .space{flex:1 1 auto;min-height:13mm}
+.mf-stamp .space{flex:1 1 auto;min-height:19mm}
 .mf-stack{display:flex;flex-direction:column;gap:.35mm;width:100%;min-width:0}
 .mf-stack .sub{display:flex;align-items:flex-end;gap:1mm}
 .mf-stack .sub .mf-label{font-size:7.6pt;min-width:15mm}
@@ -1312,7 +1312,6 @@ function mfSheet(rec,blank){
   const f=(label,key,opt)=>mfField(label,rec,key,Object.assign({ro},opt||{}));
   const dcell=(label,key)=>mfDateCell(label,rec,key,{ro});
   const area=(label,key,rows)=>mfArea(label,rec,key,{ro,rows});
-  const external=!!blank||rec.maintenanceType==='external';
   const issueList=` list="mfIssueList" onchange="mfPickIssue(this.value)"`;
   const entryList=` list="mfEntryList" onchange="mfPickEntry(this.value)"`;
   let h=mfDatalists(rec)+mfTitleBar('نموذج صيانة تكنولوجيا المعلومات');
@@ -1349,8 +1348,7 @@ function mfSheet(rec,blank){
       ${f('التوقيع','signature2')}
     </div>
    </div></div>`;
-  if(external){
-    h+=`<div class="mf-sec"><div class="mf-sec-head">صيانة خارجية</div><div class="mf-table">
+  h+=`<div class="mf-sec"><div class="mf-sec-head">صيانة خارجية</div><div class="mf-table">
       <div class="mf-row" style="grid-template-columns:2.1fr 1fr 1.2fr .95fr">
         ${f('جهة الصيانة','maintenanceEntity')}
         ${dcell('تاريخ التسليم','deliveryDate2')}
@@ -1368,32 +1366,31 @@ function mfSheet(rec,blank){
         ${mfStamp('ختم مخزن النظم')}
       </div>
      </div></div>`;
-    h+=`<div class="mf-sec"><div class="mf-sec-head">تقرير جهة الصيانة الخارجية</div><div class="mf-table">
-      <div class="mf-row" style="grid-template-columns:1fr">${f('نتيجة الفحص','inspectionResult2')}</div>
-      <div class="mf-row" style="grid-template-columns:1fr">${area('الإجراء المتخذ','actionTaken2',2)}</div>
-      <div class="mf-row" style="grid-template-columns:2.15fr 1.05fr .95fr 1.4fr">
-        ${f('اسم الفني','technicianName')}
-        ${f('التوقيع','signature5')}
-        ${dcell('التاريخ','date3')}
-        ${mfStamp('ختم جهة الصيانة')}
-      </div>
-     </div></div>`;
-    h+=`<div class="mf-sec"><div class="mf-sec-head">تقرير استلام بعد الصيانة</div><div class="mf-table">
-      <div class="mf-row" style="grid-template-columns:1fr">${f('نتيجة الفحص','inspectionResult3')}</div>
-      <div class="mf-row" style="grid-template-columns:1fr">${f('الإجراء المتخذ','actionTaken3')}</div>
-      <div class="mf-row" style="grid-template-columns:1fr 2.4fr 1.1fr">
-        ${dcell('تاريخ الاستلام','receivedDate2')}
-        ${f('مسؤول تسليم جهة الصيانة','maintenanceDeliveryOfficer')}
-        ${f('التوقيع','signature6')}
-      </div>
-      <div class="mf-row" style="grid-template-columns:1.9fr 1fr .95fr 1.35fr">
-        ${f('مسؤول الفحص','inspector4')}
-        ${f('التوقيع','signature7')}
-        ${f('رقم اذن الدخول','entryPermitNumber',{list:'mfEntryList',attrs:'onchange="mfPickEntry(this.value)"'})}
-        ${mfStamp('ختم مخزن النظم')}
-      </div>
-     </div></div>`;
-  }
+  h+=`<div class="mf-sec"><div class="mf-sec-head">تقرير جهة الصيانة الخارجية</div><div class="mf-table">
+    <div class="mf-row" style="grid-template-columns:1fr">${f('نتيجة الفحص','inspectionResult2')}</div>
+    <div class="mf-row" style="grid-template-columns:1fr">${area('الإجراء المتخذ','actionTaken2',2)}</div>
+    <div class="mf-row" style="grid-template-columns:2.15fr 1.05fr .95fr 1.4fr">
+      ${f('اسم الفني','technicianName')}
+      ${f('التوقيع','signature5')}
+      ${dcell('التاريخ','date3')}
+      ${mfStamp('ختم جهة الصيانة')}
+    </div>
+   </div></div>`;
+  h+=`<div class="mf-sec"><div class="mf-sec-head">تقرير استلام بعد الصيانة</div><div class="mf-table">
+    <div class="mf-row" style="grid-template-columns:1fr">${f('نتيجة الفحص','inspectionResult3')}</div>
+    <div class="mf-row" style="grid-template-columns:1fr">${area('الإجراء المتخذ','actionTaken3',2)}</div>
+    <div class="mf-row" style="grid-template-columns:1fr 2.4fr 1.1fr">
+      ${dcell('تاريخ الاستلام','receivedDate2')}
+      ${f('مسؤول تسليم جهة الصيانة','maintenanceDeliveryOfficer')}
+      ${f('التوقيع','signature6')}
+    </div>
+    <div class="mf-row" style="grid-template-columns:1.9fr 1fr .95fr 1.35fr">
+      ${f('مسؤول الفحص','inspector4')}
+      ${f('التوقيع','signature7')}
+      ${f('رقم اذن الدخول','entryPermitNumber',{list:'mfEntryList',attrs:'onchange="mfPickEntry(this.value)"'})}
+      ${mfStamp('ختم مخزن النظم')}
+    </div>
+   </div></div>`;
   return h;
 }
 function mfCollect(){
