@@ -88,6 +88,11 @@ tbody tr:hover td{background:var(--soft)}
 .cm{width:100%;margin-top:10px}
 #t{position:fixed;inset-inline-start:236px;inset-inline-end:0;bottom:calc(22px + env(safe-area-inset-bottom,0px));margin:auto;width:max-content;max-width:90vw;background:var(--ink);color:var(--bg);padding:11px 20px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;box-shadow:var(--sh2);font-size:14.5px;font-weight:600;z-index:50}
 #t.show{opacity:1}
+.scroll-top{position:fixed;inset-inline-end:24px;bottom:24px;z-index:40;display:grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid var(--ln);border-radius:50%;background:var(--pri);color:var(--pi);box-shadow:0 6px 16px rgba(0,0,0,.28);cursor:pointer;opacity:0;visibility:hidden;transform:translateY(10px) scale(.92);transition:opacity .24s ease,visibility .24s,transform .24s cubic-bezier(.2,.8,.2,1),filter .2s ease}
+.scroll-top:hover{filter:brightness(1.1);transform:translateY(-2px) scale(1.05)}
+.scroll-top:active{transform:translateY(0) scale(.94)}
+.scroll-top svg{width:18px;height:18px}
+body.scrolled .scroll-top{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
 html.busy{cursor:progress}
 html.busy .btn{opacity:.6;pointer-events:none}
 @media (max-width:860px){
@@ -95,10 +100,12 @@ body{padding-inline-start:0;padding-bottom:calc(62px + env(safe-area-inset-botto
 nav{inset-block:auto;inset-inline:0;bottom:0;top:auto;width:auto;flex-direction:row;gap:6px;padding:8px calc(10px + env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px));border-inline-end:0;border-top:1px solid var(--ln);overflow-x:auto;overflow-y:hidden;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:0 -8px 22px rgba(30,64,175,.08)}
 nav button{width:auto;flex:0 0 auto;padding:8px 12px}
 #t{inset-inline-start:0;bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+.scroll-top{inset-inline-end:16px;bottom:calc(82px + env(safe-area-inset-bottom,0px))}
 body:has(nav:empty){padding-bottom:0}
 body:has(nav:empty) #t{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
+body:has(nav:empty) .scroll-top{bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 }
-@media (prefers-reduced-motion:reduce){#t,.btn,.bc{transition:none}}
+@media (prefers-reduced-motion:reduce){#t,.btn,.bc,.scroll-top{transition:none}}
 .hero{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--sh)}
 .eyebrow{font-size:11.5px;font-weight:800;letter-spacing:0;color:var(--acc);margin-bottom:4px}
 .hero h2{margin:0 0 6px;font-size:24px}
@@ -299,6 +306,7 @@ body:has(nav:empty) #t{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 <nav id="nav"></nav>
 <main id="m"></main>
 <div id="t" role="status"></div>
+<button id="scrollTopBtn" class="scroll-top" type="button" aria-label="العودة لأعلى الصفحة" title="العودة لأعلى الصفحة" onclick="window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button>
 <script>
 const GOV=['القاهرة','الجيزة','الإسكندرية','القليوبية','بورسعيد','السويس','دمياط','الدقهلية','الشرقية','كفر الشيخ','الغربية','المنوفية','البحيرة','الإسماعيلية','بني سويف','الفيوم','المنيا','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مطروح','شمال سيناء','جنوب سيناء'];
 const govList=g=>!g||GOV.includes(g)?GOV:[...GOV,g];
@@ -439,6 +447,9 @@ function syncSearchScope(){
   _lastPage=k;
 }
 const $=s=>document.querySelector(s);
+function updateScrollTopButton(){document.body.classList.toggle('scrolled',window.scrollY>320)}
+window.addEventListener('scroll',updateScrollTopButton,{passive:true});
+updateScrollTopButton();
 const e=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const ok=a=>a==='userAdmin'?role==='admin':!!CAN[a]&&(
   STATE.user&&STATE.user.permissions&&Object.prototype.hasOwnProperty.call(STATE.user.permissions,a)
