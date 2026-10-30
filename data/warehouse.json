@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "savedAt": "2026-10-30T14:42:22.451Z",
+  "savedAt": "2026-10-30T20:04:46.768Z",
   "counters": {
     "category": 2004,
     "item": 2,
@@ -12,7 +12,9 @@
     "request": 3,
     "requestLine": 4,
     "requestLog": 3,
-    "form": 3
+    "form": 3,
+    "audit": 0,
+    "stocktake": 0
   },
   "users": [
     {
@@ -21,7 +23,10 @@
       "password_hash": "$2a$10$OznzVMYnAIHIuRE0HChz2eoo/uhJlrij39j8P89q0.7hg.7XiP2q2",
       "role": "admin",
       "name": "IT Manager",
-      "created_at": "2026-10-24T11:41:55"
+      "created_at": "2026-10-24T11:41:55",
+      "active": true,
+      "permissions": {},
+      "token_version": 0
     },
     {
       "id": 2,
@@ -29,7 +34,10 @@
       "password_hash": "$2a$10$FmfIO9.9e4zzDacz5zTQC.wm07Q0CPTnjstFzit8lpz.CzFY1sY3e",
       "role": "head",
       "name": "Technical Head",
-      "created_at": "2026-10-24T11:41:55"
+      "created_at": "2026-10-24T11:41:55",
+      "active": true,
+      "permissions": {},
+      "token_version": 0
     },
     {
       "id": 3,
@@ -37,7 +45,10 @@
       "password_hash": "$2a$10$5fjhYlQdwON.qD1.agc5v.7JxT/qyzex92myoybEwWhTs9Slej2UO",
       "role": "area",
       "name": "Area Manager",
-      "created_at": "2026-10-24T11:41:55"
+      "created_at": "2026-10-24T11:41:55",
+      "active": true,
+      "permissions": {},
+      "token_version": 0
     },
     {
       "id": 4,
@@ -45,7 +56,10 @@
       "password_hash": "$2a$10$L0Q1tHC.jLm6Xk1E2JxaNeOV5KpzDMPcunAGieYmNbdUfJuyx8qG2",
       "role": "store",
       "name": "Warehouse Keeper",
-      "created_at": "2026-10-24T11:41:55"
+      "created_at": "2026-10-24T11:41:55",
+      "active": true,
+      "permissions": {},
+      "token_version": 0
     },
     {
       "id": 5,
@@ -53,7 +67,10 @@
       "password_hash": "$2a$10$QGXjJGzu5384TKW9dMQFvu4G6Olut.a0FIV3NHPUnKo1DKZ4WBNrG",
       "role": "senior",
       "name": "Senior Technical",
-      "created_at": "2026-10-24T11:41:55"
+      "created_at": "2026-10-24T11:41:55",
+      "active": true,
+      "permissions": {},
+      "token_version": 0
     },
     {
       "id": 6,
@@ -61,7 +78,10 @@
       "password_hash": "$2a$10$109fqNOYJLrRCwAvkktKku67hxH0Qd/EbUhpuMJzkkLkU5bZEMkMe",
       "role": "junior",
       "name": "Junior Technical",
-      "created_at": "2026-10-24T11:41:55"
+      "created_at": "2026-10-24T11:41:55",
+      "active": true,
+      "permissions": {},
+      "token_version": 0
     }
   ],
   "categories": [
@@ -76,6 +96,7 @@
   ],
   "items": [
     {
+      "inspection_qty": 0,
       "id": 1,
       "name": "pc_dell",
       "category_id": 2004,
@@ -87,6 +108,7 @@
       "warranty_until": "2027-10-28"
     },
     {
+      "inspection_qty": 0,
       "id": 2,
       "name": "df",
       "category_id": 2004,
@@ -888,5 +910,6 @@
         }
       ]
     }
-  ]
+  ],
+  "stocktakes": []
 }

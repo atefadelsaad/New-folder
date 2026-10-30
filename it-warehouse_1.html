@@ -303,8 +303,8 @@ body:has(nav:empty) #t{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 const GOV=['القاهرة','الجيزة','الإسكندرية','القليوبية','بورسعيد','السويس','دمياط','الدقهلية','الشرقية','كفر الشيخ','الغربية','المنوفية','البحيرة','الإسماعيلية','بني سويف','الفيوم','المنيا','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مطروح','شمال سيناء','جنوب سيناء'];
 const govList=g=>!g||GOV.includes(g)?GOV:[...GOV,g];
 const R={admin:'IT Manager',head:'Technical Head',area:'Area Manager',store:'Warehouse Keeper',senior:'Senior Technical',junior:'Junior Technical'};
-const CAN={addBranch:['admin','head'],stock:['admin','head','store'],view:['admin','head','senior','area','store'],review:['admin','head','senior'],reject:['admin','head','area','store'],edit:['admin','head','area','store'],delRecv:['admin','head'],request:['admin','head','senior','junior'],branchEdit:['admin','head','senior'],approve:['admin','head','area'],release:['admin','head','store'],pool:['admin','head'],auditView:['admin','head'],maintView:['admin','head','senior','store','junior'],maintCreate:['admin','head','senior','store','junior'],maintEdit:['admin','head','senior','store'],maintDelete:['admin','head'],inspectionReview:['admin','head','store']};
-const PERMISSION_LABELS={addBranch:'إضافة/حذف الفروع',stock:'إدارة المخزون والأذون',view:'عرض المخزون والفروع',review:'مراجعة الطلبات',reject:'رفض الطلبات',edit:'تعديل البيانات',delRecv:'حذف الأذون والاستلامات',request:'إنشاء الطلبات',branchEdit:'تعديل أرصدة الفروع',approve:'اعتماد الطلبات',release:'صرف الطلبات المعتمدة',pool:'حركات الصيانة والخردة',auditView:'عرض سجل الحركة',maintView:'عرض نماذج الصيانة',maintCreate:'إنشاء نماذج الصيانة',maintEdit:'تعديل نماذج الصيانة',maintDelete:'حذف نماذج الصيانة',inspectionReview:'اعتماد فحص الاستلامات'};
+const CAN={addBranch:['admin','head'],stock:['admin','head','store'],view:['admin','head','senior','area','store'],review:['admin','head','senior'],reject:['admin','head','area','store'],edit:['admin','head','area','store'],delRecv:['admin','head'],request:['admin','head','senior','junior'],branchEdit:['admin','head','senior'],approve:['admin','head','area'],release:['admin','head','store'],pool:['admin','head'],auditView:['admin','head'],maintView:['admin','head','senior','store','junior'],maintCreate:['admin','head','senior','store','junior'],maintEdit:['admin','head','senior','store'],maintDelete:['admin','head'],inspectionReview:['admin','head','store'],stocktake:['admin','head','store'],stocktakeApprove:['admin','head']};
+const PERMISSION_LABELS={addBranch:'إضافة/حذف الفروع',stock:'إدارة المخزون والأذون',view:'عرض المخزون والفروع',review:'مراجعة الطلبات',reject:'رفض الطلبات',edit:'تعديل البيانات',delRecv:'حذف الأذون والاستلامات',request:'إنشاء الطلبات',branchEdit:'تعديل أرصدة الفروع',approve:'اعتماد الطلبات',release:'صرف الطلبات المعتمدة',pool:'حركات الصيانة والخردة',auditView:'عرض سجل الحركة',maintView:'عرض نماذج الصيانة',maintCreate:'إنشاء نماذج الصيانة',maintEdit:'تعديل نماذج الصيانة',maintDelete:'حذف نماذج الصيانة',inspectionReview:'اعتماد فحص الاستلامات',stocktake:'إجراء الجرد الدوري',stocktakeApprove:'اعتماد تسوية الجرد'};
 const MF_STATUS=[['received','تم الاستلام'],['internal_check','فحص داخلي'],['sent_external','مرسل لصيانة خارجية'],['received_after_maintenance','مستلم بعد الصيانة'],['returned_to_branch','تم الإرجاع للفرع']];
 const WARRANTY_ALERT_DAYS=7,MAINTENANCE_OVERDUE_DAYS=30;
 const MF_STATUS_LABEL=Object.fromEntries(MF_STATUS);
@@ -346,6 +346,7 @@ let CATS=[];const SER={};const CATINFO={};
 let items=[],branches=[],reqs=[],suppliers=[],DB={in:[],out:[]},MAINT={},SCRAP={},SCRAPLOG=[];
 let MFORMS=[],DSPMETA={};
 let INSPECTIONS=[];
+let STOCKTAKES=[],stocktakeEditId=null;
 const USER_ADMIN={rows:[],loaded:false,loading:false,editId:null};
 let MF=null,mfView='list',mfBlank=false,mfFilterStatus='',mfFilterDate='',mfPendDel=null,mfReturnToIssue=false;
 let DSP=null,dspView='list',dspPendDel=null,dspPrintFlag=false;
@@ -557,7 +558,7 @@ function hydrate(d){
   STATE.user=d.user;role=d.user.role;
   const wasEmpty=!items.length;
   items=d.items;branches=d.branches;reqs=d.requests;suppliers=d.suppliers;DB={in:d.vouchers.in,out:d.vouchers.out};
-  MFORMS=Array.isArray(d.maintenanceForms)?d.maintenanceForms:[];DSPMETA=d.dispatchMeta||{};INSPECTIONS=Array.isArray(d.inspectionQueue)?d.inspectionQueue:[];window.__mfSerialIdx=null;
+  MFORMS=Array.isArray(d.maintenanceForms)?d.maintenanceForms:[];DSPMETA=d.dispatchMeta||{};INSPECTIONS=Array.isArray(d.inspectionQueue)?d.inspectionQueue:[];STOCKTAKES=Array.isArray(d.stocktakes)?d.stocktakes:[];window.__mfSerialIdx=null;
   MAINT={};SCRAP={};(d.maintenance||[]).forEach(r=>MAINT[r.i]=r.q);(d.scrap||[]).forEach(r=>SCRAP[r.i]=r.q);SCRAPLOG=d.scrapLog||[];
   CATS=d.categories.map(c=>c.name);
   Object.keys(SER).forEach(k=>delete SER[k]);Object.keys(CATINFO).forEach(k=>delete CATINFO[k]);
@@ -574,16 +575,20 @@ function readPick(p){return items.filter(i=>{const el=$('#'+p+i.id);return el&&e
 
 function selectTab(key){
   tab=key;sel=null;maintView=null;scrapMode=null;SCR=null;scrapBal=true;mfView='list';MF=null;mfReturnToIssue=false;dspView='list';DSP=null;docView='list';rqView='list';RQ=null;editReqId=null;PRINT=null;
-  moreOpen=['mf','scrap','recvbr','dispatch','items','cats','sup','reqbr','audit','inspection','users','password'].includes(key);
+  moreOpen=['mf','scrap','recvbr','dispatch','items','cats','sup','reqbr','audit','inspection','users','password','stocktake','notifications'].includes(key);
+  stocktakeEditId=null;
   if(key==='audit'){AUDIT.loaded=false;AUDIT.offset=0}
   go();
 }
 function go(){
   syncSearchScope();
   const todo=reqs.filter(r=>(r.st=='review'&&ok('review'))||(r.st=='pending'&&ok('approve'))||(r.st=='approved'&&ok('release'))).length;
-  const tabs=[['dashboard','لوحة التحكم'],['stock','الأصناف والمخزن'],['maint','تحت الصيانة'],['recvsup','استلام من مورد'],['issbr','صرف إلى فرع'],['rq','الطلبات'+(todo?` (${todo})`:'')],['br','الفروع'],['mf','نماذج الصيانة'],['scrap','الخردة'],['recvbr','استلام من فرع'],['dispatch','إرسال البضاعة'],['items','إدارة الأصناف'],['cats','الفئات'],['sup','الموردون'],['reqbr','متطلبات الفروع'],['inspection','فحص الاستلامات'],['users','إدارة المستخدمين'],['password','تغيير كلمة المرور']].filter(t=>{
+  const alertCount=notificationRows().length;
+  const tabs=[['dashboard','لوحة التحكم'],['stock','الأصناف والمخزن'],['maint','تحت الصيانة'],['recvsup','استلام من مورد'],['issbr','صرف إلى فرع'],['rq','الطلبات'+(todo?` (${todo})`:'')],['br','الفروع'],['notifications','الإشعارات'+(alertCount?` (${alertCount})`:'')],['stocktake','الجرد الدوري'],['mf','نماذج الصيانة'],['scrap','الخردة'],['recvbr','استلام من فرع'],['dispatch','إرسال البضاعة'],['items','إدارة الأصناف'],['cats','الفئات'],['sup','الموردون'],['reqbr','متطلبات الفروع'],['inspection','فحص الاستلامات'],['users','إدارة المستخدمين'],['password','تغيير كلمة المرور']].filter(t=>{
     if(t[0]=='rq')return true;
     if(t[0]=='dashboard')return true;
+    if(t[0]=='notifications')return true;
+    if(t[0]=='stocktake')return ok('stocktake');
     if(t[0]=='users')return ok('userAdmin');
     if(t[0]=='password')return true;
     if(t[0]=='inspection')return ok('inspectionReview');
@@ -597,12 +602,83 @@ function go(){
   if(tab!=='docprint'&&!tabs.some(t=>t[0]===tab))tab='dashboard';
   const navButton=([key,label])=>`<button class="${tab===key?'on':''}" onclick="selectTab('${key}')">${icon(key)}<span>${label}</span></button>`;
   $('#nav').innerHTML=mainTabs.map(navButton).join('')+(moreTabs.length?`<div class="nav-more"><button type="button" class="nav-more-toggle ${moreTabs.some(([key])=>key===tab)?'on':''}" aria-expanded="${moreOpen}" onclick="moreOpen=!moreOpen;go()">${icon('box')}<span>المزيد</span></button><div class="nav-more-list" ${moreOpen?'':'hidden'}>${moreTabs.map(navButton).join('')}</div></div>`:'');
-  const content=tab==='docprint'?vDocPrint():tab==='dashboard'?vDashboard(todo):tab==='stock'?vStock():tab==='maint'?(maintView==='out'?vDoc('issmaint'):vMaint()):tab==='mf'?vMaintForms():tab==='scrap'?vScrap():tab==='recvsup'?vDoc('recvsup'):tab==='recvbr'?vDoc('recvbr'):tab==='issbr'?vDoc('issbr'):tab==='dispatch'?vDispatch():tab==='items'?vItems():tab==='cats'?vCats():tab==='sup'?vSuppliers():tab==='br'?(sel?vBranch():vBranches()):tab==='reqbr'?vBranchReqs():tab==='audit'?vAudit():tab==='inspection'?vInspectionQueue():tab==='users'?vUsers():tab==='password'?vChangePassword():vReqs();
+  const content=tab==='docprint'?vDocPrint():tab==='dashboard'?vDashboard(todo):tab==='notifications'?vNotifications():tab==='stocktake'?vStocktakes():tab==='stock'?vStock():tab==='maint'?(maintView==='out'?vDoc('issmaint'):vMaint()):tab==='mf'?vMaintForms():tab==='scrap'?vScrap():tab==='recvsup'?vDoc('recvsup'):tab==='recvbr'?vDoc('recvbr'):tab==='issbr'?vDoc('issbr'):tab==='dispatch'?vDispatch():tab==='items'?vItems():tab==='cats'?vCats():tab==='sup'?vSuppliers():tab==='br'?(sel?vBranch():vBranches()):tab==='reqbr'?vBranchReqs():tab==='audit'?vAudit():tab==='inspection'?vInspectionQueue():tab==='users'?vUsers():tab==='password'?vChangePassword():vReqs();
   $('#m').innerHTML=`<div id="formError" class="form-error" role="alert" aria-live="polite"></div>${content}`;
   decorateTables($('#m'));
   hydrateInspectionPhotos($('#m'));
   if(tab==='audit'&&!AUDIT.loaded&&!AUDIT.loading)loadAudit();
   if(tab==='users'&&!USER_ADMIN.loaded&&!USER_ADMIN.loading)loadUsers();
+}
+function notificationRows(){
+  const rows=[];
+  reqs.filter(r=>(r.st==='review'&&ok('review'))||(r.st==='pending'&&ok('approve'))||(r.st==='approved'&&ok('release'))).forEach(r=>{
+    const status=ST[r.st]||['طلب يحتاج إجراءً',''];
+    rows.push({type:'rq',title:'طلب فرع يحتاج إجراءً',detail:`${(br(r.b)||{}).n||'فرع غير معروف'} · ${status[0]} · رقم ${r.id}`,tab:'rq'});
+  });
+  INSPECTIONS.forEach(row=>rows.push({type:'inspection',title:'استلام بانتظار الفحص',detail:`${row.item} · إذن ${row.number} · الكمية ${row.qty}`,tab:'inspection'}));
+  if(role!=='junior')items.filter(item=>item.w&&item.hw!==false&&daysFromToday(item.w)!==null&&daysFromToday(item.w)<=WARRANTY_ALERT_DAYS&&Number(item.s||0)+dist(item.id)+Number(MAINT[item.id]||0)+Number(item.held||0)>0).forEach(item=>{
+    const days=daysFromToday(item.w);
+    rows.push({type:'warranty',title:days<0?'ضمان منتهي':'ضمان يقترب من الانتهاء',detail:`${item.n} · ${days<0?'انتهى منذ '+Math.abs(days)+' يوم':days===0?'ينتهي اليوم':'متبقي '+days+' أيام'}`,tab:ok('stock')?'items':'dashboard'});
+  });
+  if(ok('maintView'))MFORMS.filter(form=>{
+    if(form.status!=='sent_external')return false;
+    const issue=DB.out.find(v=>Number(v.id)===Number(form.issuePermitId)||String(v.p)===String(form.issuePermitNumber));
+    const sentDate=issue&&issue.d||form.deliveryDate2||form.deliveryDate||form.createdAt;
+    const age=-daysFromToday(sentDate);
+    return age!==null&&age>=MAINTENANCE_OVERDUE_DAYS;
+  }).forEach(form=>{
+    const issue=DB.out.find(v=>Number(v.id)===Number(form.issuePermitId)||String(v.p)===String(form.issuePermitNumber));
+    const sentDate=issue&&issue.d||form.deliveryDate2||form.deliveryDate||form.createdAt;
+    rows.push({type:'maintenance',title:'صيانة خارجية متأخرة',detail:`${form.deviceType||((it(form.itemId)||{}).n)||'جهاز'} · نموذج ${form.number||'-'} · ${-daysFromToday(sentDate)} يومًا`,tab:'mf'});
+  });
+  return rows;
+}
+function vNotifications(){
+  const rows=notificationRows();
+  return `<div class="hero"><div><div class="eyebrow">المتابعة</div><h2>${icon('rq')} الإشعارات (${rows.length})</h2><p>العناصر التي تحتاج متابعة حسب صلاحيات حسابك.</p></div><button class="btn ghost" onclick="refresh().then(go).catch(err=>toast(err.message))">تحديث</button></div>${rows.length?rows.map(row=>`<article class="box"><div class="row" style="justify-content:space-between"><div><h3>${e(row.title)}</h3><div class="mut">${e(row.detail)}</div></div><button class="btn" onclick="selectTab('${row.tab}')">فتح</button></div></article>`).join(''):'<div class="empty">لا توجد إشعارات تحتاج إلى متابعة.</div>'}`;
+}
+function openStocktake(id){stocktakeEditId=Number(id);tab='stocktake';go()}
+function vStocktakes(){
+  const current=STOCKTAKES.find(entry=>Number(entry.id)===Number(stocktakeEditId));
+  if(current){
+    const editable=current.status==='counting';
+    const rows=current.lines.map(line=>{
+      const actual=line.actual_qty==null?'':line.actual_qty;
+      const delta=line.actual_qty==null?'—':Number(line.actual_qty)-Number(line.expected_qty);
+      const serials=(line.actual_serials||[]).join('\n');
+      const expectedSerials=(line.expected_serials||[]).map(serial=>`<span class="snchip">${e(serial)}</span>`).join(' ')||'<span class="mut">—</span>';
+      return `<tr><td>${e(line.category_name||'-')}</td><td class="nmcell">${e(line.item_name)}</td><td>${line.expected_qty}</td><td>${expectedSerials}</td><td><input aria-label="الكمية الفعلية للصنف ${e(line.item_name)}" id="st_qty_${line.item_id}" type="number" min="0" step="1" value="${e(actual)}" ${editable?'':'disabled'}></td><td>${delta==='—'?'—':`<span class="chip ${delta===0?'ok':'warn'}">${delta>0?'+':''}${delta}</span>`}</td><td>${line.has_serial?`<textarea aria-label="السيريالات الفعلية للصنف ${e(line.item_name)}" id="st_sn_${line.item_id}" rows="2" ${editable?'':'disabled'}>${e(serials)}</textarea>`:'<span class="mut">بدون سيريال</span>'}</td></tr>`;
+    }).join('');
+    const actions=editable?`<button class="btn" onclick="saveStocktake(${current.id})">حفظ العدّ الفعلي</button>${ok('stocktakeApprove')?`<button class="btn soft" onclick="approveStocktake(${current.id})">اعتماد التسوية</button>`:''}`:'<span class="chip ok">تم اعتماد التسوية</span>';
+    return `<div class="hero"><div><div class="eyebrow">الجرد الدوري</div><h2>${e(current.number)}</h2><p>بدأت بواسطة ${e(current.created_by)} · ${dcell(current.created_at)}</p></div><button class="btn ghost" onclick="stocktakeEditId=null;go()">رجوع للجلسات</button></div><section class="box tw"><table><thead><tr><th>الفئة</th><th>الصنف</th><th>رصيد النظام عند البدء</th><th>السيريالات المسجلة</th><th>الكمية الفعلية</th><th>الفرق</th><th>السيريالات الفعلية</th></tr></thead><tbody>${rows}</tbody></table><div class="acts" style="margin-top:12px">${actions}</div></section>`;
+  }
+  const rows=STOCKTAKES.map(entry=>{
+    const differences=entry.lines.filter(line=>line.actual_qty!=null&&Number(line.actual_qty)!==Number(line.expected_qty)).length;
+    const status=entry.status==='approved'?'<span class="chip ok">معتمد</span>':'<span class="chip warn">قيد الجرد</span>';
+    return `<tr><td><button class="btn ghost" onclick="openStocktake(${entry.id})">${e(entry.number)}</button></td><td>${dcell(entry.created_at)}</td><td>${e(entry.created_by)}</td><td>${entry.lines.length}</td><td>${differences}</td><td>${status}</td><td>${entry.approved_by?e(entry.approved_by):'—'}</td></tr>`;
+  }).join('');
+  return `<div class="hero"><div><div class="eyebrow">المخزن</div><h2>${icon('stock')} الجرد الدوري</h2><p>ابدأ جلسة بلقطة من أرصدة المخزن، سجّل العدّ الفعلي، ثم اعتمد فرق الكميات بعد المراجعة.</p>${items.length?'':'<p class="mut">أضف صنفًا واحدًا على الأقل قبل بدء الجرد.</p>'}</div><button class="btn" ${items.length?'':'disabled'} onclick="startStocktake()">بدء جلسة جرد</button></div><section class="box tw"><table><thead><tr><th>الجلسة</th><th>تاريخ البدء</th><th>أنشأها</th><th>الأصناف</th><th>الفروق المسجلة</th><th>الحالة</th><th>اعتمدها</th></tr></thead><tbody>${rows||'<tr><td colspan="7" class="mut">لا توجد جلسات جرد بعد.</td></tr>'}</tbody></table></section>`;
+}
+async function startStocktake(){
+  try{const result=await api('/stocktakes','POST',{});await refresh();openStocktake(result.stocktake.id);toast('بدأت جلسة الجرد')}catch(err){toast(err.message)}
+}
+async function saveStocktake(id){
+  const entry=STOCKTAKES.find(row=>Number(row.id)===Number(id));if(!entry)return;
+  const lines=[];
+  for(const line of entry.lines){
+    const qtyInput=document.getElementById('st_qty_'+line.item_id);
+    const raw=qtyInput&&qtyInput.value.trim();
+    if(raw==='')return toast('أدخل الكمية الفعلية لكل الأصناف');
+    const qty=Number(raw);if(!Number.isInteger(qty)||qty<0)return toast('الكمية الفعلية يجب أن تكون عددًا صحيحًا غير سالب');
+    const serialInput=document.getElementById('st_sn_'+line.item_id);
+    const serials=serialInput?serialInput.value.split(/\r?\n/).map(value=>value.trim()).filter(Boolean):[];
+    lines.push({item_id:line.item_id,actual_qty:qty,serials});
+  }
+  try{await api('/stocktakes/'+id,'PUT',{lines});await refresh();toast('تم حفظ العدّ الفعلي');go()}catch(err){toast(err.message)}
+}
+async function approveStocktake(id){
+  if(!confirm('سيتم تعديل أرصدة المخزن إلى الكميات الفعلية المسجلة. هل تريد اعتماد التسوية؟'))return;
+  try{await api('/stocktakes/'+id+'/approve','POST',{});stocktakeEditId=null;await refresh();toast('تم اعتماد تسوية الجرد');go()}catch(err){toast(err.message)}
 }
 function vDashboard(todo){
   const stockKnown=role!=='junior';

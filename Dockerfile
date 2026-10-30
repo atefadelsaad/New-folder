@@ -10,6 +10,6 @@ COPY server/src ./src
 COPY db ./db
 COPY it-warehouse_1.html ./it-warehouse_1.html
 
-EXPOSE 3000
+EXPOSE 3002
 
 CMD ["node", "src/index.js"]
