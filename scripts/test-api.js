@@ -390,6 +390,23 @@ async function phaseRun() {
   check('junior cannot delete dispatch meta', (await call(tokens.junior, 'DELETE', '/dispatch-meta/' + mOutVoucherId)).status === 403);
   check('store cannot delete dispatch meta', (await call(tokens.store, 'DELETE', '/dispatch-meta/' + mOutVoucherId)).status === 403);
 
+  /* --------------------------- edit request --------------------------- */
+  r = await call(tokens.senior, 'POST', '/requests', { branch_id: branchId, lines: [{ item_id: plainItemId, qty: 1 }] });
+  const editRequestId = r.data.id;
+  r = await call(tokens.area, 'POST', '/requests/' + editRequestId + '/action', {
+    action: 'save', branch_id: 2, lines: [{ item_id: plainItemId, qty: 4 }], note: 'تعديل الطلب'
+  });
+  check('edit request returns success', r.status === 200, r);
+  b = await bootstrap(admin);
+  const editedRequest = requestById(b, editRequestId);
+  check('edit request keeps the same id', editedRequest.id === editRequestId, editedRequest.id);
+  check('edit request replaces the lines', editedRequest.l.length === 1 && editedRequest.l[0].q === 4, editedRequest.l);
+  check('edit request updates the branch', Number(editedRequest.b) === 2, editedRequest.b);
+  check('edit request keeps its status', editedRequest.st === 'pending', editedRequest.st);
+  check('junior cannot edit a request', (await call(tokens.junior, 'POST', '/requests/' + editRequestId + '/action', {
+    action: 'save', branch_id: branchId, lines: [{ item_id: plainItemId, qty: 9 }]
+  })).status === 403);
+
   /* --------------------------- reject flow ---------------------------- */
   r = await call(tokens.senior, 'POST', '/requests', { branch_id: branchId, lines: [{ item_id: plainItemId, qty: 1 }] });
   const rejectId = r.data.id;

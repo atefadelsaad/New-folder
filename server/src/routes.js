@@ -726,6 +726,11 @@ router.post('/requests/:id/action', route((req, res) => {
       if (!can(role, 'edit')) data.fail(403, 'لا تملك صلاحية هذا الإجراء');
       const lines = readRequestLines(body.lines);
       if (!lines.length) data.fail(400, 'اترك صنفًا واحدًا على الأقل أو ارفض الطلب');
+      if (has(body, 'branch_id')) {
+        const nextBranch = asInt(body.branch_id);
+        if (!nextBranch || !data.branchById(nextBranch)) data.fail(400, 'الفرع المحدد غير موجود');
+        request.branch_id = nextBranch;
+      }
       request.lines = lines.map((l) => ({ id: ++st.counters.requestLine, item_id: l.itemId, qty: l.qty }));
       log('عدّل الطلب', '', text(body.note, 2000) || 'تم التعديل');
     } else if (action === 'rev') {

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "savedAt": "2026-10-30T11:53:17.229Z",
+  "savedAt": "2026-10-30T14:42:22.451Z",
   "counters": {
     "category": 2004,
     "item": 2,
@@ -9,10 +9,10 @@
     "voucher": 1021,
     "voucherLine": 1027,
     "scrapEntry": 1,
-    "request": 2,
-    "requestLine": 3,
-    "requestLog": 2,
-    "form": 2
+    "request": 3,
+    "requestLine": 4,
+    "requestLog": 3,
+    "form": 3
   },
   "users": [
     {
@@ -860,6 +860,31 @@
           "kind": "",
           "note": "",
           "created_at": "2026-10-28T20:51:21"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "branch_id": 2,
+      "requested_by": "Junior Technical",
+      "status": "review",
+      "created_at": "2026-10-30T12:16:22.817Z",
+      "releasedVoucherId": null,
+      "lines": [
+        {
+          "id": 4,
+          "item_id": 2,
+          "qty": 1
+        }
+      ],
+      "log": [
+        {
+          "id": 3,
+          "by_name": "Junior Technical",
+          "action": "أرسل الطلب",
+          "kind": "",
+          "note": "",
+          "created_at": "2026-10-30T12:16:22.817Z"
         }
       ]
     }

@@ -294,7 +294,7 @@ let MFORMS=[],DSPMETA={};
 let MF=null,mfView='list',mfBlank=false,mfFilterStatus='',mfFilterDate='',mfPendDel=null;
 let DSP=null,dspView='list',dspPendDel=null,dspPrintFlag=false;
 let docView='list';
-let rqView='list',RQ=null;
+let rqView='list',RQ=null,editReqId=null;
 let supEdit=null,pendSup=null;
 let role='junior',tab='stock',sel=null,q='',branchEditState=null;
 let SAVING=false;
@@ -463,7 +463,7 @@ function go(){
     if(t[0]=='mf')return ok('maintView');
     if(t[0]=='dispatch')return ok('stock');
     return (t[0]=='items'||t[0]=='recvsup'||t[0]=='recvbr'||t[0]=='issbr'||t[0]=='sup'||t[0]=='cats')?ok('stock'):ok('view');
-  });if(tab!=='docprint'&&!tabs.some(t=>t[0]==tab))tab='rq';$('#nav').innerHTML=tabs.map(([k,v])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';sel=null;maintView=null;scrapMode=null;SCR=null;scrapBal=true;mfView='list';MF=null;dspView='list';DSP=null;docView='list';rqView='list';RQ=null;PRINT=null;go()">${icon(k)}<span>${v}</span></button>`).join('');
+  });if(tab!=='docprint'&&!tabs.some(t=>t[0]==tab))tab='rq';$('#nav').innerHTML=tabs.map(([k,v])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';sel=null;maintView=null;scrapMode=null;SCR=null;scrapBal=true;mfView='list';MF=null;dspView='list';DSP=null;docView='list';rqView='list';RQ=null;editReqId=null;PRINT=null;go()">${icon(k)}<span>${v}</span></button>`).join('');
   $('#m').innerHTML=tab=='docprint'?vDocPrint():tab=='stock'?vStock():tab=='maint'?(maintView==='out'?vDoc('issmaint'):vMaint()):tab=='mf'?vMaintForms():tab=='scrap'?vScrap():tab=='recvsup'?vDoc('recvsup'):tab=='recvbr'?vDoc('recvbr'):tab=='issbr'?vDoc('issbr'):tab=='dispatch'?vDispatch():tab=='items'?vItems():tab=='cats'?vCats():tab=='sup'?vSuppliers():tab=='br'?(sel?vBranch():vBranches()):tab=='reqbr'?vBranchReqs():vReqs();
 }
 
@@ -1373,10 +1373,20 @@ function vReqs(){
   <div id="res_rq">${d.html}</div>`;
 }
 function newRequest(){
+  editReqId=null;
   RQ={b:branches[0]?branches[0].id:null,by:(STATE.user||{}).name||'',d:isoToday(),note:'',lines:[requestLine()]};
   rqView='edit';go();window.scrollTo(0,0);
 }
-function rqBack(){rqView='list';RQ=null;go();window.scrollTo(0,0)}
+function editRequest(id){
+  const r=reqs.find(x=>Number(x.id)===Number(id));
+  if(!r)return toast('الطلب غير موجود');
+  editReqId=r.id;
+  const first=r.log&&r.log.length?r.log[0]:null;
+  RQ={b:r.b,by:r.by||'',d:r.d||'',note:first?(first.t||''):'',lines:(r.l||[]).map(x=>({i:+x.i,q:+x.q}))};
+  if(!RQ.lines.length)RQ.lines=[requestLine()];
+  ui=null;rqView='edit';go();window.scrollTo(0,0);
+}
+function rqBack(){rqView='list';RQ=null;editReqId=null;go();window.scrollTo(0,0)}
 function requestLine(){const x=items[0];return {i:x?x.id:0,q:1}}
 function rqFix(l){l.q=Math.max(1,Math.floor(+l.q||1))}
 function requestItemOptions(sel){
@@ -1412,7 +1422,7 @@ function requestEditableSheet(){
     <div class="mf-sec"><div class="mf-sec-head">بيانات الطلب</div><div class="mf-table">
       <div class="mf-row" style="grid-template-columns:1fr 1fr 1.6fr 1.4fr">
         <div class="mf-cell"><span class="mf-label">رقم الطلب</span><span class="mf-val">تلقائي</span></div>
-        <div class="mf-cell"><span class="mf-label">التاريخ</span><span class="mf-date"><input class="mf-line" id="rq_date" type="date" value="${e(RQ.d||'')}" data-mirror="mfm_rq_date" oninput="mfDateSync(this);RQ.d=this.value"><span class="mirror" id="mfm_rq_date">${RQ.d?e(mfDMY(RQ.d)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div>
+        <div class="mf-cell"><span class="mf-label">التاريخ</span><span class="mf-date"><input class="mf-line" id="rq_date" type="date" value="${e(RQ.d||'')}" data-mirror="mfm_rq_date" oninput="mfDateSync(this);RQ.d=this.value"${editReqId?' disabled':''}><span class="mirror" id="mfm_rq_date">${RQ.d?e(mfDMY(RQ.d)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div>
         <div class="mf-cell"><span class="mf-label">الفرع</span><select class="mf-line" onchange="RQ.b=+this.value;go()">${branches.map(b=>`<option value="${b.id}"${Number(b.id)===Number(RQ.b)?' selected':''}>${e(b.n)}</option>`).join('')}</select></div>
         <div class="mf-cell"><span class="mf-label">مقدّم الطلب</span><input class="mf-line" value="${e(RQ.by||'')}" disabled></div>
       </div>
@@ -1435,18 +1445,36 @@ function requestEditableSheet(){
 }
 function vRequestEditor(){
   if(!RQ)return vReqs();
+  const editing=!!editReqId;
+  const reqNo='REQ-'+String(editReqId).padStart(4,'0');
   return `<div class="mf-page">
     <div class="mf-bar no-print">
       <div class="grp">
         <button class="btn ghost" onclick="rqBack()">رجوع للقائمة</button>
-        <button class="btn" onclick="saveRequest()">${role=='junior'?'إرسال للسينيور للمراجعة':'إرسال لمدير المنطقة'}</button>
+        <button class="btn" onclick="${editing?'saveRequestEdit()':'saveRequest()'}">${editing?'حفظ التعديل':(role=='junior'?'إرسال للسينيور للمراجعة':'إرسال لمدير المنطقة')}</button>
         <button class="btn soft" onclick="window.print()">طباعة</button>
       </div>
-      <div class="grp"><span class="mf-no">طلب جديد</span></div>
+      <div class="grp"><span class="mf-no">${editing?e(reqNo):'طلب جديد'}</span></div>
     </div>
-    <p class="mf-hint no-print">هذه هي صفحة إدخال الطلب نفسها: املأ النموذج على الورقة ثم اضغط «${role=='junior'?'إرسال للسينيور للمراجعة':'إرسال لمدير المنطقة'}» ليُسجَّل الطلب ويُرسل للاعتماد، أو «طباعة» لطباعة الورقة كما هي. رقم الطلب يُحدَّد تلقائيًا بعد الإرسال.</p>
+    <p class="mf-hint no-print">${editing?'عدّل بيانات النموذج ثم اضغط «حفظ التعديل» لتحديث الطلب نفسه. رقم الطلب وتاريخ الإنشاء يبقيان كما هما.':'هذه هي صفحة إدخال الطلب نفسها: املأ النموذج على الورقة ثم اضغط «'+(role=='junior'?'إرسال للسينيور للمراجعة':'إرسال لمدير المنطقة')+'» ليُسجَّل الطلب ويُرسل للاعتماد، أو «طباعة» لطباعة الورقة كما هي. رقم الطلب يُحدَّد تلقائيًا بعد الإرسال.'}</p>
     <div class="print-root"><div class="paper-wrap"><div class="paper-sheet">${requestEditableSheet()}</div></div></div>
   </div>`;
+}
+async function saveRequestEdit(){
+  if(!RQ||!editReqId)return;
+  if(!br(RQ.b))return toast('اختر فرعًا مسجلًا');
+  if(!RQ.lines.length)return toast('أضف صنفًا واحدًا على الأقل');
+  const lines=[];
+  for(const l of RQ.lines){
+    if(!l.i)return toast('اختر الصنف في كل سطر');
+    rqFix(l);
+    lines.push({item_id:+l.i,qty:+l.q});
+  }
+  try{
+    await api('/requests/'+editReqId+'/action','POST',{action:'save',branch_id:+RQ.b,lines,note:(RQ.note||'').trim()||'تم التعديل'});
+    rqView='list';RQ=null;editReqId=null;await refresh();
+    toast('تم حفظ التعديل');go();
+  }catch(err){toast(err.message)}
 }
 async function saveRequest(){
   if(!RQ)return;
@@ -1479,17 +1507,16 @@ function printBlankRequest(){
 function card(r){
   const [lb,cl]=ST[r.st],open=['review','pending','approved'].includes(r.st);
   const u=ui&&ui.id==r.id?ui.m:null;
-  const lines=u=='edit'?r.l.map(x=>`<label class="ln">${e(it(x.i).n)} <input type="number" min="0" value="${x.q}" id="e${r.id}_${x.i}"></label>`).join(''):r.l.map(x=>`${e(it(x.i).n)} × ${x.q}`).join('، ');
+  const lines=r.l.map(x=>`${e(it(x.i).n)} × ${x.q}`).join('، ');
   const log=r.log.length?'<div class="lg">'+r.log.map(g=>`<div><b>${e(g.by)}</b> <span class="chip ${g.k}">${e(g.a)}</span>${g.t?`<div>${e(g.t)}</div>`:''}</div>`).join('')+'</div>':'';
   const st={review:['rev','تأكيد وإرسال لمدير المنطقة','review'],pending:['ok','موافقة وإرسال لمسؤول المخزن','approve'],approved:['out','تأكيد الصرف من المخزن','release']}[r.st];
   let p='';
   if(open&&!u){
     if(st&&ok(st[2]))p+=`<button class="btn" onclick="act(${r.id},'${st[0]}')">${st[1]}</button>`;
     if(ok('reject'))p+=`<button class="btn bad" onclick="ui={id:${r.id},m:'no'};go()">رفض الطلب</button>`;
-    if(ok('edit'))p+=`<button class="btn ghost" onclick="ui={id:${r.id},m:'edit'};go()">تعديل الطلب</button>`;
+    if(ok('edit'))p+=`<button class="btn ghost" onclick="editRequest(${r.id})">تعديل الطلب</button>`;
   }
   if(open&&u=='no')p=`<input class="cm" style="margin:0" id="c${r.id}" placeholder="سبب الرفض (إجباري)"><button class="btn bad" onclick="act(${r.id},'no')">تأكيد الرفض</button><button class="btn ghost" onclick="ui=null;go()">إلغاء</button>`;
-  if(open&&u=='edit')p=`<input class="cm" style="margin:0" id="c${r.id}" value="تم التعديل"><button class="btn" onclick="act(${r.id},'save')">حفظ التعديل</button><button class="btn ghost" onclick="ui=null;go()">إلغاء</button>`;
   p+=`<button class="btn soft" onclick="printRequest(${r.id})">طباعة النموذج</button>`;
   return `<div class="box"><b>${e(br(r.b).n)}</b> <span class="chip ${cl}">${lb}</span><div class="mut">${e(r.by)}</div><div style="margin-top:6px">${lines}</div>${log}${p?`<div class="acts" style="margin-top:10px;flex-wrap:wrap">${p}</div>`:''}</div>`;
 }
@@ -1501,15 +1528,9 @@ async function send(){
 async function act(id,a){
   const body={action:a};
   if(a=='no'){body.note=(($('#c'+id)||{}).value||'').trim();if(!body.note)return toast('اكتب سبب الرفض في التعليق')}
-  if(a=='save'){
-    const r=reqs.find(x=>x.id==id);
-    body.lines=r.l.map(x=>({item_id:x.i,qty:+($('#e'+id+'_'+x.i)||{}).value})).filter(x=>x.qty>0);
-    body.note=(($('#c'+id)||{}).value||'تم التعديل').trim();
-    if(!body.lines.length)return toast('اترك صنفًا واحدًا على الأقل أو ارفض الطلب');
-  }
   try{
     await api('/requests/'+id+'/action','POST',body);ui=null;await refresh();
-    toast(a=='out'?'تم الصرف':a=='no'?'تم رفض الطلب':a=='save'?'تم حفظ التعديل':a=='rev'?'تم التأكيد وإرسال الطلب لمدير المنطقة':'تمت الموافقة وإرسال الطلب لمسؤول المخزن');
+    toast(a=='out'?'تم الصرف':a=='no'?'تم رفض الطلب':a=='rev'?'تم التأكيد وإرسال الطلب لمدير المنطقة':'تمت الموافقة وإرسال الطلب لمسؤول المخزن');
     go();
   }catch(err){toast(err.message)}
 }
