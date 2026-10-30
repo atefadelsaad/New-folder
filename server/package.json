@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node ../test_swap.js && node test_audit.js && node test_maintenance_flow.js"
+    "test": "node ../test_swap.js && node test_audit.js && node test_maintenance_flow.js && node test_user_management.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

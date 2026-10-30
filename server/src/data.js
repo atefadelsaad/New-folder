@@ -104,6 +104,9 @@ function seed() {
     password_hash: bcrypt.hashSync(password, 10),
     role,
     name,
+    active: true,
+    permissions: {},
+    token_version: 0,
     created_at: now
   }));
   state.categories = CATEGORIES.map((name, idx) => ({
@@ -145,8 +148,15 @@ function load() {
 
   state.counters = Object.assign(newCounters(), asObject(domain.counters));
   state.users = asArray(domain.users);
+  state.users.forEach((user) => {
+    if (user.active == null) user.active = true;
+    if (!user.permissions || typeof user.permissions !== 'object' || Array.isArray(user.permissions)) user.permissions = {};
+    if (!Number.isInteger(Number(user.token_version))) user.token_version = 0;
+  });
   state.categories = asArray(domain.categories);
-  state.items = asArray(domain.items);
+  state.items = asArray(domain.items).map((item) => Object.assign({ inspection_qty: 0 }, item, {
+    inspection_qty: Number(item.inspection_qty) || 0
+  }));
   state.branches = asArray(domain.branches);
   state.branchItems = asArray(domain.branchItems);
   state.suppliers = asArray(domain.suppliers);
@@ -275,6 +285,14 @@ function replaceState(backup) {
 function auditEntities(source) {
   const records = new Map();
   const collections = [
+    ['user', source.users && source.users.map((user) => ({
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      role: user.role,
+      active: user.active !== false,
+      permissions: user.permissions || {}
+    }))],
     ['category', source.categories],
     ['item', source.items],
     ['branch', source.branches],
@@ -384,7 +402,8 @@ function serialLedger(itemIds, excludeVoucherId) {
         if (v.direction === 'out') {
           put(line.item_id, sn, v.kind === 'br' ? 'branch' : 'maint', v.kind === 'br' ? v.branch_id : null);
         } else {
-          put(line.item_id, sn, String(line.state) === 'scrap' ? 'scrap' : 'stock', null);
+          const stateName = String(line.state);
+          put(line.item_id, sn, stateName === 'inspection' ? 'inspection' : stateName === 'scrap' ? 'scrap' : 'stock', null);
         }
       }
     }
@@ -417,13 +436,14 @@ function pickStockSerials(itemId, qty) {
 /* -------------------------------- stock math ------------------------------ */
 
 function readPools(itemIds, branchIds) {
-  const stock = new Map(), maint = new Map(), scrap = new Map(), branch = new Map();
+  const stock = new Map(), maint = new Map(), scrap = new Map(), inspection = new Map(), branch = new Map();
   for (const id of itemIds) {
     const item = itemById(id);
     if (!item) continue;
     stock.set(Number(id), Number(item.stock) || 0);
     maint.set(Number(id), Number(item.maint_qty) || 0);
     scrap.set(Number(id), Number(item.scrap_qty) || 0);
+    inspection.set(Number(id), Number(item.inspection_qty) || 0);
   }
   for (const bid of branchIds) {
     const map = new Map();
@@ -432,7 +452,7 @@ function readPools(itemIds, branchIds) {
     }
     branch.set(Number(bid), map);
   }
-  return { stock, maint, scrap, branch };
+  return { stock, maint, scrap, inspection, branch };
 }
 
 const collectIds = (vouchers) => {
@@ -465,6 +485,10 @@ function applyDeltasToState(deltas) {
     const item = itemById(id);
     if (item) item.scrap_qty = val;
   }
+  for (const [id, val] of result.inspection) {
+    const item = itemById(id);
+    if (item) item.inspection_qty = val;
+  }
   for (const [bid, map] of result.branch) {
     for (const [iid, val] of map) setBranchQty(bid, iid, val);
   }
@@ -482,6 +506,7 @@ function applyScrap(lines) {
 }
 
 function stockError(r) {
+  if (r.error === 'inspection') return 'لا يمكن إلغاء الفحص: الكمية غير موجودة في حجز الفحص';
   if (r.error === 'maint') return 'لا يمكن الإرجاع: الكمية أكبر من الرصيد تحت الصيانة';
   if (r.error === 'scrap') return 'لا يمكن الصرف: الكمية أكبر من رصيد الخردة';
   if (r.error === 'stock') return 'لا يمكن إتمام الصرف: الكمية المطلوبة أكبر من رصيد المخزن';
@@ -527,7 +552,8 @@ function validateSerials(n, excludeVoucherId) {
 }
 
 const touchesPool = (n) =>
-  (n.direction === 'out' && n.kind === 'sup') || n.kind === 'maint' || n.lines.some((l) => lineState(l) !== 'stock');
+  (n.direction === 'out' && n.kind === 'sup') || n.kind === 'maint'
+    || n.lines.some((l) => ['maint', 'scrap'].includes(lineState(l)));
 
 function assertUniqueNumber(direction, number, excludeId) {
   const target = String(number).trim().toLowerCase();
@@ -653,6 +679,17 @@ function bootstrap(role) {
       st: l.state || 'stock',
       rs: l.reason || '',
       nt: l.note || '',
+      mfi: l.maintenance_form_id || null,
+      insp: l.inspection ? {
+        status: l.inspection.status || '',
+        condition: l.inspection.condition || '',
+        notes: l.inspection.notes || '',
+        photos: (l.inspection.photos || []).map((photo) => ({ id: photo.id, url: '/api/inspection-photos/' + encodeURIComponent(photo.id) })),
+        decision: l.inspection.decision || '',
+        reviewedBy: l.inspection.reviewed_by || '',
+        reviewedAt: l.inspection.reviewed_at || '',
+        reviewNotes: l.inspection.review_notes || ''
+      } : null,
       hw: !!l.has_warranty,
       wu: l.warranty_until || ''
     }))
@@ -686,6 +723,7 @@ function bootstrap(role) {
         w: i.warranty_until || '',
         note: i.notes || '',
         hw: i.has_warranty == null ? null : !!i.has_warranty,
+        held: Number(i.inspection_qty) || 0,
         d: day(i.created_at)
       };
       if (!junior) row.s = Number(i.stock) || 0;
@@ -736,6 +774,34 @@ function bootstrap(role) {
     maintenanceForms: state.forms,
     dispatchMeta: junior ? {} : state.dispatchMeta
   };
+}
+
+function pendingInspections() {
+  const itemNames = new Map(state.items.map((item) => [Number(item.id), item.name]));
+  const supplierNames = new Map(state.suppliers.map((supplier) => [Number(supplier.id), supplier.name]));
+  const branchNames = new Map(state.branches.map((branch) => [Number(branch.id), branch.name]));
+  const rows = [];
+  liveVouchers().filter((voucher) => voucher.direction === 'in').forEach((voucher) => {
+    (voucher.lines || []).filter((line) => String(line.state) === 'inspection').forEach((line) => {
+      const inspection = line.inspection || {};
+      rows.push({
+        voucherId: voucher.id,
+        lineId: line.id,
+        number: voucher.number,
+        date: day(voucher.doc_date),
+        kind: voucher.kind,
+        party: voucher.kind === 'br' ? branchNames.get(Number(voucher.branch_id)) || '' : supplierNames.get(Number(voucher.supplier_id)) || '',
+        itemId: line.item_id,
+        item: itemNames.get(Number(line.item_id)) || '',
+        qty: Number(line.qty) || 0,
+        serials: Array.isArray(line.serials) ? line.serials : [],
+        condition: inspection.condition || line.item_condition || '',
+        notes: inspection.notes || '',
+        photos: (inspection.photos || []).map((photo) => ({ id: photo.id, url: '/api/inspection-photos/' + encodeURIComponent(photo.id) }))
+      });
+    });
+  });
+  return rows.sort((a, b) => Number(a.voucherId) - Number(b.voucherId));
 }
 
 /* ------------------------------ startup pass ------------------------------ */
@@ -790,6 +856,7 @@ module.exports = {
   nowIso,
   day,
   state,
+  pendingInspections,
   liveVouchers,
   voucherById,
   itemById,

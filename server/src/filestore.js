@@ -105,15 +105,31 @@ function backupNow(date) {
   const dir = path.join(BACKUP_DIR, stamp);
   if (fs.existsSync(dir)) {
     const already = fs.readdirSync(dir).filter((n) => DATA_FILES.includes(n));
-    if (already.length === DATA_FILES.length) return dir;
+    if (already.length === DATA_FILES.length) {
+      backupInspectionPhotos(dir);
+      return dir;
+    }
   }
   ensureDir(dir);
   for (const name of DATA_FILES) {
     const src = fileFor(name);
     if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dir, name));
   }
+  backupInspectionPhotos(dir);
   pruneBackups();
   return dir;
+}
+
+function backupInspectionPhotos(backupDir) {
+  const source = path.join(DATA_DIR, 'inspection_photos');
+  if (!fs.existsSync(source)) return;
+  const destination = path.join(backupDir, 'inspection_photos');
+  ensureDir(destination);
+  for (const name of fs.readdirSync(source)) {
+    if (!/^[0-9a-f-]{36}\.(?:jpg|png|webp)$/i.test(name)) continue;
+    const src = path.join(source, name);
+    if (fs.statSync(src).isFile()) fs.copyFileSync(src, path.join(destination, name));
+  }
 }
 
 function pruneBackups() {

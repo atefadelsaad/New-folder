@@ -75,7 +75,7 @@ td{font-size:15px;font-weight:500}
 tbody tr:hover td{background:var(--soft)}
 .chip{display:inline-block;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;background:var(--accb);color:var(--acc)}
 .dt{direction:ltr;unicode-bidi:isolate;display:inline-block;white-space:nowrap;font-variant-numeric:tabular-nums}
-.chip.ok{background:var(--okb);color:var(--ok)}.chip.bad{background:var(--badb);color:var(--bad)}
+.chip.ok{background:var(--okb);color:var(--ok)}.chip.bad{background:var(--badb);color:var(--bad)}.chip.warn{background:#fff3cd;color:#805b00}
 .bl{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
 .bc{text-align:start;background:var(--sf);border:1px solid var(--ln);border-radius:var(--r);padding:16px;cursor:pointer;font:inherit;color:var(--ink);box-shadow:var(--sh);transition:border-color .15s,box-shadow .15s,transform .15s}
 .bc:hover{border-color:var(--pri);box-shadow:var(--sh2);transform:translateY(-2px)}
@@ -92,7 +92,7 @@ html.busy{cursor:progress}
 html.busy .btn{opacity:.6;pointer-events:none}
 @media (max-width:860px){
 body{padding-inline-start:0;padding-bottom:calc(62px + env(safe-area-inset-bottom,0px))}
-nav{inset-block:auto;inset-inline:0;bottom:0;top:auto;width:auto;flex-direction:row;gap:6px;padding:8px calc(10px + env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px));border-inline-end:0;border-top:1px solid var(--ln);overflow-x:auto;overflow-y:hidden;box-shadow:0 -8px 22px rgba(30,64,175,.08)}
+nav{inset-block:auto;inset-inline:0;bottom:0;top:auto;width:auto;flex-direction:row;gap:6px;padding:8px calc(10px + env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px));border-inline-end:0;border-top:1px solid var(--ln);overflow-x:auto;overflow-y:hidden;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:0 -8px 22px rgba(30,64,175,.08)}
 nav button{width:auto;flex:0 0 auto;padding:8px 12px}
 #t{inset-inline-start:0;bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 body:has(nav:empty){padding-bottom:0}
@@ -303,8 +303,10 @@ body:has(nav:empty) #t{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 const GOV=['القاهرة','الجيزة','الإسكندرية','القليوبية','بورسعيد','السويس','دمياط','الدقهلية','الشرقية','كفر الشيخ','الغربية','المنوفية','البحيرة','الإسماعيلية','بني سويف','الفيوم','المنيا','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مطروح','شمال سيناء','جنوب سيناء'];
 const govList=g=>!g||GOV.includes(g)?GOV:[...GOV,g];
 const R={admin:'IT Manager',head:'Technical Head',area:'Area Manager',store:'Warehouse Keeper',senior:'Senior Technical',junior:'Junior Technical'};
-const CAN={addBranch:['admin','head'],stock:['admin','head','store'],view:['admin','head','senior','area','store'],review:['admin','head','senior'],reject:['admin','head','area','store'],edit:['admin','head','area','store'],delRecv:['admin','head'],request:['admin','head','senior','junior'],branchEdit:['admin','head','senior'],approve:['admin','head','area'],release:['admin','head','store'],pool:['admin','head'],auditView:['admin','head'],maintView:['admin','head','senior','store','junior'],maintCreate:['admin','head','senior','store','junior'],maintEdit:['admin','head','senior','store'],maintDelete:['admin','head']};
+const CAN={addBranch:['admin','head'],stock:['admin','head','store'],view:['admin','head','senior','area','store'],review:['admin','head','senior'],reject:['admin','head','area','store'],edit:['admin','head','area','store'],delRecv:['admin','head'],request:['admin','head','senior','junior'],branchEdit:['admin','head','senior'],approve:['admin','head','area'],release:['admin','head','store'],pool:['admin','head'],auditView:['admin','head'],maintView:['admin','head','senior','store','junior'],maintCreate:['admin','head','senior','store','junior'],maintEdit:['admin','head','senior','store'],maintDelete:['admin','head'],inspectionReview:['admin','head','store']};
+const PERMISSION_LABELS={addBranch:'إضافة/حذف الفروع',stock:'إدارة المخزون والأذون',view:'عرض المخزون والفروع',review:'مراجعة الطلبات',reject:'رفض الطلبات',edit:'تعديل البيانات',delRecv:'حذف الأذون والاستلامات',request:'إنشاء الطلبات',branchEdit:'تعديل أرصدة الفروع',approve:'اعتماد الطلبات',release:'صرف الطلبات المعتمدة',pool:'حركات الصيانة والخردة',auditView:'عرض سجل الحركة',maintView:'عرض نماذج الصيانة',maintCreate:'إنشاء نماذج الصيانة',maintEdit:'تعديل نماذج الصيانة',maintDelete:'حذف نماذج الصيانة',inspectionReview:'اعتماد فحص الاستلامات'};
 const MF_STATUS=[['received','تم الاستلام'],['internal_check','فحص داخلي'],['sent_external','مرسل لصيانة خارجية'],['received_after_maintenance','مستلم بعد الصيانة'],['returned_to_branch','تم الإرجاع للفرع']];
+const WARRANTY_ALERT_DAYS=7,MAINTENANCE_OVERDUE_DAYS=30;
 const MF_STATUS_LABEL=Object.fromEntries(MF_STATUS);
 const MF_TYPE=[['internal','صيانة داخلية'],['external','صيانة خارجية']];
 const DSP_DEST=[['branch','فرع'],['supplier','مورد'],['maintenance','جهة صيانة']];
@@ -337,12 +339,14 @@ function icon(k){return `<span class="ico" aria-hidden="true"><svg viewBox="0 0 
 function catIcon(c){const s=String(c||'').toLowerCase();if(/لابتوب|laptop|نوت|notebook|كمبيوتر|computer|حاسب|pc/.test(s))return icon('laptop');if(/طابع|printer/.test(s))return icon('printer');if(/شاش|monitor|screen/.test(s))return icon('monitor');if(/موبايل|هاتف|phone|mobile|تابلت|tablet/.test(s))return icon('phone');if(/شبك|راوتر|network|router|سويتش|switch|سلك/.test(s))return icon('network');if(/صيان|tool|معدات|أدوات/.test(s))return icon('tool');return icon('box')}
 const ST={review:['بانتظار مراجعة السينيور',''],pending:['بانتظار مدير المنطقة',''],approved:['بانتظار مسؤول المخزن',''],released:['تم الصرف','ok'],rejected:['مرفوض','bad']};
 const MRES=[['stock','تم إصلاحه'],['scrap','رفض الصيانة']];
-const SM={stock:'مخزون',maint:'تحت الصيانة',scrap:'خردة'};
+const SM={stock:'مخزون',maint:'تحت الصيانة',scrap:'خردة',inspection:'بانتظار الفحص'};
 const SRC={in:{sup:'من مورد',maint:'من صيانة',br:'من فرع'},out:{sup:'إلى مورد الصيانة',br:'إلى فرع'}};
 const STATE={token:localStorage.getItem('wh_token')||'',user:null};
 let CATS=[];const SER={};const CATINFO={};
 let items=[],branches=[],reqs=[],suppliers=[],DB={in:[],out:[]},MAINT={},SCRAP={},SCRAPLOG=[];
 let MFORMS=[],DSPMETA={};
+let INSPECTIONS=[];
+const USER_ADMIN={rows:[],loaded:false,loading:false,editId:null};
 let MF=null,mfView='list',mfBlank=false,mfFilterStatus='',mfFilterDate='',mfPendDel=null,mfReturnToIssue=false;
 let DSP=null,dspView='list',dspPendDel=null,dspPrintFlag=false;
 let docView='list';
@@ -435,7 +439,10 @@ function syncSearchScope(){
 }
 const $=s=>document.querySelector(s);
 const e=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const ok=a=>CAN[a].includes(role);
+const ok=a=>a==='userAdmin'?role==='admin':!!CAN[a]&&(
+  STATE.user&&STATE.user.permissions&&Object.prototype.hasOwnProperty.call(STATE.user.permissions,a)
+    ?STATE.user.permissions[a]===true:CAN[a].includes(role)
+);
 const it=id=>items.find(i=>i.id==id);
 const br=id=>branches.find(b=>b.id==id);
 const dist=id=>branches.reduce((a,b)=>a+(b.q[id]||0),0);
@@ -451,6 +458,14 @@ function dispDate(s){
   return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:raw;
 }
 const dcell=s=>s?`<span class="dt">${e(dispDate(s))}</span>`:'';
+function daysFromToday(value){
+  const date=dispDate(value),match=date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!match)return null;
+  const target=Date.UTC(+match[1],+match[2]-1,+match[3]);
+  const today=dispDate(isoToday()).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!today)return null;
+  return Math.round((target-Date.UTC(+today[1],+today[2]-1,+today[3]))/86400000);
+}
 function warrantyBadge(id){const x=it(id);if(!x||!x.w)return '<span class="chip">بدون ضمان</span>';return x.w>=isoToday()?`<span class="chip ok">ضمان حتى ${dcell(x.w)}</span>`:`<span class="chip bad">انتهى الضمان ${dcell(x.w)}</span>`}
 const opts=(a,sel)=>a.map(x=>`<option${x==sel?' selected':''}>${e(x)}</option>`).join('');
 let pendDel=null,editId=null,pend=null,ui=null,catEdit=null,pendCat=null,stockLoc=null,maintView=null,MA=null,scrapMode=null,SCR=null,scrapBal=true;
@@ -520,7 +535,7 @@ async function login(){
     tab='dashboard';sel=null;stockLoc=null;await boot();
   }catch(err){renderLogin(err.message)}
 }
-function logout(){STATE.token='';STATE.user=null;localStorage.removeItem('wh_token');renderLogin()}
+function logout(){STATE.token='';STATE.user=null;localStorage.removeItem('wh_token');PHOTO_URLS.forEach(url=>URL.revokeObjectURL(url));PHOTO_URLS.clear();renderLogin()}
 let BUILD='';
 async function checkBuild(){
   try{
@@ -542,13 +557,13 @@ function hydrate(d){
   STATE.user=d.user;role=d.user.role;
   const wasEmpty=!items.length;
   items=d.items;branches=d.branches;reqs=d.requests;suppliers=d.suppliers;DB={in:d.vouchers.in,out:d.vouchers.out};
-  MFORMS=Array.isArray(d.maintenanceForms)?d.maintenanceForms:[];DSPMETA=d.dispatchMeta||{};window.__mfSerialIdx=null;
+  MFORMS=Array.isArray(d.maintenanceForms)?d.maintenanceForms:[];DSPMETA=d.dispatchMeta||{};INSPECTIONS=Array.isArray(d.inspectionQueue)?d.inspectionQueue:[];window.__mfSerialIdx=null;
   MAINT={};SCRAP={};(d.maintenance||[]).forEach(r=>MAINT[r.i]=r.q);(d.scrap||[]).forEach(r=>SCRAP[r.i]=r.q);SCRAPLOG=d.scrapLog||[];
   CATS=d.categories.map(c=>c.name);
   Object.keys(SER).forEach(k=>delete SER[k]);Object.keys(CATINFO).forEach(k=>delete CATINFO[k]);
   d.categories.forEach(c=>{SER[c.name]=c.has_serial;CATINFO[c.name]={sup:c.supplier||'',by:c.by||'',d:c.d||''}});
   if(wasEmpty)Object.keys(DS).forEach(key=>{DR[key]=nd(key);E[key]=null});
-  $('#roleBar').innerHTML=`<span>${e(d.user.name)} · ${e(R[role]||role)}</span><button class="btn ghost" onclick="logout()">خروج</button>`;
+  $('#roleBar').innerHTML=`<span>${e(d.user.name)}</span><button class="btn ghost" onclick="logout()">خروج</button>`;
 }
 async function refresh(){const d=await api('/bootstrap');hydrate(d)}
 
@@ -559,16 +574,19 @@ function readPick(p){return items.filter(i=>{const el=$('#'+p+i.id);return el&&e
 
 function selectTab(key){
   tab=key;sel=null;maintView=null;scrapMode=null;SCR=null;scrapBal=true;mfView='list';MF=null;mfReturnToIssue=false;dspView='list';DSP=null;docView='list';rqView='list';RQ=null;editReqId=null;PRINT=null;
-  moreOpen=['mf','scrap','recvbr','dispatch','items','cats','sup','reqbr','audit'].includes(key);
+  moreOpen=['mf','scrap','recvbr','dispatch','items','cats','sup','reqbr','audit','inspection','users','password'].includes(key);
   if(key==='audit'){AUDIT.loaded=false;AUDIT.offset=0}
   go();
 }
 function go(){
   syncSearchScope();
   const todo=reqs.filter(r=>(r.st=='review'&&ok('review'))||(r.st=='pending'&&ok('approve'))||(r.st=='approved'&&ok('release'))).length;
-  const tabs=[['dashboard','لوحة التحكم'],['stock','الأصناف والمخزن'],['maint','تحت الصيانة'],['recvsup','استلام من مورد'],['issbr','صرف إلى فرع'],['rq','الطلبات'+(todo?` (${todo})`:'')],['br','الفروع'],['mf','نماذج الصيانة'],['scrap','الخردة'],['recvbr','استلام من فرع'],['dispatch','إرسال البضاعة'],['items','إدارة الأصناف'],['cats','الفئات'],['sup','الموردون'],['reqbr','متطلبات الفروع'],['audit','سجل الحركة']].filter(t=>{
+  const tabs=[['dashboard','لوحة التحكم'],['stock','الأصناف والمخزن'],['maint','تحت الصيانة'],['recvsup','استلام من مورد'],['issbr','صرف إلى فرع'],['rq','الطلبات'+(todo?` (${todo})`:'')],['br','الفروع'],['mf','نماذج الصيانة'],['scrap','الخردة'],['recvbr','استلام من فرع'],['dispatch','إرسال البضاعة'],['items','إدارة الأصناف'],['cats','الفئات'],['sup','الموردون'],['reqbr','متطلبات الفروع'],['inspection','فحص الاستلامات'],['users','إدارة المستخدمين'],['password','تغيير كلمة المرور']].filter(t=>{
     if(t[0]=='rq')return true;
     if(t[0]=='dashboard')return true;
+    if(t[0]=='users')return ok('userAdmin');
+    if(t[0]=='password')return true;
+    if(t[0]=='inspection')return ok('inspectionReview');
     if(t[0]=='audit')return ok('auditView');
     if(t[0]=='mf')return ok('maintView');
     if(t[0]=='dispatch')return ok('stock');
@@ -579,21 +597,40 @@ function go(){
   if(tab!=='docprint'&&!tabs.some(t=>t[0]===tab))tab='dashboard';
   const navButton=([key,label])=>`<button class="${tab===key?'on':''}" onclick="selectTab('${key}')">${icon(key)}<span>${label}</span></button>`;
   $('#nav').innerHTML=mainTabs.map(navButton).join('')+(moreTabs.length?`<div class="nav-more"><button type="button" class="nav-more-toggle ${moreTabs.some(([key])=>key===tab)?'on':''}" aria-expanded="${moreOpen}" onclick="moreOpen=!moreOpen;go()">${icon('box')}<span>المزيد</span></button><div class="nav-more-list" ${moreOpen?'':'hidden'}>${moreTabs.map(navButton).join('')}</div></div>`:'');
-  const content=tab==='docprint'?vDocPrint():tab==='dashboard'?vDashboard(todo):tab==='stock'?vStock():tab==='maint'?(maintView==='out'?vDoc('issmaint'):vMaint()):tab==='mf'?vMaintForms():tab==='scrap'?vScrap():tab==='recvsup'?vDoc('recvsup'):tab==='recvbr'?vDoc('recvbr'):tab==='issbr'?vDoc('issbr'):tab==='dispatch'?vDispatch():tab==='items'?vItems():tab==='cats'?vCats():tab==='sup'?vSuppliers():tab==='br'?(sel?vBranch():vBranches()):tab==='reqbr'?vBranchReqs():tab==='audit'?vAudit():vReqs();
+  const content=tab==='docprint'?vDocPrint():tab==='dashboard'?vDashboard(todo):tab==='stock'?vStock():tab==='maint'?(maintView==='out'?vDoc('issmaint'):vMaint()):tab==='mf'?vMaintForms():tab==='scrap'?vScrap():tab==='recvsup'?vDoc('recvsup'):tab==='recvbr'?vDoc('recvbr'):tab==='issbr'?vDoc('issbr'):tab==='dispatch'?vDispatch():tab==='items'?vItems():tab==='cats'?vCats():tab==='sup'?vSuppliers():tab==='br'?(sel?vBranch():vBranches()):tab==='reqbr'?vBranchReqs():tab==='audit'?vAudit():tab==='inspection'?vInspectionQueue():tab==='users'?vUsers():tab==='password'?vChangePassword():vReqs();
   $('#m').innerHTML=`<div id="formError" class="form-error" role="alert" aria-live="polite"></div>${content}`;
   decorateTables($('#m'));
+  hydrateInspectionPhotos($('#m'));
   if(tab==='audit'&&!AUDIT.loaded&&!AUDIT.loading)loadAudit();
+  if(tab==='users'&&!USER_ADMIN.loaded&&!USER_ADMIN.loading)loadUsers();
 }
 function vDashboard(todo){
   const stockKnown=role!=='junior';
   const out=stockKnown?items.filter(i=>Number(i.s)===0).length:0;
   const low=stockKnown?items.filter(i=>Number(i.s)>0&&Number(i.s)<=3).length:0;
   const maint=stockKnown?Object.values(MAINT).reduce((sum,value)=>sum+(Number(value)||0),0):0;
+  const warrantyAlerts=stockKnown?items.map(item=>({item,days:daysFromToday(item.w)})).filter(row=>row.item.w&&row.item.hw!==false&&row.days!==null&&row.days<=WARRANTY_ALERT_DAYS&&Number(row.item.s||0)+dist(row.item.id)+Number(MAINT[row.item.id]||0)+Number(row.item.held||0)>0).sort((a,b)=>a.days-b.days):[];
+  const maintenanceAlerts=ok('maintView')?MFORMS.filter(form=>{
+    if(form.status!=='sent_external')return false;
+    const issue=DB.out.find(v=>Number(v.id)===Number(form.issuePermitId)||String(v.p)===String(form.issuePermitNumber));
+    const sentDate=issue&&issue.d||form.deliveryDate2||form.deliveryDate||form.createdAt;
+    const age=-daysFromToday(sentDate);
+    return age!==null&&age>=MAINTENANCE_OVERDUE_DAYS;
+  }).map(form=>{
+    const issue=DB.out.find(v=>Number(v.id)===Number(form.issuePermitId)||String(v.p)===String(form.issuePermitNumber));
+    const sentDate=issue&&issue.d||form.deliveryDate2||form.deliveryDate||form.createdAt;
+    return {form,days:-daysFromToday(sentDate)};
+  }).sort((a,b)=>b.days-a.days):[];
+  const alertSections=[
+    stockKnown?`<section class="box"><div class="row" style="justify-content:space-between"><h3>ضمانات قاربت على الانتهاء أو انتهت (${warrantyAlerts.length})</h3>${ok('stock')?`<button class="btn ghost" onclick="selectTab('items')">إدارة الأصناف</button>`:''}</div>${warrantyAlerts.length?`<div class="tw"><table><thead><tr><th>الصنف</th><th>الرصيد</th><th>تاريخ انتهاء الضمان</th><th>المتبقي</th></tr></thead><tbody>${warrantyAlerts.map(({item,days})=>`<tr><td class="nmcell">${e(item.n)}</td><td>${Number(item.s||0)+dist(item.id)+Number(MAINT[item.id]||0)+Number(item.held||0)}</td><td>${dcell(item.w)}</td><td><span class="chip ${days<0?'bad':'warn'}">${days<0?'انتهى منذ '+Math.abs(days)+' يوم':days===0?'ينتهي اليوم':'خلال '+days+' أيام'}</span></td></tr>`).join('')}</tbody></table></div>`:`<p class="mut">لا توجد ضمانات منتهية أو تنتهي خلال ${WARRANTY_ALERT_DAYS} أيام للأصناف التي لها رصيد.</p>`}</section>`:'',
+    ok('maintView')?`<section class="box"><div class="row" style="justify-content:space-between"><h3>أجهزة تأخرت لدى مورد الصيانة (${maintenanceAlerts.length})</h3><button class="btn ghost" onclick="tab='maint';maintView='release';go()">متابعة إذن الخروج للصيانة</button></div>${maintenanceAlerts.length?`<div class="tw"><table><thead><tr><th>النموذج</th><th>الجهاز</th><th>المورد</th><th>تاريخ الإرسال</th><th>مدة الانتظار</th></tr></thead><tbody>${maintenanceAlerts.map(({form,days})=>`<tr><td>${e(form.number||'-')}</td><td class="nmcell">${e(form.deviceType||((it(form.itemId)||{}).n)||'-')}${form.serial?' · '+e(form.serial):''}</td><td>${e(form.maintenanceEntity||'-')}</td><td>${dcell(form.deliveryDate2||form.deliveryDate||form.createdAt)}</td><td><span class="chip bad">${days} يومًا</span></td></tr>`).join('')}</tbody></table></div>`:`<p class="mut">لا توجد أجهزة تجاوزت ${MAINTENANCE_OVERDUE_DAYS} يومًا لدى مورد الصيانة.</p>`}</section>`:''
+  ].filter(Boolean).join('');
   const metrics=[
     `<div class="dash-card"><span>إجمالي الأصناف</span><b>${items.length}</b></div>`,
     `<div class="dash-card bad"><span>نفد رصيدها</span><b>${stockKnown?out:'—'}</b></div>`,
     `<div class="dash-card warn"><span>رصيد منخفض (٣ أو أقل)</span><b>${stockKnown?low:'—'}</b></div>`,
     `<div class="dash-card"><span>قطع تحت الصيانة</span><b>${stockKnown?maint:'—'}</b></div>`,
+    `<div class="dash-card warn"><span>محجوز للفحص</span><b>${stockKnown?items.reduce((sum,item)=>sum+(Number(item.held)||0),0):'—'}</b></div>`,
     `<div class="dash-card ${todo?'warn':'ok'}"><span>طلبات تنتظر إجراءً</span><b>${todo}</b></div>`
   ].join('');
   const actions=[
@@ -604,7 +641,7 @@ function vDashboard(todo){
     ok('view')?`<button class="btn dash-action ghost" onclick="selectTab('br')">${icon('br')} استعراض الفروع</button>`:''
   ].filter(Boolean).join('');
   return `<section class="hero"><div><div class="eyebrow">نظرة عامة</div><h2>لوحة التحكم</h2><p>ملخص سريع لحالة الأصناف والعمليات التي تحتاج إلى متابعة. تنبيه انخفاض الرصيد مضبوط حاليًا على ٣ قطع أو أقل.</p></div></section>
-    <div class="dash-grid">${metrics}</div><section class="box"><h3>إجراءات سريعة</h3><div class="dash-actions">${actions||'<p class="mut">لا توجد إجراءات متاحة لهذا الحساب.</p>'}</div></section>`;
+    <div class="dash-grid">${metrics}</div>${alertSections}<section class="box"><h3>إجراءات سريعة</h3><div class="dash-actions">${actions||'<p class="mut">لا توجد إجراءات متاحة لهذا الحساب.</p>'}</div></section>`;
 }
 async function loadAudit(){
   AUDIT.loading=true;
@@ -625,6 +662,107 @@ function vAudit(){
   const body=AUDIT.rows.length?AUDIT.rows.map(row=>`<article class="box"><div class="rq"><div><h3>${e(row.action)} · ${e(row.actor)} (${e(row.username)})</h3><div class="mut"><span class="dt">${e(row.at)}</span> · ${e(row.method)} ${e(row.path)} · الدور: ${e(R[row.role]||row.role)}</div></div></div><p><b>السبب:</b> ${row.reason?e(row.reason):'<span class="mut">لم يُذكر سبب</span>'}</p>${changes(row)}</article>`).join(''):'<div class="empty">لا توجد أحداث مسجلة حتى الآن.</div>';
   const start=AUDIT.total?AUDIT.offset+1:0,end=Math.min(AUDIT.offset+AUDIT.limit,AUDIT.total);
   return `<h2>سجل الحركة</h2><p class="mut">سجل موحد للعمليات المسجلة، متاح لمدير النظام والمدير الفني فقط.</p><div class="row" style="justify-content:space-between;margin-bottom:12px"><span class="rcnt">عرض ${start}–${end} من ${AUDIT.total}</span><div class="acts"><button class="btn ghost" ${AUDIT.offset<=0?'disabled':''} onclick="AUDIT.offset=Math.max(0,AUDIT.offset-AUDIT.limit);AUDIT.loaded=false;loadAudit()">الأحدث</button><button class="btn ghost" ${end>=AUDIT.total?'disabled':''} onclick="AUDIT.offset+=AUDIT.limit;AUDIT.loaded=false;loadAudit()">الأقدم</button><button class="btn ghost" onclick="AUDIT.loaded=false;loadAudit()">تحديث</button></div></div>${body}`;
+}
+
+const PHOTO_URLS=new Map();
+async function inspectionPhotoUrl(id){
+  if(PHOTO_URLS.has(id))return PHOTO_URLS.get(id);
+  const response=await fetch('/api/inspection-photos/'+encodeURIComponent(id),{headers:{Authorization:'Bearer '+STATE.token}});
+  if(!response.ok)throw new Error('تعذر تحميل صورة الفحص');
+  const url=URL.createObjectURL(await response.blob());PHOTO_URLS.set(id,url);return url;
+}
+function hydrateInspectionPhotos(root){
+  if(!root)return;
+  root.querySelectorAll('img[data-photo-id]').forEach(img=>{
+    const id=img.dataset.photoId;
+    if(PHOTO_URLS.has(id)){img.src=PHOTO_URLS.get(id);return}
+    if(img.dataset.loading)return;
+    img.dataset.loading='1';
+    inspectionPhotoUrl(id)
+      .then(url=>{document.querySelectorAll('img[data-photo-id]').forEach(node=>{if(node.dataset.photoId===id)node.src=url})})
+      .catch(()=>{img.alt='تعذر تحميل الصورة'});
+  });
+}
+async function openInspectionPhoto(id){
+  try{const url=await inspectionPhotoUrl(id);window.open(url,'_blank','noopener')}
+  catch(err){toast(err.message)}
+}
+async function loadUsers(){
+  USER_ADMIN.loading=true;
+  try{const response=await api('/users');USER_ADMIN.rows=response.users||[];USER_ADMIN.permissions=response.permissions||Object.keys(CAN);USER_ADMIN.roles=response.roles||Object.keys(R);USER_ADMIN.loaded=true}
+  catch(err){USER_ADMIN.loaded=true;USER_ADMIN.rows=[];toast(err.message)}
+  finally{USER_ADMIN.loading=false;if(tab==='users')go()}
+}
+function setUserEditor(id){
+  USER_ADMIN.editId=id==null?null:Number(id);
+  go();
+}
+function userPermissionsEditor(user){
+  const permissions=Object.keys(CAN);
+  return `<div class="box"><h3>الصلاحيات الدقيقة</h3><p class="mut">«حسب الدور» يستخدم صلاحيات الدور الأساسي، ويمكن السماح أو المنع لكل عملية لهذا الحساب فقط.</p><div class="grid">${permissions.map(key=>{
+    const value=user&&user.permissions&&Object.prototype.hasOwnProperty.call(user.permissions,key)?(user.permissions[key]?'allow':'deny'):'inherit';
+    return `<label>${e(PERMISSION_LABELS[key]||key)}<select id="user_perm_${key}"><option value="inherit"${value==='inherit'?' selected':''}>حسب الدور</option><option value="allow"${value==='allow'?' selected':''}>سماح</option><option value="deny"${value==='deny'?' selected':''}>منع</option></select></label>`;
+  }).join('')}</div></div>`;
+}
+function vUsers(){
+  if(!ok('userAdmin'))return '<h2>غير مصرح</h2>';
+  if(!USER_ADMIN.loaded)return '<h2>إدارة المستخدمين</h2><p class="mut">جارٍ تحميل الحسابات…</p>';
+  const user=USER_ADMIN.rows.find(row=>Number(row.id)===Number(USER_ADMIN.editId))||null;
+  const roleOptions=(USER_ADMIN.roles||Object.keys(R)).map(roleName=>`<option value="${e(roleName)}"${user&&user.role===roleName?' selected':''}>${e(R[roleName]||roleName)}</option>`).join('');
+  const form=`<section class="box"><h3>${user?'تعديل حساب '+e(user.username):'إضافة مستخدم'}</h3>
+    <div class="grid"><label>اسم المستخدم<input id="user_username" value="${e(user?user.username:'')}" autocomplete="off"></label>
+    <label>الاسم الظاهر<input id="user_name" value="${e(user?user.name:'')}"></label>
+    <label>الدور الأساسي<select id="user_role">${roleOptions}</select></label>
+    ${user?'':`<label>كلمة المرور الأولية<input id="user_password" type="password" minlength="8" autocomplete="new-password"></label>`}
+    ${user?`<label class="ln"><input id="user_active" type="checkbox" ${user.active?'checked':''}> الحساب نشط</label>`:''}</div>
+    ${userPermissionsEditor(user)}
+    <div class="acts"><button class="btn" onclick="saveUser()">${user?'حفظ التعديلات':'إنشاء المستخدم'}</button>${user?`<button class="btn ghost" onclick="setUserEditor(null)">إلغاء التعديل</button>`:''}</div>
+    ${user?`<div class="row" style="margin-top:16px"><label>إعادة تعيين كلمة المرور<input id="user_reset_password" type="password" minlength="8" autocomplete="new-password"></label><button class="btn ghost" onclick="resetUserPassword(${user.id})">تعيين كلمة مرور جديدة</button></div>`:''}
+  </section>`;
+  const rows=USER_ADMIN.rows.map(row=>`<tr><td>${e(row.username)}</td><td>${e(row.name)}</td><td>${e(R[row.role]||row.role)}</td><td>${row.active?'<span class="chip ok">نشط</span>':'<span class="chip bad">معطل</span>'}</td><td><button class="btn ghost" onclick="setUserEditor(${row.id})">إدارة</button></td></tr>`).join('');
+  return `<h2>إدارة المستخدمين</h2><p class="mut">الحسابات يمكن إدارتها بواسطة مدير النظام فقط. تعطيل الحساب أو تغيير كلمة المرور يُنهي جلساته النشطة.</p>${form}<section class="box tw"><h3>الحسابات الحالية</h3><table><tr><th>اسم المستخدم</th><th>الاسم</th><th>الدور</th><th>الحالة</th><th></th></tr>${rows}</table></section>`;
+}
+async function saveUser(){
+  const username=($('#user_username')||{}).value.trim(),name=($('#user_name')||{}).value.trim(),roleName=($('#user_role')||{}).value;
+  if(!username)return setFormError('اكتب اسم المستخدم');
+  if(!name)return setFormError('اكتب الاسم الظاهر');
+  const permissions={};
+  Object.keys(CAN).forEach(key=>{const value=($('#user_perm_'+key)||{}).value;if(value==='allow')permissions[key]=true;else if(value==='deny')permissions[key]=false});
+  const editId=USER_ADMIN.editId;
+  const body={username,name,role:roleName,permissions};
+  if(editId!=null)body.active=!!($('#user_active')||{}).checked;
+  else body.password=(($('#user_password')||{}).value||'');
+  try{
+    await api(editId==null?'/users':'/users/'+editId,editId==null?'POST':'PUT',body);
+    USER_ADMIN.editId=null;USER_ADMIN.loaded=false;await loadUsers();toast(editId==null?'تم إنشاء المستخدم':'تم حفظ بيانات المستخدم');go();
+  }catch(err){toast(err.message)}
+}
+async function resetUserPassword(id){
+  const password=(($('#user_reset_password')||{}).value||'');
+  if(password.length<8)return setFormError('كلمة المرور يجب ألا تقل عن 8 أحرف');
+  try{await api('/users/'+id+'/password','PUT',{password});$('#user_reset_password').value='';toast('تم تعيين كلمة المرور وإنهاء الجلسات السابقة')}
+  catch(err){toast(err.message)}
+}
+function vChangePassword(){
+  return `<h2>تغيير كلمة المرور</h2><section class="box" style="max-width:560px"><p class="mut">بعد التغيير ستبقى هذه الجلسة نشطة، وسيُطلب تسجيل الدخول مجددًا من الأجهزة الأخرى.</p><label>كلمة المرور الحالية<input id="current_password" type="password" autocomplete="current-password"></label><div class="grid"><label>كلمة المرور الجديدة<input id="new_password" type="password" minlength="8" autocomplete="new-password"></label><label>تأكيد كلمة المرور<input id="confirm_password" type="password" minlength="8" autocomplete="new-password"></label></div><button class="btn" onclick="saveOwnPassword()">حفظ كلمة المرور</button></section>`;
+}
+async function saveOwnPassword(){
+  const currentPassword=($('#current_password')||{}).value||'',newPassword=($('#new_password')||{}).value||'',confirmation=($('#confirm_password')||{}).value||'';
+  if(newPassword.length<8)return setFormError('كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف');
+  if(newPassword!==confirmation)return setFormError('تأكيد كلمة المرور غير مطابق');
+  try{const result=await api('/auth/password','PUT',{currentPassword,newPassword});STATE.token=result.token;localStorage.setItem('wh_token',result.token);await refresh();toast('تم تغيير كلمة المرور')}
+  catch(err){toast(err.message)}
+}
+function vInspectionQueue(){
+  if(!ok('inspectionReview'))return '<h2>غير مصرح</h2>';
+  if(!INSPECTIONS.length)return '<h2>فحص الاستلامات</h2><div class="empty">لا توجد أصناف بانتظار الفحص.</div>';
+  return `<h2>فحص الاستلامات (${INSPECTIONS.length})</h2><p class="mut">الأصناف هنا محجوزة ولا يمكن صرفها حتى اعتماد النتيجة. الصنف المقبول يدخل المخزون، والتالف يُسجل في الخردة.</p>${INSPECTIONS.map(row=>`<article class="box"><div class="row" style="justify-content:space-between"><div><h3>${e(row.item)} · ${e(row.number)}</h3><div class="mut">${e(row.party||'-')} · ${dcell(row.date)} · الكمية: ${row.qty}</div></div><span class="chip warn">بانتظار الفحص</span></div><p><b>الحالة المسجلة:</b> ${e(row.condition||'غير محددة')} ${row.serials.length?`· <b>السيريال:</b> ${row.serials.map(e).join('، ')}`:''}</p>${row.notes?`<p><b>ملاحظات الاستلام:</b> ${e(row.notes)}</p>`:''}${row.photos.length?`<div class="row">${row.photos.map(photo=>`<img data-photo-id="${e(photo.id)}" onclick="openInspectionPhoto('${e(photo.id)}')" alt="صورة الصنف عند الاستلام" style="width:92px;height:92px;object-fit:cover;border-radius:8px;border:1px solid var(--ln);cursor:pointer">`).join('')}</div>`:''}<label>ملاحظة المراجع<textarea id="inspection_review_${row.lineId}" rows="2" maxlength="2000"></textarea></label><div class="acts" style="margin-top:10px"><button class="btn" onclick="reviewInspection(${row.voucherId},${row.lineId},'good')">اعتماد سليم وإضافته للمخزون</button><button class="btn bad" onclick="reviewInspection(${row.voucherId},${row.lineId},'damaged')">اعتماد تالف ونقله للخردة</button></div></article>`).join('')}`;
+}
+async function reviewInspection(voucherId,lineId,decision){
+  if(decision==='damaged'&&!confirm('سيُنقل الصنف التالف إلى الخردة ولن يصبح متاحًا للصرف. هل تريد المتابعة؟'))return;
+  const notes=(($('#inspection_review_'+lineId)||{}).value||'').trim();
+  try{await api(`/inspections/${voucherId}/${lineId}/review`,'POST',{decision,notes});await refresh();toast(decision==='good'?'تم اعتماد الصنف وإضافته للمخزون':'تم اعتماد الصنف التالف ونقله للخردة');go()}
+  catch(err){toast(err.message)}
 }
 
 function itemWarranty(i){
@@ -736,8 +874,8 @@ const DS={recvsup:{dir:'in',kind:'sup',t:'استلام من مورد'},recvbr:{d
 let docKey='recvsup';
 const KK=()=>docKey;
 const hasSer=id=>{const x=it(id);return !!(x&&SER[x.c])};
-const nl=(dir=DS[KK()].dir)=>{const p=dir=='out'?items.filter(i=>i.s>0):items;return {i:p.length?p[0].id:'',q:1,sns:[''],st:'stock',rs:'',nt:'',cd:'سليم',hw:false,wu:''}};
-const nd=key=>{const S=DS[key];return {k:S.kind,sup:'',b:branches[0]?branches[0].id:null,p:'',d:isoToday(),sb:'',note:'',by:(STATE.user||{}).name||'',stockOfficer:(STATE.user||{}).name||'',stockOfficerSig:'',receiverName:'',receiverSig:'',receiveDate:isoToday(),gov:'',addr:'',original:{},lines:[nl(S.dir)]}};
+const nl=(dir=DS[KK()].dir)=>{const p=dir=='out'?items.filter(i=>i.s>0):items;return {i:p.length?p[0].id:'',q:1,sns:[''],st:dir==='in'?'inspection':'stock',rs:'',nt:'',cd:'سليم',hw:false,wu:'',insp:null,photoData:[]}};
+const nd=key=>{const S=DS[key];return {k:S.kind,sup:'',b:branches[0]?branches[0].id:null,p:'',d:isoToday(),sb:'',note:'',by:(STATE.user||{}).name||'',stockOfficer:(STATE.user||{}).name||'',stockOfficerSig:'',giverName:'',giverSignature:'',receiverName:'',receiverSig:'',receiveDate:isoToday(),gov:'',addr:'',original:{},lines:[nl(S.dir)]}};
 const DR={},E={};Object.keys(DS).forEach(key=>{DR[key]=nd(key);E[key]=null});
 function partyName(r){const b=br(r.b);return r.k=='br'?(b?b.n:'فرع غير محدد'):(r.sup||'مورد غير محدد')}
 function registeredSuppliers(){const used=[...DB.in,...DB.out].map(r=>String(r.sup||'').trim()).filter(Boolean);return [...new Set([...suppliers.map(s=>s.n),...used])]}
@@ -817,7 +955,7 @@ function resStock(){
   });
   const pg=paginate(rows,PV.stock);
   const html=rows.length
-    ?`<div class="box tw"><h3>الأصناف (${rows.length})</h3><table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>الحالة</th></tr>${pg.rows.map(i=>{const qty=Number(i.s)||0;return `<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td class="nmcell">${e(i.n)}</td><td>${qty}</td><td>${qty===0?'<span class="chip bad">نفد الرصيد</span>':qty<=3?'<span class="chip low-stock">رصيد منخفض</span>':'<span class="chip ok">متوفر</span>'}</td></tr>`}).join('')}</table></div>`+pager('stock',PV.stock,pg.p,pg.n)
+    ?`<div class="box tw"><h3>الأصناف (${rows.length})</h3><table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>محجوز للفحص</th><th>الحالة</th></tr>${pg.rows.map(i=>{const qty=Number(i.s)||0,held=Number(i.held)||0;return `<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td class="nmcell">${e(i.n)}</td><td>${qty}</td><td>${held?`<span class="chip warn">${held}</span>`:'-'}</td><td>${qty===0?(held?'<span class="chip warn">بانتظار الفحص</span>':'<span class="chip bad">نفد الرصيد</span>'):qty<=3?'<span class="chip low-stock">رصيد منخفض</span>':'<span class="chip ok">متوفر</span>'}</td></tr>`}).join('')}</table></div>`+pager('stock',PV.stock,pg.p,pg.n)
     :(items.length?noRes('stock'):'<p class="mut">لا توجد أصناف.</p>');
   return {html,total:rows.length};
 }
@@ -1206,7 +1344,7 @@ function vDoc(key){
 function vDocList(key){
   const S=DS[key],d=resDoc(key),inn=S.dir==='in';
   const flow=inn
-    ?('يُعبأ النموذج على ورقة A4 مباشرة، وعند الحفظ يُضاف للمخزون'+(S.kind==='br'?' ويُنقص رصيد الفرع':'')+'.')
+    ?('يُعبأ النموذج على ورقة A4 مباشرة، وعند الحفظ تُحجز الأصناف للفحص ولا تصبح متاحة حتى اعتماد النتيجة'+(S.kind==='br'?' ويُنقص رصيد الفرع':'')+'.')
     :('يُعبأ النموذج على ورقة A4 مباشرة، وعند الحفظ تُخصم الكميات من المخزون'+(S.kind==='br'?' وتُضاف لرصيد الفرع':'')+'.');
   return `<div class="hero">
     <div><div class="eyebrow">المخزن</div><h2>${icon(key)} ${S.t}</h2><p>${flow}</p></div>
@@ -1269,17 +1407,55 @@ function docFixLine(l){
 }
 function docSetItem(j,v){
   const D=DR[KK()],l=D&&D.lines[j];if(!l)return;
-  l.i=+v||0;l.q=1;l.sns=[];docFixLine(l);go();
+  l.i=+v||0;l.q=1;l.sns=[];l.insp=null;l.photoData=[];docFixLine(l);go();
 }
 function docSetQty(j,v){
   const D=DR[KK()],l=D&&D.lines[j];if(!l)return;
-  l.q=Math.max(1,Math.floor(+v||1));docFixLine(l);go();
+  l.q=Math.max(1,Math.floor(+v||1));l.insp=null;l.photoData=[];docFixLine(l);go();
 }
 function addDocLine(){const D=DR[KK()];if(!D)return;D.lines.push(nl(DS[KK()].dir));go()}
 function docFillRows(cols,n){
   let h='';
   for(let i=0;i<n;i++)h+=`<tr class="fill" style="cursor:pointer" title="إضافة صنف" onclick="addDocLine()">${cols.map(()=>'<td>&nbsp;</td>').join('')}</tr>`;
   return h;
+}
+function compressInspectionPhoto(file){
+  return new Promise((resolve,reject)=>{
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type))return reject(new Error('ارفع صورة JPG أو PNG أو WebP'));
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error('تعذر قراءة الصورة المحددة'));
+    reader.onload=()=>{
+      const image=new Image();
+      image.onerror=()=>reject(new Error('ملف الصورة غير صالح'));
+      image.onload=()=>{
+        const scale=Math.min(1,1280/Math.max(image.width,image.height));
+        const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));
+        const context=canvas.getContext('2d');context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);
+        for(const quality of [.84,.72,.58,.45]){
+          const value=canvas.toDataURL('image/jpeg',quality);
+          if(Math.floor((value.length-'data:image/jpeg;base64,'.length)*.75)<=1024*1024)return resolve(value);
+        }
+        reject(new Error('تعذر ضغط الصورة إلى أقل من 1 ميجابايت'));
+      };
+      image.src=String(reader.result||'');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function addInspectionPhotos(index,input){
+  const D=DR[KK()],line=D&&D.lines[index];if(!line)return;
+  const files=Array.from(input.files||[]);
+  const current=D.lines.reduce((sum,row)=>sum+(row.insp&&row.insp.photos?row.insp.photos.length:0)+(row.photoData||[]).length,0);
+  if(current+files.length>3){input.value='';return setFormError('يسمح بحد أقصى 3 صور لكل إذن استلام')}
+  try{
+    const photos=await Promise.all(files.map(compressInspectionPhoto));
+    line.photoData=(line.photoData||[]).concat(photos);go();
+  }catch(err){setFormError(err.message);input.value=''}
+}
+function inspectionPhotoPreview(line){
+  const saved=(line.insp&&line.insp.photos||[]).map(photo=>`<img data-photo-id="${e(photo.id)}" onclick="openInspectionPhoto('${e(photo.id)}')" alt="صورة محفوظة" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--ln);cursor:pointer">`);
+  const fresh=(line.photoData||[]).map(photo=>`<img src="${photo}" alt="صورة جديدة" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--ln)">`);
+  return saved.concat(fresh).join('');
 }
 function delDocLine(j){
   const D=DR[KK()];if(!D)return;
@@ -1304,7 +1480,7 @@ function docLineRows(key){
       <td><input class="mf-line" type="number" min="1" value="${l.q}" onchange="docSetQty(${j},this.value)"></td>
       <td><select class="mf-line" onchange="DR[KK()].lines[${j}].cd=this.value">${opts(['سليم','يحتاج صيانة','تالف'],l.cd)}</select></td>
       ${inn?`<td>${war}</td>`:''}
-      <td><input class="mf-line" value="${e(l.nt||'')}" oninput="DR[KK()].lines[${j}].nt=this.value"></td>
+      <td><input class="mf-line" value="${e(l.nt||'')}" oninput="DR[KK()].lines[${j}].nt=this.value">${inn?`<div class="no-print" style="margin-top:5px"><label style="font-size:11px">صور التلف عند الاستلام (حتى 3 صور للإذن)<input type="file" accept="image/jpeg,image/png,image/webp" multiple onchange="addInspectionPhotos(${j},this)"></label><div class="row" style="gap:4px;margin:4px 0">${inspectionPhotoPreview(l)}</div></div>`:''}</td>
     </tr>`;
   }).join('');
 }
@@ -1314,6 +1490,7 @@ function docDateCell(label,D){
 }
 function docSheet(key){
   const S=DS[key],D=DR[key],inn=S.dir==='in',isb=S.kind==='br';
+  const handover=key==='issbr'&&D.lines.some(line=>hasSer(line.i));
   const cols=inn?['م','التصنيف','اسم الصنف','السيريال','الكمية','الحالة','الضمان','ملاحظات']:['م','التصنيف','اسم الصنف','السيريال','الكمية','الحالة','ملاحظات'];
   const widths=inn?['4%','11%','19%','22%','6%','9%','18%','11%']:['4%','13%','23%','28%','7%','13%','12%'];
   const selectedForm=key==='issmaint'?MFORMS.find(f=>Number(f.id)===Number(D.maintenanceFormId)):null;
@@ -1321,7 +1498,7 @@ function docSheet(key){
   const party=isb
     ?`<div class="mf-cell"><span class="mf-label">${e(docPartyLabel(key))} *</span><select id="doc_branch" class="mf-line" required onchange="docSetBranch(this.value)">${branches.map(b=>`<option value="${b.id}"${Number(b.id)===Number(D.b)?' selected':''}>${e(b.n)}</option>`).join('')}</select></div>`
     :`<div class="mf-cell"><span class="mf-label">${e(docPartyLabel(key))} *</span><select id="doc_supplier" class="mf-line" required onchange="docSetSupplier(this.value)">${supplierOptions(D.sup)}</select></div>`;
-  const secondLbl=key==='recvsup'?'المورد / المسلّم':isb&&inn?'مسؤول الفرع':'اسم المستلم';
+  const secondLbl=handover?'الموظف المستلم *':key==='recvsup'?'المورد / المسلّم':isb&&inn?'مسؤول الفرع':'اسم المستلم';
   return `${mfTitleBar(VFORM_TITLE[key]||S.t)}
     ${maintenanceFormField}
     <div class="mf-sec"><div class="mf-sec-head">بيانات الإذن</div><div class="mf-table">
@@ -1340,14 +1517,14 @@ function docSheet(key){
       <table class="dsp-table"><colgroup>${widths.map(w=>`<col style="width:${w}">`).join('')}</colgroup>
        <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
        <tbody>${docLineRows(key)}${docFillRows(cols,Math.max(0,20-D.lines.length))}</tbody></table>
-      <div class="dsp-row-actions no-print"><button class="btn ghost" onclick="addDocLine()">إضافة صنف</button><span class="dsp-type-note">${inn?'الاستلام يزيد المخزون.':'لا يمكن الصرف بأكثر من رصيد المخزن، ولا تكرار السيريال.'}</span></div>
+      <div class="dsp-row-actions no-print"><button class="btn ghost" onclick="addDocLine()">إضافة صنف</button><span class="dsp-type-note">${inn?'كل استلام يُحجز للفحص؛ السليم يدخل المخزون والتالف ينتقل للخردة بعد الاعتماد.':'لا يمكن الصرف بأكثر من رصيد المخزن، ولا تكرار السيريال.'}</span></div>
     </div>
     <div class="mf-sec"><div class="mf-sec-head">ملاحظات</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1fr"><div class="mf-cell mf-block"><textarea class="mf-area" rows="2" oninput="DR[KK()].note=this.value">${e(D.note||'')}</textarea></div></div></div></div>
-    <div class="mf-sec"><div class="mf-sec-head">التسليم والاستلام</div><div class="mf-table">
+    <div class="mf-sec"><div class="mf-sec-head">${handover?'تسليم العهدة بين الموظفين':'التسليم والاستلام'}</div><div class="mf-table">
       <div class="mf-row" style="grid-template-columns:1.45fr 1.45fr 1fr 1.35fr">
-        <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">مسؤول المخزن</span><input class="mf-line" value="${e(D.stockOfficer||'')}" oninput="DR[KK()].stockOfficer=this.value"></div><div class="sub"><span class="mf-label">التوقيع</span><input class="mf-line" value="${e(D.stockOfficerSig||'')}" oninput="DR[KK()].stockOfficerSig=this.value"></div></div></div>
-        <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">${e(secondLbl)}</span><input class="mf-line" value="${e(D.receiverName||'')}" oninput="DR[KK()].receiverName=this.value"></div><div class="sub"><span class="mf-label">التوقيع</span><input class="mf-line" value="${e(D.receiverSig||'')}" oninput="DR[KK()].receiverSig=this.value"></div></div></div>
-        <div class="mf-cell"><span class="mf-label">${inn?'تاريخ الاستلام':'تاريخ التسليم'}</span><span class="mf-date"><input class="mf-line" id="doc_receiveDate" type="date" value="${e(D.receiveDate||'')}" data-mirror="mfm_doc_receiveDate" oninput="mfDateSync(this);DR[KK()].receiveDate=this.value"><span class="mirror" id="mfm_doc_receiveDate">${D.receiveDate?e(mfDMY(D.receiveDate)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div>
+        <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">${handover?'الموظف المُسلِّم *':'مسؤول المخزن'}</span>${handover?`<input class="mf-line" id="doc_giverName" required value="${e(D.giverName||'')}" oninput="DR[KK()].giverName=this.value">`:`<input class="mf-line" value="${e(D.stockOfficer||'')}" oninput="DR[KK()].stockOfficer=this.value">`}</div><div class="sub"><span class="mf-label">${handover?'التوقيع الكتابي *':'التوقيع'}</span>${handover?`<input class="mf-line" id="doc_giverSignature" required value="${e(D.giverSignature||'')}" oninput="DR[KK()].giverSignature=this.value">`:`<input class="mf-line" value="${e(D.stockOfficerSig||'')}" oninput="DR[KK()].stockOfficerSig=this.value">`}</div></div></div>
+        <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">${e(secondLbl)}</span><input class="mf-line" ${handover?'id="doc_receiverName" required':''} value="${e(D.receiverName||'')}" oninput="DR[KK()].receiverName=this.value"></div><div class="sub"><span class="mf-label">${handover?'التوقيع الكتابي *':'التوقيع'}</span><input class="mf-line" ${handover?'id="doc_receiverSignature" required':''} value="${e(D.receiverSig||'')}" oninput="DR[KK()].receiverSig=this.value"></div></div></div>
+        <div class="mf-cell"><span class="mf-label">${handover?'تاريخ التسليم *':inn?'تاريخ الاستلام':'تاريخ التسليم'}</span><span class="mf-date"><input class="mf-line" id="doc_receiveDate" type="date" ${handover?'required':''} value="${e(D.receiveDate||'')}" data-mirror="mfm_doc_receiveDate" oninput="mfDateSync(this);DR[KK()].receiveDate=this.value"><span class="mirror" id="mfm_doc_receiveDate">${D.receiveDate?e(mfDMY(D.receiveDate)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div>
         ${mfStamp('ختم مخزن النظم')}
       </div>
      </div></div>`;
@@ -1366,7 +1543,7 @@ function vDocEditor(key){
       </div>
       <div class="grp"><span class="mf-no">${ed?'إذن رقم '+e(D.p):'إذن جديد'}</span></div>
     </div>
-    <p class="mf-hint no-print">هذه هي صفحة الإدخال نفسها: املأ النموذج ثم اضغط «${ed?'حفظ التعديل':'تسجيل الإذن'}» ليُحدَّث المخزون، أو «طباعة» لطباعة الورقة كما هي.</p>
+    <p class="mf-hint no-print">${key==='issbr'?'عند صرف جهاز له سيريال، سجّل اسم الموظف المُسلِّم والمستلم وتوقيعهما الكتابي وتاريخ التسليم؛ تُحفظ البيانات مع الإذن وتظهر في سجل الأذون.':'هذه هي صفحة الإدخال نفسها: املأ النموذج ثم اضغط «'+(ed?'حفظ التعديل':'تسجيل الإذن')+'» ليُحدَّث المخزون، أو «طباعة» لطباعة الورقة كما هي.'}</p>
     <div class="print-root"><div class="paper-wrap"><div class="paper-sheet">${docSheet(key)}</div></div></div>
     ${linkedFormPage}
   </div>`;
@@ -1409,12 +1586,15 @@ function vDocLegacy(key){
   ${sbox('doc_'+key,'بحث: رقم إذن، جهة، صنف، سيريال، مستخدم، تاريخ',d.total)}<h2>${icon(key)} ${S.t} (${d.total})</h2><div id="res_doc_${key}">${d.html}</div>`;
 }
 function docMatchText(r){
-  return [r.p,partyName(r),r.d,r.by,r.ed,r.sb,r.lines.map(l=>[(it(l.i)||{}).n,(it(l.i)||{}).c,(l.sns||[]).join(' '),l.rs,l.nt].join(' ')).join(' ')].join(' ');
+  const meta=dspMeta(r.id);
+  return [r.p,partyName(r),r.d,r.by,r.ed,r.sb,meta.giverName,meta.receiverName,r.lines.map(l=>[(it(l.i)||{}).n,(it(l.i)||{}).c,(l.sns||[]).join(' '),l.rs,l.nt].join(' ')).join(' ')].join(' ');
 }
 function docCard(key,r){
   const S=DS[key],K=S.dir,inn=K=='in',party=partyName(r);
   const mfLink=key=='recvbr'||key=='issmaint';
-  return `<div class="box"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>إذن رقم ${e(r.p)}</b> <span class="chip ok">${SRC[K][r.k]}</span><div class="mut">الجهة: ${e(party)}${r.sb?' · من فرع '+e(r.sb):''} · ${dcell(r.d)} · ${e(r.by)}${r.ed?' · عدّله '+e(r.ed):''}</div></div>
+  const handover=key==='issbr'?dspMeta(r.id):null;
+  const handoverSummary=handover&&handover.giverName?`<div class="mut">العهدة: سلّمها ${e(handover.giverName)} (${e(handover.giverSignature||'')}) إلى ${e(handover.receiverName||'-')} (${e(handover.receiverSignature||'')}) · التاريخ ${dcell(handover.receiveDate||r.d)}</div>`:'';
+  return `<div class="box"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>إذن رقم ${e(r.p)}</b> <span class="chip ok">${SRC[K][r.k]}</span><div class="mut">الجهة: ${e(party)}${r.sb?' · من فرع '+e(r.sb):''} · ${dcell(r.d)} · ${e(r.by)}${r.ed?' · عدّله '+e(r.ed):''}</div>${handoverSummary}</div>
    <div class="acts" style="flex-wrap:wrap">${ok('stock')?`<button class="btn ghost" onclick="editDoc(${r.id})">تعديل</button>`:''}${key==='issmaint'?'':`<button class="btn soft" onclick="printVoucher('${key}',${r.id})">طباعة</button>`}${ok('delRecv')?`<button class="btn bad" onclick="delDoc(${r.id})">حذف</button>`:''}</div></div>
    <div class="tw"><table><tr><th>الصنف</th><th>السيريال</th>${inn?'<th>الحالة</th>':'<th>سبب الصيانة</th><th>شرح</th>'}<th>العدد</th>${mfLink?'<th></th>':''}</tr>${r.lines.map((l,j)=>`<tr><td class="nmcell">${e((it(l.i)||{n:'-'}).n)}</td><td>${l.sns.length?snList(l.sns):'<span class="mut">بدون سيريال</span>'}</td>${inn?`<td>${e(SM[l.st]||SM.stock)}${l.hw?` · ضمان حتى ${e(l.wu||'')}`:''}</td>`:`<td>${e(l.rs||'-')}</td><td>${e(l.nt||'-')}</td>`}<td>${l.q}</td>${mfLink?`<td><button class="btn ghost" style="padding:5px 9px;font-size:12px" onclick="mfFromVoucher(${r.id},${j})">نموذج صيانة</button></td>`:''}</tr>`).join('')}</table></div></div>`;
 }
@@ -1440,12 +1620,18 @@ function editDoc(id){
   E[key]=id;pend=null;
   const m=dspMeta(r.id),b=r.b?br(r.b):null;
   const linkedForm=MFORMS.find(f=>Number(f.issuePermitId)===Number(r.id));
-  DR[key]={k:DS[key].kind,sup:r.sup||'',b:r.b||(branches[0]?branches[0].id:null),p:r.p||'',d:r.d||isoToday(),sb:r.sb||'',note:m.note||'',by:m.stockOfficer||r.by||'',stockOfficer:m.stockOfficer||r.by||'',stockOfficerSig:m.stockOfficerSignature||'',receiverName:m.receiverName||'',receiverSig:m.receiverSignature||'',receiveDate:m.receiveDate||r.d||isoToday(),gov:m.gov||(b?(b.g||''):''),addr:m.address||(b?(b.address||''):''),maintenanceFormId:m.maintenanceFormId||(linkedForm?linkedForm.id:null),original:{},lines:r.lines.map(l=>({i:l.i,q:l.q,sns:[...l.sns],st:l.st||'stock',rs:l.rs||'',nt:l.nt||'',cd:l.cd||'سليم',hw:!!l.hw,wu:l.wu||''}))};
+  DR[key]={k:DS[key].kind,sup:r.sup||'',b:r.b||(branches[0]?branches[0].id:null),p:r.p||'',d:r.d||isoToday(),sb:r.sb||'',note:m.note||'',by:m.stockOfficer||r.by||'',stockOfficer:m.stockOfficer||r.by||'',stockOfficerSig:m.stockOfficerSignature||'',giverName:m.giverName||'',giverSignature:m.giverSignature||'',receiverName:m.receiverName||'',receiverSig:m.receiverSignature||'',receiveDate:m.receiveDate||r.d||isoToday(),gov:m.gov||(b?(b.g||''):''),addr:m.address||(b?(b.address||''):''),maintenanceFormId:m.maintenanceFormId||(linkedForm?linkedForm.id:null),original:{},lines:r.lines.map(l=>({i:l.i,q:l.q,sns:[...l.sns],st:l.st||'stock',rs:l.rs||'',nt:l.nt||'',cd:l.cd||'سليم',hw:!!l.hw,wu:l.wu||'',insp:l.insp||null,photoData:[]}))};
   r.lines.forEach(l=>{DR[key].original[l.i]=(DR[key].original[l.i]||0)+(+l.q||0)});
   docView='edit';go();window.scrollTo(0,0);
 }
 async function saveDoc(){
   const key=KK(),S=DS[key],K=S.dir,D=DR[key],k=S.kind,isb=k=='br',inn=K=='in',sendMaint=K=='out'&&k=='sup',sup=(D.sup||'').trim(),p=(D.p||'').trim(),editing=E[key];
+  const handover=key==='issbr'&&D.lines.some(line=>hasSer(line.i));
+  if(handover&&!D.giverName.trim())return setFormError('اكتب اسم الموظف المُسلِّم','doc_giverName');
+  if(handover&&!D.giverSignature.trim())return setFormError('اكتب توقيع الموظف المُسلِّم','doc_giverSignature');
+  if(handover&&!D.receiverName.trim())return setFormError('اكتب اسم الموظف المستلم','doc_receiverName');
+  if(handover&&!D.receiverSig.trim())return setFormError('اكتب توقيع الموظف المستلم','doc_receiverSignature');
+  if(handover&&!D.receiveDate)return setFormError('اختر تاريخ التسليم','doc_receiveDate');
   if(isb&&!br(D.b))return setFormError('اختر فرعًا مسجلًا','doc_branch');
   if(k=='sup'&&!sup)return setFormError('اختر المورد','doc_supplier');
   const maintenanceForm=sendMaint?MFORMS.find(f=>Number(f.id)===Number(D.maintenanceFormId)):null;
@@ -1472,21 +1658,30 @@ async function saveDoc(){
     if(inn&&l.hw&&!l.wu)return setFormError('اكتب تاريخ انتهاء الضمان');
     lines.push({
       item_id:+l.i,qty:+l.q,serials:sns,
-      state:'stock',
+      state:inn?'inspection':'stock',
       reason:sendMaint?(l.rs||''):'',
       note:l.nt||'',
       condition:l.cd||'سليم',
+      inspection_notes:inn?(l.nt||''):'',
+      photos:inn?(l.photoData||[]):[],
       has_warranty:inn?!!l.hw:false,
       warranty_until:inn&&l.hw?(l.wu||''):''
     });
   }
   const body={direction:K,kind:k,number:p,doc_date:D.d||'',supplier_name:isb?'':sup,branch_id:isb?+D.b:null,source_branch:sendMaint?(D.sb||''):'',lines};
   if(sendMaint)Object.assign(body,{maintenance_flow:true,maintenance_form_id:D.maintenanceFormId,note:D.note||'',stockOfficer:D.stockOfficer||'',stockOfficerSignature:D.stockOfficerSig||'',receiverName:D.receiverName||'',receiverSignature:D.receiverSig||'',receiveDate:D.receiveDate||'',gov:D.gov||'',address:D.addr||''});
+  if(handover)body.handover={giverName:D.giverName,giverSignature:D.giverSignature,receiverName:D.receiverName,receiverSignature:D.receiverSig,receiveDate:D.receiveDate};
   try{
     const res=editing?await api('/vouchers/'+editing,'PUT',body):await api('/vouchers','POST',body);
     const vid=(res&&res.id)||editing;
-    if(vid&&!sendMaint){
-      try{await api('/dispatch-meta/'+vid,'PUT',{destType:isb?'branch':'supplier',note:D.note||'',stockOfficer:D.stockOfficer||'',stockOfficerSignature:D.stockOfficerSig||'',receiverName:D.receiverName||'',receiverSignature:D.receiverSig||'',receiveDate:D.receiveDate||'',gov:D.gov||'',address:D.addr||'',partyName:docPartyValue(key,D)})}catch(_){}
+    if(vid&&!sendMaint&&!handover){
+      try{await api('/dispatch-meta/'+vid,'PUT',{destType:isb?'branch':'supplier',note:D.note||'',stockOfficer:D.stockOfficer||'',stockOfficerSignature:D.stockOfficerSig||'',receiverName:D.receiverName||'',receiverSignature:D.receiverSig||'',receiveDate:D.receiveDate||'',gov:D.gov||'',address:D.addr||'',partyName:docPartyValue(key,D)})}
+      catch(err){
+        if(key==='issbr'){
+          E[key]=vid;await refresh();toast('تم تسجيل الإذن، لكن تعذر حفظ بيانات التسليم: '+err.message+' — أعد الحفظ من نفس الشاشة.');go();return;
+        }
+        throw err;
+      }
     }
     resetDoc();docView='list';if(document.activeElement)document.activeElement.blur();
     if(sendMaint)maintView='release';
@@ -2499,10 +2694,10 @@ function vfFill(cols,n){
   for(let i=0;i<n;i++)h+=`<tr class="fill">${cols.map(()=>'<td>&nbsp;</td>').join('')}</tr>`;
   return h;
 }
-function vfSignRow(firstName,secondLabel,secondName,dateLabel,date,firstLabel){
+function vfSignRow(firstName,secondLabel,secondName,dateLabel,date,firstLabel,firstSignature,secondSignature){
   return `<div class="mf-row" style="grid-template-columns:1.45fr 1.45fr 1fr 1.35fr">
-    <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">${e(firstLabel||'مسؤول المخزن')}</span><span class="mf-val">${firstName?e(firstName):'&nbsp;'}</span></div><div class="sub"><span class="mf-label">التوقيع</span><span class="mf-val">&nbsp;</span></div></div></div>
-    <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">${e(secondLabel)}</span><span class="mf-val">${secondName?e(secondName):'&nbsp;'}</span></div><div class="sub"><span class="mf-label">التوقيع</span><span class="mf-val">&nbsp;</span></div></div></div>
+    <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">${e(firstLabel||'مسؤول المخزن')}</span><span class="mf-val">${firstName?e(firstName):'&nbsp;'}</span></div><div class="sub"><span class="mf-label">التوقيع</span><span class="mf-val">${firstSignature?e(firstSignature):'&nbsp;'}</span></div></div></div>
+    <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">${e(secondLabel)}</span><span class="mf-val">${secondName?e(secondName):'&nbsp;'}</span></div><div class="sub"><span class="mf-label">التوقيع</span><span class="mf-val">${secondSignature?e(secondSignature):'&nbsp;'}</span></div></div></div>
     <div class="mf-cell"><div class="mf-stack"><div class="sub"><span class="mf-label">${e(dateLabel)}</span></div><div class="sub"><span class="mf-val">${date?e(mfDMY(date)):'&nbsp;/&nbsp;/&nbsp;'}</span></div></div></div>
     ${mfStamp('ختم مخزن النظم')}
   </div>`;
@@ -2532,7 +2727,7 @@ function voucherDocSheet(key,id,blank){
   const minRows=22;
   const note=m.note||rec.lines.map(l=>l.nt).filter(Boolean).join(' | ');
   const dateLbl=isIn?'تاريخ الاستلام':'تاريخ التسليم';
-  const secondLbl=key==='recvsup'?'المورد / المسلّم':isIn?'مسؤول الفرع':'اسم المستلم';
+  const secondLbl=key==='issbr'?'الموظف المستلم':key==='recvsup'?'المورد / المسلّم':isIn?'مسؤول الفرع':'اسم المستلم';
   const secondName=m.receiverName||(isIn?party:((b&&b.manager)||''));
   return `${mfTitleBar(VFORM_TITLE[key]||DS[key].t)}
     <div class="mf-sec"><div class="mf-sec-head">بيانات الإذن</div><div class="mf-table">
@@ -2553,8 +2748,8 @@ function voucherDocSheet(key,id,blank){
        <tbody>${rows}${vfFill(cols,Math.max(0,minRows-rec.lines.length))}</tbody></table>
      </div>
     <div class="mf-sec"><div class="mf-sec-head">ملاحظات</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1fr"><div class="mf-cell mf-block"><textarea class="mf-area" rows="6" readonly>${e(note)}</textarea></div></div></div></div>
-    <div class="mf-sec"><div class="mf-sec-head">التسليم والاستلام</div><div class="mf-table">
-      ${vfSignRow(rec.by,secondLbl,secondName,dateLbl,rec.d)}
+    <div class="mf-sec"><div class="mf-sec-head">${key==='issbr'&&m.giverName?'تسليم العهدة بين الموظفين':'التسليم والاستلام'}</div><div class="mf-table">
+      ${key==='issbr'&&m.giverName?vfSignRow(m.giverName,secondLbl,secondName,dateLbl,m.receiveDate||rec.d,'الموظف المُسلِّم',m.giverSignature,m.receiverSignature):vfSignRow(rec.by,secondLbl,secondName,dateLbl,rec.d)}
      </div></div>`;
 }
 function scrapDocSheet(id,blank){

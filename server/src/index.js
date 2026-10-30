@@ -22,7 +22,7 @@ const routes = require('./routes');
 const app = express();
 app.use(cors());
 app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '8mb' }));
 
 // Build id derived from the UI and server sources, so any deployed change makes
 // the 15-second client poll reload the page.

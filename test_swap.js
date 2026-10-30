@@ -123,7 +123,7 @@ assert.strictEqual(editBlocked.ok, false);
 // 8. Delta shape helpers.
 assert.deepStrictEqual(
   voucherDeltas({ direction: 'out', kind: 'br', branch_id: 3, lines: [{ itemId: 6, qty: 1 }] }),
-  [{ itemId: 6, stock: -1, maint: 0, scrap: 0, branchId: 3, branch: 1 }]
+  [{ itemId: 6, stock: -1, maint: 0, scrap: 0, inspection: 0, branchId: 3, branch: 1 }]
 );
 
 // 9. Scrapping deducts from the warehouse balance and feeds the terminal pool.

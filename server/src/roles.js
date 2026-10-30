@@ -21,9 +21,19 @@ const CAN = {
   maintView: ['admin', 'head', 'senior', 'store', 'junior'],
   maintCreate: ['admin', 'head', 'senior', 'store', 'junior'],
   maintEdit: ['admin', 'head', 'senior', 'store'],
-  maintDelete: ['admin', 'head']
+  maintDelete: ['admin', 'head'],
+  inspectionReview: ['admin', 'head', 'store']
 };
 
-const can = (role, perm) => CAN[perm].includes(role);
+const can = (user, perm) => {
+  const role = typeof user === 'string' ? user : user && user.role;
+  if (perm === 'userAdmin') return role === 'admin';
+  if (!Object.prototype.hasOwnProperty.call(CAN, perm)) return false;
+  const permissions = user && typeof user === 'object' && user.permissions;
+  if (permissions && Object.prototype.hasOwnProperty.call(permissions, perm)) {
+    return permissions[perm] === true;
+  }
+  return CAN[perm].includes(role);
+};
 
 module.exports = { CAN, can };
