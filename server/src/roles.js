@@ -22,7 +22,9 @@ const CAN = {
   maintCreate: ['admin', 'head', 'senior', 'store', 'junior'],
   maintEdit: ['admin', 'head', 'senior', 'store'],
   maintDelete: ['admin', 'head'],
-  inspectionReview: ['admin', 'head', 'store']
+  inspectionReview: ['admin', 'head', 'store'],
+  stocktake: ['admin', 'head', 'store'],
+  stocktakeApprove: ['admin', 'head']
 };
 
 const can = (user, perm) => {

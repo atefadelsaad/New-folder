@@ -68,7 +68,8 @@ function newCounters() {
     requestLine: 0,
     requestLog: 0,
     form: 0,
-    audit: 0
+    audit: 0,
+    stocktake: 0
   };
 }
 
@@ -84,6 +85,7 @@ const state = {
   scrapEntries: [],
   requests: [],
   forms: [],
+  stocktakes: [],
   dispatchMeta: {},
   auditLog: []
 };
@@ -166,6 +168,9 @@ function load() {
     lines: asArray(r.lines),
     log: asArray(r.log)
   }));
+  state.stocktakes = asArray(domain.stocktakes).map((s) => Object.assign({}, s, {
+    lines: asArray(s.lines)
+  }));
 
   if (!hasDomain || !state.users.length) seed();
 
@@ -192,6 +197,7 @@ function ensureCounters() {
   c.request = Math.max(Number(c.request) || 0, MAX_ID(state.requests));
   c.requestLine = Math.max(Number(c.requestLine) || 0, state.requests.reduce((m, r) => Math.max(m, MAX_ID(r.lines)), 0));
   c.requestLog = Math.max(Number(c.requestLog) || 0, state.requests.reduce((m, r) => Math.max(m, MAX_ID(r.log)), 0));
+  c.stocktake = Math.max(Number(c.stocktake) || 0, MAX_ID(state.stocktakes));
   c.form = Math.max(Number(c.form) || 0, MAX_ID(state.forms), MAX_FORM_NO(state.forms));
   c.audit = Math.max(Number(c.audit) || 0, MAX_ID(state.auditLog));
 }
@@ -266,7 +272,8 @@ function snapshot() {
     suppliers: state.suppliers,
     vouchers: state.vouchers,
     scrapEntries: state.scrapEntries,
-    requests: state.requests
+    requests: state.requests,
+    stocktakes: state.stocktakes
   };
 }
 
@@ -300,6 +307,7 @@ function auditEntities(source) {
     ['voucher', source.vouchers],
     ['scrap', source.scrapEntries],
     ['request', source.requests],
+    ['stocktake', source.stocktakes],
     ['maintenance-form', source.forms]
   ];
   collections.forEach(([name, rows]) => {
@@ -391,30 +399,161 @@ function serialLedger(itemIds, excludeVoucherId) {
       serial: String(sn)
     });
   };
-  const vouchers = liveVouchers().slice().sort((a, b) => Number(a.id) - Number(b.id));
-  for (const v of vouchers) {
-    if (excludeVoucherId != null && Number(v.id) === Number(excludeVoucherId)) continue;
-    for (const line of v.lines) {
-      if (!wanted.has(Number(line.item_id))) continue;
-      const serials = Array.isArray(line.serials) ? line.serials : [];
-      for (const sn of serials) {
-        if (!String(sn || '').trim()) continue;
-        if (v.direction === 'out') {
-          put(line.item_id, sn, v.kind === 'br' ? 'branch' : 'maint', v.kind === 'br' ? v.branch_id : null);
-        } else {
-          const stateName = String(line.state);
-          put(line.item_id, sn, stateName === 'inspection' ? 'inspection' : stateName === 'scrap' ? 'scrap' : 'stock', null);
+  const events = [];
+  let sequence = 0;
+  liveVouchers().slice().sort((a, b) => Number(a.id) - Number(b.id)).forEach((voucher) => {
+    if (excludeVoucherId != null && Number(voucher.id) === Number(excludeVoucherId)) return;
+    let at = voucher.edited_at || voucher.created_at || '';
+    (voucher.lines || []).forEach((line) => {
+      const reviewedAt = line.inspection && line.inspection.reviewed_at;
+      if (reviewedAt && (!at || String(reviewedAt) > String(at))) at = reviewedAt;
+    });
+    events.push({ at, sequence: sequence++, type: 'voucher', record: voucher });
+  });
+  state.scrapEntries.slice().sort((a, b) => Number(a.id) - Number(b.id)).forEach((record) => {
+    events.push({ at: record.created_at || '', sequence: sequence++, type: 'scrap', record });
+  });
+  state.stocktakes.filter((record) => record.status === 'approved').slice()
+    .sort((a, b) => Number(a.id) - Number(b.id)).forEach((record) => {
+      events.push({ at: record.approved_at || '', sequence: sequence++, type: 'stocktake', record });
+    });
+  events.sort((a, b) => String(a.at).localeCompare(String(b.at)) || a.sequence - b.sequence);
+  for (const event of events) {
+    const record = event.record;
+    if (event.type === 'voucher') {
+      for (const line of record.lines || []) {
+        if (!wanted.has(Number(line.item_id))) continue;
+        const serials = Array.isArray(line.serials) ? line.serials : [];
+        for (const sn of serials) {
+          if (!String(sn || '').trim()) continue;
+          if (record.direction === 'out') {
+            put(line.item_id, sn, record.kind === 'br' ? 'branch' : 'maint', record.kind === 'br' ? record.branch_id : null);
+          } else {
+            const stateName = String(line.state);
+            put(line.item_id, sn, stateName === 'inspection' ? 'inspection' : stateName === 'scrap' ? 'scrap' : 'stock', null);
+          }
         }
+      }
+    } else if (event.type === 'scrap') {
+      if (!wanted.has(Number(record.item_id))) continue;
+      const serials = Array.isArray(record.serials) ? record.serials : [];
+      for (const sn of serials) if (String(sn || '').trim()) put(record.item_id, sn, 'scrap', null);
+    } else {
+      for (const line of record.lines || []) {
+        const itemId = Number(line.item_id);
+        if (!wanted.has(itemId)) continue;
+        const prefix = itemId + '|';
+        const actual = new Set((Array.isArray(line.actual_serials) ? line.actual_serials : []).map((sn) => String(sn).toLowerCase()));
+        for (const [key, value] of ledger.entries()) {
+          if (key.startsWith(prefix) && value.state === 'stock' && !actual.has(String(value.serial).toLowerCase())) ledger.delete(key);
+        }
+        for (const serial of line.actual_serials || []) put(itemId, serial, 'stock', null);
       }
     }
   }
-  const scrap = state.scrapEntries.slice().sort((a, b) => Number(a.id) - Number(b.id));
-  for (const row of scrap) {
-    if (!wanted.has(Number(row.item_id))) continue;
-    const serials = Array.isArray(row.serials) ? row.serials : [];
-    for (const sn of serials) if (String(sn || '').trim()) put(row.item_id, sn, 'scrap', null);
-  }
   return ledger;
+}
+
+function stocktakeById(id) {
+  return state.stocktakes.find((entry) => Number(entry.id) === Number(id)) || null;
+}
+
+function createStocktake(actor) {
+  if (!state.items.length) fail(400, 'أضف صنفًا واحدًا على الأقل قبل بدء الجرد');
+  return tx((st) => {
+    const createdAt = nowIso();
+    const lines = st.items.map((item) => {
+      const serials = hasSerial(item.id)
+        ? [...serialLedger([item.id], null).entries()].filter(([, value]) => value.state === 'stock').map(([, value]) => value.serial)
+        : [];
+      return {
+        item_id: Number(item.id),
+        item_name: item.name,
+        category_name: (categoryById(item.category_id) || {}).name || '',
+        has_serial: hasSerial(item.id),
+        expected_qty: Number(item.stock) || 0,
+        expected_serials: serials,
+        actual_qty: null,
+        actual_serials: [],
+        counted_by: '',
+        counted_at: ''
+      };
+    });
+    const entry = {
+      id: ++st.counters.stocktake,
+      number: 'INV-' + String(st.counters.stocktake).padStart(4, '0'),
+      status: 'counting',
+      created_by: actor,
+      created_at: createdAt,
+      lines
+    };
+    st.stocktakes.push(entry);
+    return entry;
+  });
+}
+
+function updateStocktake(id, rawLines, actor) {
+  if (!Array.isArray(rawLines) || !rawLines.length) fail(400, 'أدخل كميات الجرد');
+  return tx((st) => {
+    const entry = stocktakeById(id);
+    if (!entry) fail(404, 'جلسة الجرد غير موجودة');
+    if (entry.status !== 'counting') fail(409, 'جلسة الجرد مغلقة');
+    const seenItems = new Set();
+    for (const raw of rawLines) {
+      const itemId = Number(raw && raw.item_id);
+      const actual = Number(raw && raw.actual_qty);
+      if (!Number.isInteger(itemId) || !Number.isInteger(actual) || actual < 0) fail(400, 'اكتب كمية فعلية صحيحة لكل صنف');
+      if (seenItems.has(itemId)) fail(400, 'الصنف مكرر في بيانات الجرد');
+      seenItems.add(itemId);
+      const line = entry.lines.find((row) => Number(row.item_id) === itemId);
+      if (!line) fail(400, 'الصنف غير موجود في جلسة الجرد');
+      const serials = Array.isArray(raw.serials) ? raw.serials.map((sn) => String(sn || '').trim()).filter(Boolean) : [];
+      if (hasSerial(itemId)) {
+        if (serials.length !== actual) fail(400, 'عدد السيريالات يجب أن يساوي الكمية الفعلية للصنف ' + line.item_name);
+        const unique = new Set(serials.map((sn) => sn.toLowerCase()));
+        if (unique.size !== serials.length) fail(400, 'يوجد سيريال مكرر للصنف ' + line.item_name);
+      } else if (serials.length) {
+        fail(400, 'لا تقبل سيريالات لهذا الصنف');
+      }
+      line.actual_qty = actual;
+      line.actual_serials = serials;
+      line.counted_by = actor;
+      line.counted_at = nowIso();
+    }
+    return entry;
+  });
+}
+
+function approveStocktake(id, actor) {
+  return tx((st) => {
+    const entry = stocktakeById(id);
+    if (!entry) fail(404, 'جلسة الجرد غير موجودة');
+    if (entry.status !== 'counting') fail(409, 'جلسة الجرد مغلقة');
+    for (const line of entry.lines) {
+      const item = itemById(line.item_id);
+      if (!item || line.actual_qty == null) fail(400, 'أكمل عدّ كل الأصناف قبل اعتماد التسوية');
+      if ((Number(item.stock) || 0) !== Number(line.expected_qty)) fail(409, 'تغير رصيد الصنف ' + line.item_name + ' بعد بدء الجرد؛ ابدأ جلسة جديدة قبل الاعتماد');
+      if (hasSerial(item.id)) {
+        const current = [...serialLedger([item.id], null).entries()]
+          .filter(([, value]) => value.state === 'stock').map(([, value]) => String(value.serial).toLowerCase()).sort();
+        const expected = (line.expected_serials || []).map((sn) => String(sn).toLowerCase()).sort();
+        if (JSON.stringify(current) !== JSON.stringify(expected)) fail(409, 'تغيرت سيريالات الصنف ' + line.item_name + ' بعد بدء الجرد');
+        const ledger = serialLedger([item.id], null);
+        for (const serial of line.actual_serials || []) {
+          const currentSerial = ledger.get(serialKey(item.id, serial));
+          if (currentSerial && currentSerial.state !== 'stock') fail(409, 'السيريال ' + serial + ' مسجل خارج المخزن');
+        }
+      }
+    }
+    for (const line of entry.lines) {
+      const item = itemById(line.item_id);
+      item.stock = Number(line.actual_qty);
+    }
+    entry.status = 'approved';
+    entry.approved_by = actor;
+    entry.approved_at = nowIso();
+    return entry;
+  });
 }
 
 const serialKey = (itemId, sn) => Number(itemId) + '|' + String(sn).toLowerCase();
@@ -869,6 +1008,10 @@ module.exports = {
   branchQty,
   setBranchQty,
   serialLedger,
+  stocktakeById,
+  createStocktake,
+  updateStocktake,
+  approveStocktake,
   serialKey,
   pickStockSerials,
   validateSerials,

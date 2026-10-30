@@ -52,6 +52,17 @@ async function bootstrap(token) {
   return r.data;
 }
 
+async function reviewReceipt(token, voucherId) {
+  const b = await bootstrap(token);
+  const rows = (b.inspectionQueue || []).filter((row) => Number(row.voucherId) === Number(voucherId));
+  check('receipt appears in inspection queue', rows.length > 0, rows);
+  for (const row of rows) {
+    const r = await call(token, 'POST', '/inspections/' + row.voucherId + '/' + row.lineId + '/review', { decision: 'good' });
+    check('approve inspected receipt line', r.status === 200, r);
+  }
+  return rows.length;
+}
+
 const today = () => new Date().toISOString().slice(0, 10);
 const itemById = (b, id) => b.items.find((i) => Number(i.id) === Number(id)) || {};
 const requestById = (b, id) => b.requests.find((r) => Number(r.id) === Number(id)) || {};
@@ -139,7 +150,10 @@ async function phaseRun() {
   const inVoucherId = r.data.id;
 
   b = await bootstrap(admin);
-  check('stock is 2 after receipt', itemById(b, itemId).s === 2, itemById(b, itemId).s);
+  check('receipt is held for inspection', itemById(b, itemId).s === 0 && itemById(b, itemId).held === 2, itemById(b, itemId));
+  await reviewReceipt(admin, inVoucherId);
+  b = await bootstrap(admin);
+  check('stock is 2 after inspection approval', itemById(b, itemId).s === 2, itemById(b, itemId).s);
 
   check('duplicate serial rejected', (await call(admin, 'POST', '/vouchers', {
     direction: 'in', kind: 'sup', number: 'T-IN-DUP-' + suffix, supplier_name: supplierName,
@@ -155,6 +169,25 @@ async function phaseRun() {
   check('voucher without number rejected', (await call(admin, 'POST', '/vouchers', {
     direction: 'in', kind: 'sup', supplier_name: supplierName, lines: [{ item_id: itemId, qty: 1, serials: [s1] }]
   })).status === 400);
+
+  /* ------------------------------ stocktake -------------------------- */
+  r = await call(tokens.store, 'POST', '/stocktakes', {});
+  check('store creates stocktake session', r.status === 200 && r.data.stocktake, r);
+  const stocktake = r.data.stocktake;
+  check('stocktake snapshots current inventory', stocktake.lines.some((line) => Number(line.item_id) === Number(itemId) && line.expected_qty === 2), stocktake.lines);
+  const countedLines = stocktake.lines.map((line) => ({
+    item_id: line.item_id,
+    actual_qty: line.expected_qty,
+    serials: line.expected_serials || []
+  }));
+  r = await call(tokens.store, 'PUT', '/stocktakes/' + stocktake.id, { lines: countedLines });
+  check('store saves counted quantities', r.status === 200, r);
+  check('store cannot approve stocktake', (await call(tokens.store, 'POST', '/stocktakes/' + stocktake.id + '/approve', {})).status === 403);
+  r = await call(admin, 'POST', '/stocktakes/' + stocktake.id + '/approve', {});
+  check('admin approves stocktake', r.status === 200 && r.data.stocktake.status === 'approved', r);
+  b = await bootstrap(admin);
+  check('approved stocktake appears in bootstrap', b.stocktakes.some((row) => Number(row.id) === Number(stocktake.id) && row.status === 'approved'));
+  check('junior cannot view stocktake sessions', (await bootstrap(tokens.junior)).stocktakes.length === 0);
 
   /* --------------------------- request flow --------------------------- */
   r = await call(tokens.junior, 'POST', '/requests', {
@@ -223,8 +256,12 @@ async function phaseRun() {
     lines: [{ item_id: itemId, qty: 1, serials: [remainingSerial], state: 'stock' }]
   });
   check('receive device back from branch', r.status === 200, r);
+  const branchReturnVoucherId = r.data.id;
   b = await bootstrap(admin);
-  check('stock back to 1 after branch return', itemById(b, itemId).s === 1, itemById(b, itemId).s);
+  check('branch return waits for inspection', itemById(b, itemId).s === 0 && itemById(b, itemId).held === 1, itemById(b, itemId));
+  await reviewReceipt(admin, branchReturnVoucherId);
+  b = await bootstrap(admin);
+  check('stock back to 1 after branch return inspection', itemById(b, itemId).s === 1, itemById(b, itemId).s);
 
   /* -------------------------- maintenance forms ----------------------- */
   const mfPayload = {
@@ -238,7 +275,7 @@ async function phaseRun() {
   check('create internal maintenance form', r.status === 200 && r.data.form, r);
   const internalForm = r.data.form;
   check('form gets an auto number', /^MF-\d{4}$/.test(internalForm.number), internalForm.number);
-  check('form number does not reuse MF-0001', internalForm.number !== 'MF-0001', internalForm.number);
+  check('first generated form starts at MF-0001', internalForm.number === 'MF-0001', internalForm.number);
   check('unknown form fields are kept', internalForm.customField === 'keep-me' && internalForm.nested && internalForm.nested.a === 1, internalForm);
 
   r = await call(admin, 'PUT', '/maintenance-forms/' + internalForm.id, { issuePermitId: null, status: 'received' });
@@ -258,11 +295,11 @@ async function phaseRun() {
   // Number reuse guard: create, delete, create again.
   r = await call(admin, 'POST', '/maintenance-forms', { maintenanceType: 'internal', status: 'received', branchName });
   const disposable = r.data.form;
-  check('delete form allowed for admin', (await call(admin, 'DELETE', '/maintenance-forms/' + disposable.id)).status === 200);
+  check('delete form allowed for admin', (await call(admin, 'DELETE', '/maintenance-forms/' + disposable.id, { reason: 'integration test cleanup' })).status === 200);
   r = await call(admin, 'POST', '/maintenance-forms', { maintenanceType: 'internal', status: 'received', branchName });
   const afterDelete = r.data.form;
   check('deleted form number is never reused', parseInt(afterDelete.number.replace(/\D/g, ''), 10) > parseInt(disposable.number.replace(/\D/g, ''), 10), { deleted: disposable.number, next: afterDelete.number });
-  await call(admin, 'DELETE', '/maintenance-forms/' + afterDelete.id);
+  await call(admin, 'DELETE', '/maintenance-forms/' + afterDelete.id, { reason: 'integration test cleanup' });
 
   /* ---------------------- dispatch to maintenance --------------------- */
   r = await call(admin, 'POST', '/vouchers', {
@@ -302,6 +339,7 @@ async function phaseRun() {
   });
   check('receive unit back from maintenance', r.status === 200 && r.data.id, r);
   const maintInVoucherId = r.data.id;
+  await reviewReceipt(admin, maintInVoucherId);
 
   r = await call(admin, 'PUT', '/maintenance-forms/' + externalForm.id, {
     entryPermitId: maintInVoucherId, status: 'received_after_maintenance'
@@ -316,7 +354,7 @@ async function phaseRun() {
   // The dispatched unit has already come back, so reversing this permit would
   // push the maintenance pool below zero: the delete must be refused and the
   // dispatch/form links must stay intact.
-  r = await call(admin, 'DELETE', '/vouchers/' + mOutVoucherId);
+  r = await call(admin, 'DELETE', '/vouchers/' + mOutVoucherId, { reason: 'integration test reversal' });
   check('delete refused when pools no longer allow reversal', r.status === 400 && arabic(r.data.error), r);
   b = await bootstrap(admin);
   check('dispatch kept after refused delete', !!b.dispatchMeta[mOutVoucherId], Object.keys(b.dispatchMeta));
@@ -343,7 +381,7 @@ async function phaseRun() {
   b = await bootstrap(admin);
   check('second dispatch linked to form', String(formById(b, delForm.id).issuePermitId) === String(mOutVoucher2Id), formById(b, delForm.id));
 
-  r = await call(admin, 'DELETE', '/vouchers/' + mOutVoucher2Id);
+  r = await call(admin, 'DELETE', '/vouchers/' + mOutVoucher2Id, { reason: 'integration test reversal' });
   check('delete dispatch voucher', r.status === 200, r);
   b = await bootstrap(admin);
   check('dispatch meta removed with voucher', !b.dispatchMeta[mOutVoucher2Id], Object.keys(b.dispatchMeta));
@@ -367,10 +405,12 @@ async function phaseRun() {
   check('scrap requires pool permission', (await call(tokens.store, 'POST', '/scrap', { mode: 'plain', lines: [{ item_id: plainItemId, qty: 1 }] })).status === 403);
 
   /* --------------------- plain item over-issue guard ------------------ */
-  await call(admin, 'POST', '/vouchers', {
+  r = await call(admin, 'POST', '/vouchers', {
     direction: 'in', kind: 'sup', number: 'T-PLAIN-IN-' + suffix, supplier_name: supplierName,
     lines: [{ item_id: plainItemId, qty: 1, state: 'stock' }]
   });
+  check('receive plain item into inspection', r.status === 200 && r.data.id, r);
+  await reviewReceipt(admin, r.data.id);
   r = await call(admin, 'POST', '/vouchers', {
     direction: 'out', kind: 'br', number: 'T-PLAIN-OUT-' + suffix, branch_id: branchId,
     lines: [{ item_id: plainItemId, qty: 2, state: 'stock' }]
@@ -381,14 +421,14 @@ async function phaseRun() {
   check('plain item moved to scrap', itemById(b, plainItemId).s === 0 && (b.scrap.find((x) => Number(x.i) === Number(plainItemId)) || {}).q === 1, { item: itemById(b, plainItemId), scrap: b.scrap });
 
   /* ------------------------------ deletes ----------------------------- */
-  check('store cannot delete a voucher', (await call(tokens.store, 'DELETE', '/vouchers/' + inVoucherId)).status === 403);
-  check('senior cannot delete a voucher', (await call(tokens.senior, 'DELETE', '/vouchers/' + inVoucherId)).status === 403);
-  check('store cannot delete a maintenance form', (await call(tokens.store, 'DELETE', '/maintenance-forms/' + internalForm.id)).status === 403);
-  check('senior cannot delete a maintenance form', (await call(tokens.senior, 'DELETE', '/maintenance-forms/' + internalForm.id)).status === 403);
-  check('junior cannot delete a maintenance form', (await call(tokens.junior, 'DELETE', '/maintenance-forms/' + internalForm.id)).status === 403);
-  check('head can delete a maintenance form', (await call(tokens.head, 'DELETE', '/maintenance-forms/' + internalForm.id)).status === 200);
-  check('junior cannot delete dispatch meta', (await call(tokens.junior, 'DELETE', '/dispatch-meta/' + mOutVoucherId)).status === 403);
-  check('store cannot delete dispatch meta', (await call(tokens.store, 'DELETE', '/dispatch-meta/' + mOutVoucherId)).status === 403);
+  check('store cannot delete a voucher', (await call(tokens.store, 'DELETE', '/vouchers/' + inVoucherId, { reason: 'permission test' })).status === 403);
+  check('senior cannot delete a voucher', (await call(tokens.senior, 'DELETE', '/vouchers/' + inVoucherId, { reason: 'permission test' })).status === 403);
+  check('store cannot delete a maintenance form', (await call(tokens.store, 'DELETE', '/maintenance-forms/' + internalForm.id, { reason: 'permission test' })).status === 403);
+  check('senior cannot delete a maintenance form', (await call(tokens.senior, 'DELETE', '/maintenance-forms/' + internalForm.id, { reason: 'permission test' })).status === 403);
+  check('junior cannot delete a maintenance form', (await call(tokens.junior, 'DELETE', '/maintenance-forms/' + internalForm.id, { reason: 'permission test' })).status === 403);
+  check('head can delete a maintenance form', (await call(tokens.head, 'DELETE', '/maintenance-forms/' + internalForm.id, { reason: 'permission test' })).status === 200);
+  check('junior cannot delete dispatch meta', (await call(tokens.junior, 'DELETE', '/dispatch-meta/' + mOutVoucherId, { reason: 'permission test' })).status === 403);
+  check('store cannot delete dispatch meta', (await call(tokens.store, 'DELETE', '/dispatch-meta/' + mOutVoucherId, { reason: 'permission test' })).status === 403);
 
   /* --------------------------- edit request --------------------------- */
   r = await call(tokens.senior, 'POST', '/requests', { branch_id: branchId, lines: [{ item_id: plainItemId, qty: 1 }] });
@@ -435,6 +475,7 @@ async function phaseRun() {
   });
   check('create editable voucher', r.status === 200 && r.data.id, r);
   const editVoucherId = r.data.id;
+  await reviewReceipt(admin, editVoucherId);
   b = await bootstrap(admin);
   check('editable voucher stock starts at 2', itemById(b, editItemId).s === 2, itemById(b, editItemId).s);
 
@@ -443,6 +484,7 @@ async function phaseRun() {
     lines: [{ item_id: editItemId, qty: 5, state: 'stock' }]
   });
   check('edit voucher to a larger qty', r.status === 200, r);
+  await reviewReceipt(admin, editVoucherId);
   b = await bootstrap(admin);
   check('stock follows the edited qty', itemById(b, editItemId).s === 5, itemById(b, editItemId).s);
 
@@ -451,10 +493,11 @@ async function phaseRun() {
     lines: [{ item_id: editItemId, qty: 1, state: 'stock' }]
   });
   check('edit voucher to a smaller qty', r.status === 200, r);
+  await reviewReceipt(admin, editVoucherId);
   b = await bootstrap(admin);
   check('stock follows the reduced qty', itemById(b, editItemId).s === 1, itemById(b, editItemId).s);
 
-  check('delete reverses the edited voucher', (await call(admin, 'DELETE', '/vouchers/' + editVoucherId)).status === 200);
+  check('delete reverses the edited voucher', (await call(admin, 'DELETE', '/vouchers/' + editVoucherId, { reason: 'integration test cleanup' })).status === 200);
   b = await bootstrap(admin);
   check('stock returns to zero after voucher delete', itemById(b, editItemId).s === 0, itemById(b, editItemId).s);
 
@@ -467,7 +510,7 @@ async function phaseRun() {
   b = await bootstrap(admin);
   const expected = {
     suffix, branchName, categoryName, itemName, plainItemName: plainItem, supplierName,
-    branchId, itemId, plainItemId, requestId, rejectId, externalFormId: externalForm.id,
+    branchId, itemId, plainItemId, requestId, rejectId, stocktakeId: stocktake.id, externalFormId: externalForm.id,
     externalFormNumber: externalForm.number, maintInVoucherId,
     mOutVoucherId, mOutVoucher2Id, delFormId: delForm.id,
     inVoucherId, remainingSerial, issuedSerial,
@@ -491,6 +534,7 @@ async function phaseVerify() {
   check('login still works after restart', r.status === 200 && !!r.data.token);
   const admin = r.data.token;
   const b = await bootstrap(admin);
+  check('approved stocktake survived restart', (b.stocktakes || []).some((row) => Number(row.id) === Number(expected.stocktakeId) && row.status === 'approved'));
   check('branch survived restart', b.branches.some((x) => Number(x.id) === Number(expected.branchId)), b.branches.map((x) => x.n));
   check('category survived restart', b.categories.some((x) => x.name === expected.categoryName), b.categories.map((x) => x.name));
   check('item survived restart', itemById(b, expected.itemId).n === expected.itemName, itemById(b, expected.itemId));

@@ -40,6 +40,7 @@ const route = (fn) => (req, res, next) => {
     const method = req.method.toUpperCase();
     let action = method === 'POST' ? 'إضافة' : method === 'PUT' || method === 'PATCH' ? 'تعديل' : method === 'DELETE' ? 'حذف' : 'تغيير';
     if (method === 'POST' && req.path === '/scrap') action = 'إتلاف';
+    if (method === 'POST' && /^\/stocktakes\/\d+\/approve$/.test(req.path)) action = 'اعتماد تسوية جرد';
     if (method === 'POST' && /^\/requests\/\d+\/action$/.test(req.path)) {
       action = ({ no: 'رفض طلب', save: 'تعديل طلب', rev: 'مراجعة طلب', ok: 'اعتماد طلب', out: 'صرف طلب' })[body.action] || 'إجراء على طلب';
     }
@@ -253,7 +254,24 @@ router.get('/bootstrap', route((req, res) => {
   const payload = data.bootstrap(req.user.role);
   payload.user = { role: req.user.role, name: req.user.name, username: req.user.username, permissions: req.user.permissions || {} };
   payload.inspectionQueue = can(req.user, 'inspectionReview') ? data.pendingInspections() : [];
+  payload.stocktakes = can(req.user, 'stocktake')
+    ? data.state.stocktakes.slice().sort((a, b) => Number(b.id) - Number(a.id)) : [];
   res.json(payload);
+}));
+
+router.post('/stocktakes', guard('stocktake'), route((req, res) => {
+  res.json({ stocktake: data.createStocktake(req.user.name) });
+}));
+
+router.put('/stocktakes/:id', guard('stocktake'), route((req, res) => {
+  const body = bodyOf(req);
+  const stocktake = data.updateStocktake(asInt(req.params.id), body.lines, req.user.name);
+  res.json({ stocktake });
+}));
+
+router.post('/stocktakes/:id/approve', guard('stocktakeApprove'), route((req, res) => {
+  const stocktake = data.approveStocktake(asInt(req.params.id), req.user.name);
+  res.json({ stocktake });
 }));
 
 /* ------------------------------ master data ----------------------------- */
@@ -959,6 +977,7 @@ router.put('/vouchers/:id', guard('stock'), route((req, res) => {
     old.source_branch = n.sourceBranch || '';
     if (n.docDate) old.doc_date = n.docDate;
     old.edited_by = req.user.name;
+    old.edited_at = data.nowIso();
     old.lines = n.lines.map((l) => insertLine(st, l));
     if (handover) {
       const previousMeta = st.dispatchMeta[old.id] && typeof st.dispatchMeta[old.id] === 'object'

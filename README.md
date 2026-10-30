@@ -75,6 +75,19 @@ changes, and any supplied reason. Deletes require a reason. The UI provides a
 role-restricted **سجل الحركة** screen; the corresponding endpoint is `GET /api/audit`.
 The newest 10,000 events are retained in `data/audit_log.json`.
 
+## Periodic stocktakes and notifications
+
+The **الجرد الدوري** screen creates a stock snapshot for every catalogue item. The
+Warehouse Keeper, Technical Head, or IT Manager can enter counted quantities and serials;
+only the Technical Head or IT Manager can approve the adjustment. Approval is blocked if
+the warehouse balance or tracked serial ledger changed after the session began. Approved
+quantity and serial changes are recorded in the audit trail.
+
+The **الإشعارات** screen shows actionable requests for the signed-in user's role, receipts
+awaiting inspection, warranties expiring within 7 days or already expired, and external
+maintenance cases open for at least 30 days. The navigation count reflects currently
+actionable notifications; the dashboard continues to show warranty and maintenance alerts.
+
 The dashboard highlights zero-stock items, items with 1–3 units, maintenance quantities,
 items held for inspection, and requests awaiting action. The low-stock threshold is currently 3 units.
 
@@ -107,6 +120,9 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
 - `PUT /api/auth/password`, `PUT /api/users/:id/password` — own password change / admin reset
 - `POST /api/inspections/:voucherId/:lineId/review` — accept or reject an inspection line
 - `GET /api/inspection-photos/:id` — authenticated inspection photo
+- `POST /api/stocktakes` — create a stock snapshot
+- `PUT /api/stocktakes/:id` — save counted quantities and serials
+- `POST /api/stocktakes/:id/approve` — approve stock reconciliation (admin/head only)
 - `GET  /api/audit` — recent audit events (admin/head only)
 - `POST/PUT/DELETE /api/items`, `/api/categories`, `/api/branches`, `/api/suppliers`
 - `POST/PUT/DELETE /api/vouchers` — receipts/disbursements (stock validated in a transaction)
@@ -180,5 +196,5 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
 
 ```bash
 node check.js       # validates the inline UI script parses
-cd server && npm test # stock, audit, inspection, maintenance, and account permissions
+cd server && npm test # stock, audit, inspection, maintenance, account permissions, and stocktake
 ```
