@@ -67,7 +67,8 @@ function newCounters() {
     request: 0,
     requestLine: 0,
     requestLog: 0,
-    form: 0
+    form: 0,
+    audit: 0
   };
 }
 
@@ -83,8 +84,11 @@ const state = {
   scrapEntries: [],
   requests: [],
   forms: [],
-  dispatchMeta: {}
+  dispatchMeta: {},
+  auditLog: []
 };
+
+let auditContext = null;
 
 const MAX_ID = (rows) => (Array.isArray(rows) ? rows.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) : 0);
 const MAX_FORM_NO = (rows) => (Array.isArray(rows) ? rows.reduce((m, r) => {
@@ -157,6 +161,7 @@ function load() {
 
   state.forms = store.readList(FORMS_FILE);
   state.dispatchMeta = store.readMap(META_FILE);
+  state.auditLog = store.readList('audit_log.json');
 
   ensureCounters();
   reconcile();
@@ -178,6 +183,7 @@ function ensureCounters() {
   c.requestLine = Math.max(Number(c.requestLine) || 0, state.requests.reduce((m, r) => Math.max(m, MAX_ID(r.lines)), 0));
   c.requestLog = Math.max(Number(c.requestLog) || 0, state.requests.reduce((m, r) => Math.max(m, MAX_ID(r.log)), 0));
   c.form = Math.max(Number(c.form) || 0, MAX_ID(state.forms), MAX_FORM_NO(state.forms));
+  c.audit = Math.max(Number(c.audit) || 0, MAX_ID(state.auditLog));
 }
 
 const liveVouchers = () => state.vouchers.filter((v) => !v.deleted_at);
@@ -258,11 +264,82 @@ function save() {
   store.writeJson(DOMAIN_FILE, snapshot());
   store.writeJson(FORMS_FILE, state.forms);
   store.writeJson(META_FILE, state.dispatchMeta);
+  store.writeList('audit_log.json', state.auditLog);
 }
 
 function replaceState(backup) {
   Object.keys(state).forEach((k) => { delete state[k]; });
   Object.assign(state, backup);
+}
+
+function auditEntities(source) {
+  const records = new Map();
+  const collections = [
+    ['category', source.categories],
+    ['item', source.items],
+    ['branch', source.branches],
+    ['supplier', source.suppliers],
+    ['voucher', source.vouchers],
+    ['scrap', source.scrapEntries],
+    ['request', source.requests],
+    ['maintenance-form', source.forms]
+  ];
+  collections.forEach(([name, rows]) => {
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      records.set(name + ':' + row.id, JSON.parse(JSON.stringify(row)));
+    });
+  });
+  (Array.isArray(source.branchItems) ? source.branchItems : []).forEach((row) => {
+    records.set('branch-item:' + row.branch_id + ':' + row.item_id, JSON.parse(JSON.stringify(row)));
+  });
+  Object.keys(source.dispatchMeta || {}).forEach((id) => {
+    records.set('dispatch-meta:' + id, JSON.parse(JSON.stringify(source.dispatchMeta[id])));
+  });
+  return records;
+}
+
+function appendAudit(before) {
+  if (!auditContext) return;
+  const oldRecords = auditEntities(before);
+  const newRecords = auditEntities(state);
+  const keys = new Set([...oldRecords.keys(), ...newRecords.keys()]);
+  const changes = [];
+  keys.forEach((key) => {
+    const oldValue = oldRecords.get(key);
+    const newValue = newRecords.get(key);
+    if (JSON.stringify(oldValue) === JSON.stringify(newValue)) return;
+    const split = key.indexOf(':');
+    changes.push({
+      entity: key.slice(0, split),
+      entityId: key.slice(split + 1),
+      before: oldValue == null ? null : oldValue,
+      after: newValue == null ? null : newValue
+    });
+  });
+  if (!changes.length) return;
+  state.auditLog.push({
+    id: ++state.counters.audit,
+    action: auditContext.action,
+    method: auditContext.method,
+    path: auditContext.path,
+    actor: auditContext.actor,
+    username: auditContext.username,
+    role: auditContext.role,
+    reason: auditContext.reason,
+    at: nowIso(),
+    changes
+  });
+  if (state.auditLog.length > 10000) state.auditLog.splice(0, state.auditLog.length - 10000);
+}
+
+function withAudit(context, fn) {
+  const previous = auditContext;
+  auditContext = context;
+  try {
+    return fn();
+  } finally {
+    auditContext = previous;
+  }
 }
 
 // Run a synchronous mutation as one unit: either it completes and is persisted,
@@ -272,6 +349,7 @@ function tx(fn) {
     const backup = JSON.parse(JSON.stringify(state));
     try {
       const result = fn(state);
+      appendAudit(backup);
       save();
       return result;
     } catch (err) {
@@ -738,5 +816,6 @@ module.exports = {
   unlinkFormFromDispatch,
   voucherLink,
   formById,
-  lineState
+  lineState,
+  withAudit
 };

@@ -18,7 +18,7 @@ const ROOT = fs.existsSync(path.join(__dirname, '..', 'it-warehouse_1.html'))
 const DATA_DIR = process.env.WH_DATA_DIR ? path.resolve(process.env.WH_DATA_DIR) : path.join(ROOT, 'data');
 const BACKUP_DIR = path.join(DATA_DIR, 'backups');
 const BACKUP_KEEP = 14;
-const DATA_FILES = ['warehouse.json', 'maintenance_forms.json', 'dispatch_meta.json'];
+const DATA_FILES = ['warehouse.json', 'maintenance_forms.json', 'dispatch_meta.json', 'audit_log.json'];
 
 let tmpSeq = 0;
 

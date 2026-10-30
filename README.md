@@ -1,24 +1,26 @@
 # مخزن تكنولوجيا المعلومات — IT Warehouse
 
-Single-page warehouse UI (Arabic/RTL) backed by an Express REST API and Microsoft SQL
-Server, with JWT authentication and Docker support.
+Single-page warehouse UI (Arabic/RTL) backed by an Express REST API, JSON-file storage,
+JWT authentication, and Docker support. The current API stores operational data under
+`data/`; the SQL Server service and schema files are not currently connected to the API.
 
 ## Structure
 
 ```
 it-warehouse_1.html     # the UI (login + all screens), served by the API at /
-server/                 # Express + SQL Server API
-  src/index.js          # bootstrap: schema + seed + static UI + routes
+server/                 # Express + JSON-file API
+  src/index.js          # bootstrap, static UI, and routes
   src/routes.js         # REST endpoints + permissions
   src/roles.js          # permission map (CAN), incl. pool movements
+  src/data.js           # domain state, persistence, bootstrap, and audit trail
+  src/filestore.js      # atomic JSON file storage and daily backups
   src/stock.js          # pure stock math (shared with tests)
-  src/seed.js           # default users + demo data
   src/auth.js           # JWT sign/verify
-  src/db.js             # mssql connection pool
-db/schema.mssql.sql     # database schema (idempotent)
+db/schema.mssql.sql     # planned SQL schema (not used by the current API)
 Dockerfile              # app image
-docker-compose.yml      # app + SQL Server
+docker-compose.yml      # app + currently unused SQL Server service
 test_swap.js            # stock engine tests
+server/test_audit.js    # audit trail tests
 check.js                # inline UI script syntax check
 ```
 
@@ -28,26 +30,28 @@ check.js                # inline UI script syntax check
 docker compose up -d --build
 ```
 
-Open http://localhost:3000
+Open http://localhost:3000. The app persists its JSON files in the `warehouse_data`
+Docker volume; the SQL Server container is not used by the current API.
 
-SQL Server is exposed on `localhost:1433` (user/password/db: `sa`/`Your_password123`/`it_warehouse`).
-The API creates the database, schema and seed data on first start.
+The daily backup is stored under `data/backups/`. Audit events are persisted separately
+in `data/audit_log.json` and are visible only to the IT Manager and Technical Head.
 
 Stop / reset:
 
 ```bash
 docker compose down          # stop
-docker compose down -v       # stop and delete the database volume
+docker compose down -v       # stop and delete the app data volume (and unused SQL volume)
 ```
 
 ## Run locally (without Docker)
 
-Requires a reachable SQL Server (2019+). The target database is created automatically.
+Requires Node.js. The server persists data in JSON files under `data/`; no database
+connection is currently required.
 
 ```bash
 cd server
 npm install
-# copy ../.env.example to server/.env and adjust DB_SERVER / DB_PASSWORD / JWT_SECRET
+# copy ../.env.example to server/.env and set a unique JWT_SECRET
 npm start
 ```
 
@@ -64,12 +68,23 @@ Seeded on first run — change the passwords before real use.
 | senior   | senior123  | Senior Technical  |
 | junior   | junior123  | Junior Technical  |
 
+## Audit trail
+
+Successful create, update, and delete operations record the actor, role, time, entity
+changes, and any supplied reason. Deletes require a reason. The UI provides a
+role-restricted **سجل الحركة** screen; the corresponding endpoint is `GET /api/audit`.
+The newest 10,000 events are retained in `data/audit_log.json`.
+
+The dashboard highlights zero-stock items, items with 1–3 units, maintenance quantities,
+and requests awaiting action. The low-stock threshold is currently 3 units.
+
 ## Key API endpoints
 
 All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`.
 
 - `POST /api/auth/login` — `{ username, password }` → `{ token, user }`
 - `GET  /api/bootstrap` — items, categories, branches, suppliers, vouchers, requests
+- `GET  /api/audit` — recent audit events (admin/head only)
 - `POST/PUT/DELETE /api/items`, `/api/categories`, `/api/branches`, `/api/suppliers`
 - `POST/PUT/DELETE /api/vouchers` — receipts/disbursements (stock validated in a transaction)
 - `POST /api/scrap` — write damaged units off the warehouse balance into `خردة`
@@ -79,7 +94,7 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
 
 - Three warehouse pools per item: `stock`, `تحت الصيانة` (`maint_qty`) and `خردة`
   (`scrap_qty`). All are kept non-negative in `server/src/stock.js` and enforced inside a
-  DB transaction with row locks before anything is written.
+  synchronous state transaction before JSON files are atomically written.
 - The document operations are split into dedicated screens (tabs), each with a fixed
   direction/kind and no source selector:
   - **استلام من مورد** — receipt from a supplier (`in/sup`); always added to `مخزون`.
@@ -96,7 +111,9 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
 - Sending to maintenance is a **disbursement to a maintenance supplier** (`direction = out`,
   `kind = sup`): qty leaves `stock` and enters `تحت الصيانة`. Such a permit records the
   supplier, permit number, automatic date, items, serials, per-line maintenance reason and
-  explanation, and an optional origin branch. It is the source of the release note.
+  explanation, and an optional origin branch. Select an existing form from **نماذج الصيانة**
+  before saving; the form is linked to the exit permit and appears with it in the maintenance
+  release and return flow. Saving an exit permit does not create duplicate maintenance forms.
 - The **تحت الصيانة** tab has two actions: the read-only **إذن الخروج للصيانة** (exit
   permits: serials, party, origin branch, reason, explanation, registrar and date) and
   **إقرار استلام من الصيانة** (acknowledgement of the returned goods). The exit list shows
@@ -132,6 +149,5 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
 
 ```bash
 node check.js       # validates the inline UI script parses
-node test_swap.js   # stock engine: over-disbursement, branch moves, maintenance, edits
-cd server && npm test
+cd server && npm test # stock, audit trail, and maintenance issue/return flows
 ```

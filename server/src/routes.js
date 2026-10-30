@@ -33,7 +33,23 @@ const bodyOf = (req) => (req.body && typeof req.body === 'object' && !Array.isAr
 // persisted atomically) or throws, in which case nothing is written.
 const route = (fn) => (req, res, next) => {
   try {
-    fn(req, res);
+    if (!req.user) return fn(req, res);
+    const body = bodyOf(req);
+    const method = req.method.toUpperCase();
+    let action = method === 'POST' ? 'إضافة' : method === 'PUT' || method === 'PATCH' ? 'تعديل' : method === 'DELETE' ? 'حذف' : 'تغيير';
+    if (method === 'POST' && req.path === '/scrap') action = 'إتلاف';
+    if (method === 'POST' && /^\/requests\/\d+\/action$/.test(req.path)) {
+      action = ({ no: 'رفض طلب', save: 'تعديل طلب', rev: 'مراجعة طلب', ok: 'اعتماد طلب', out: 'صرف طلب' })[body.action] || 'إجراء على طلب';
+    }
+    data.withAudit({
+      action,
+      method,
+      path: req.baseUrl + req.path,
+      actor: req.user.name,
+      username: req.user.username,
+      role: req.user.role,
+      reason: text(body.reason || body.note, 500)
+    }, () => fn(req, res));
   } catch (err) {
     if (err instanceof data.ApiError) return res.status(err.status).json({ error: err.message });
     next(err);
@@ -85,7 +101,22 @@ router.post('/auth/login', loginLimiter, route((req, res) => {
 
 router.use(auth);
 
+router.use((req, res, next) => {
+  if (req.method === 'DELETE' && !text(bodyOf(req).reason, 500)) {
+    return res.status(400).json({ error: 'اكتب سبب الحذف قبل التأكيد' });
+  }
+  next();
+});
+
 router.get('/auth/me', (req, res) => res.json({ user: req.user }));
+
+router.get('/audit', (req, res) => {
+  if (!can(req.user.role, 'auditView')) return res.status(403).json({ error: 'لا تملك صلاحية عرض سجل الحركة' });
+  const limit = Math.min(100, Math.max(1, asInt(req.query.limit, 50)));
+  const offset = Math.max(0, asInt(req.query.offset));
+  const rows = data.state.auditLog.slice().reverse();
+  res.json({ total: rows.length, rows: rows.slice(offset, offset + limit) });
+});
 
 /* ------------------------------- bootstrap ------------------------------ */
 
@@ -416,7 +447,9 @@ function normalizeVoucher(body) {
     note: text(l.note, 2000),
     condition: text(l.condition || l.item_condition, 200),
     hasWarranty: !!l.has_warranty,
-    warrantyUntil: asDate(l.warranty_until)
+    warrantyUntil: asDate(l.warranty_until),
+    maintenanceFormId: positiveInt(l.maintenance_form_id),
+    sourceVoucherId: positiveInt(l.source_voucher_id)
   }));
   // Branch returns always land in the good stock pool; damaged units are
   // written off from the scrap screen instead.
@@ -484,6 +517,124 @@ function insertVoucher(st, n, user) {
   return voucher;
 }
 
+function selectedMaintenanceForm(body, voucher, n) {
+  if (n.direction !== 'out' || n.kind !== 'sup') data.fail(400, 'إذن الصرف المحدد للصيانة غير صالح');
+  const formId = positiveInt(body.maintenance_form_id);
+  if (!formId) data.fail(400, 'اختر نموذج الصيانة قبل تسجيل إذن الخروج');
+  const form = data.formById(formId);
+  if (!form) data.fail(404, 'نموذج الصيانة المحدد غير موجود');
+  if (form.issuePermitId != null && Number(form.issuePermitId) !== Number(voucher.id)) {
+    const linkedVoucher = data.voucherById(form.issuePermitId);
+    if (linkedVoucher) data.fail(409, 'نموذج الصيانة مرتبط بإذن خروج آخر');
+  }
+  if (n.lines.length !== 1 || Number(form.itemId) !== Number(n.lines[0].itemId)) {
+    data.fail(400, 'الصنف في إذن الخروج يجب أن يطابق نموذج الصيانة المحدد');
+  }
+  if (data.hasSerial(n.lines[0].itemId)) {
+    const line = n.lines[0];
+    if (line.qty !== 1 || line.serials.length !== 1 || (form.serial && !line.serials.some((serial) => String(serial).toLowerCase() === String(form.serial).toLowerCase()))) {
+      data.fail(400, 'السيريال في إذن الخروج يجب أن يطابق نموذج الصيانة المحدد');
+    }
+  }
+  return form;
+}
+
+function linkMaintenanceIssue(st, voucher, n, body, actor) {
+  const form = selectedMaintenanceForm(body, voucher, n);
+  const previous = st.dispatchMeta[voucher.id] && typeof st.dispatchMeta[voucher.id] === 'object'
+    ? st.dispatchMeta[voucher.id] : {};
+  const previousFormId = previous.maintenanceFormId == null ? null : Number(previous.maintenanceFormId);
+  if (previousFormId && previousFormId !== Number(form.id)) {
+    const previousForm = data.formById(previousFormId);
+    if (previousForm && String(previousForm.issuePermitId) === String(voucher.id)) {
+      data.unlinkFormFromDispatch(previousForm, actor);
+    }
+  }
+  const meta = Object.assign({}, previous, {
+    destType: 'maintenance',
+    maintenanceFormId: form.id,
+    partyName: n.supplierName,
+    note: text(body.note, META_FIELDS.note),
+    stockOfficer: text(body.stockOfficer, 160),
+    stockOfficerSignature: text(body.stockOfficerSignature, 160),
+    receiverName: text(body.receiverName, 160),
+    receiverSignature: text(body.receiverSignature, 160),
+    receiveDate: asDate(body.receiveDate) || '',
+    gov: text(body.gov, 160),
+    address: text(body.address, 500),
+    updatedBy: actor,
+    updatedAt: data.nowIso()
+  });
+  form.maintenanceEntity = n.supplierName;
+  form.itemId = n.lines[0].itemId;
+  if (!form.serial && n.lines[0].serials.length) form.serial = n.lines[0].serials[0];
+  if (n.lines[0].reason) form.faultDescription = n.lines[0].reason;
+  if (n.lines[0].note) form.accessoriesNotes = n.lines[0].note;
+  form.branchName = voucher.source_branch || form.branchName || '';
+  form.deliveryDate = voucher.doc_date;
+  form.permitNumber = voucher.number;
+  form.supportOfficer = actor;
+  form.deliveryDate2 = voucher.doc_date;
+  form.issuePermitNumber = voucher.number;
+  form.maintenanceType = 'external';
+  form.status = 'sent_external';
+  data.syncFormToDispatch(form, voucher, actor);
+  st.dispatchMeta[voucher.id] = meta;
+}
+
+function linkMaintenanceReturn(st, voucher, n, actor) {
+  n.lines.forEach((line) => {
+    if (!line.maintenanceFormId) return;
+    const form = data.formById(line.maintenanceFormId);
+    if (!form) data.fail(404, 'نموذج الصيانة المرتبط غير موجود');
+    const issueId = form.issuePermitId || line.sourceVoucherId;
+    const issue = issueId ? data.voucherById(issueId) : null;
+    if (!issue || issue.direction !== 'out' || issue.kind !== 'sup') {
+      data.fail(400, 'نموذج الصيانة غير مرتبط بإذن خروج للصيانة');
+    }
+    if (form.issuePermitId && Number(form.issuePermitId) !== Number(issue.id)) {
+      data.fail(400, 'نموذج الصيانة مرتبط بإذن خروج مختلف');
+    }
+    if (form.itemId && Number(form.itemId) !== Number(line.itemId)) {
+      data.fail(400, 'الصنف المستلم لا يطابق نموذج الصيانة');
+    }
+    if (form.serial && (line.qty !== 1 || !line.serials.some((serial) => String(serial).toLowerCase() === String(form.serial).toLowerCase()))) {
+      data.fail(400, 'السيريال المستلم لا يطابق نموذج الصيانة');
+    }
+    const issueLine = issue.lines.find((candidate) => Number(candidate.item_id) === Number(line.itemId)
+      && (!form.serial || (candidate.serials || []).some((serial) => String(serial).toLowerCase() === String(form.serial).toLowerCase())));
+    if (!issueLine) data.fail(400, 'نموذج الصيانة لا يطابق صنف أو سيريال إذن الخروج');
+    if (!form.issuePermitId) {
+      const meta = st.dispatchMeta[issue.id] && typeof st.dispatchMeta[issue.id] === 'object'
+        ? st.dispatchMeta[issue.id] : {};
+      if (meta.maintenanceFormId && Number(meta.maintenanceFormId) !== Number(form.id)) {
+        data.fail(409, 'إذن الخروج مرتبط بنموذج صيانة آخر');
+      }
+      if (st.forms.some((candidate) => Number(candidate.id) !== Number(form.id) && Number(candidate.issuePermitId) === Number(issue.id))) {
+        data.fail(409, 'إذن الخروج مرتبط بنموذج صيانة آخر');
+      }
+      form.itemId = line.itemId;
+      form.maintenanceType = 'external';
+      form.maintenanceEntity = form.maintenanceEntity || (st.suppliers.find((supplier) => Number(supplier.id) === Number(issue.supplier_id)) || {}).name || '';
+      data.syncFormToDispatch(form, issue, actor);
+      st.dispatchMeta[issue.id] = Object.assign({}, meta, {
+        destType: 'maintenance',
+        maintenanceFormId: form.id,
+        partyName: form.maintenanceEntity
+      });
+    }
+    form.entryPermitId = voucher.id;
+    form.entryPermitNumber = voucher.number;
+    form.receiptVoucherId = voucher.id;
+    form.receiptVoucherNumber = voucher.number;
+    form.receivedDate2 = voucher.doc_date;
+    form.inspectionResult3 = line.state === 'scrap' ? 'رفض الصيانة' : 'تم إصلاحه';
+    form.status = 'received_after_maintenance';
+    form.updatedBy = actor;
+    form.updatedAt = data.nowIso();
+  });
+}
+
 function applyLineWarranty(n) {
   if (n.direction !== 'in' || n.kind === 'sup') return;
   for (const l of n.lines) {
@@ -518,9 +669,18 @@ router.post('/vouchers', guard('stock'), route((req, res) => {
     }
     const serialError = data.validateSerials(n, null);
     if (serialError) data.fail(400, serialError);
+    if (body.maintenance_flow === true && (!body.maintenance_form_id || n.direction !== 'out' || n.kind !== 'sup')) {
+      data.fail(400, 'اختر نموذج الصيانة قبل تسجيل إذن الخروج');
+    }
     const applied = data.applyChange(null, n);
     if (!applied.ok) data.fail(400, data.stockError(applied));
     const voucher = insertVoucher(st, n, req.user.name);
+    if (body.maintenance_flow === true) {
+      linkMaintenanceIssue(st, voucher, n, body, req.user.name);
+    }
+    if (n.direction === 'in' && n.kind === 'maint') {
+      linkMaintenanceReturn(st, voucher, n, req.user.name);
+    }
     applyLineWarranty(n);
     if (request) {
       request.status = 'released';
@@ -545,6 +705,9 @@ router.put('/vouchers/:id', guard('stock'), route((req, res) => {
   const n = normalizeVoucher(body);
   const invalid = validateVoucher(n);
   if (invalid) data.fail(400, invalid);
+  if (body.maintenance_flow === true && (!body.maintenance_form_id || n.direction !== 'out' || n.kind !== 'sup')) {
+    data.fail(400, 'اختر نموذج الصيانة قبل تسجيل إذن الخروج');
+  }
   data.tx((st) => {
     const old = data.voucherById(id);
     if (!old) data.fail(404, 'الإذن غير موجود');
@@ -565,6 +728,9 @@ router.put('/vouchers/:id', guard('stock'), route((req, res) => {
     if (n.docDate) old.doc_date = n.docDate;
     old.edited_by = req.user.name;
     old.lines = n.lines.map((l) => insertLine(st, l));
+    if (body.maintenance_flow === true) {
+      linkMaintenanceIssue(st, old, n, body, req.user.name);
+    }
     applyLineWarranty(n);
     // The dispatch sheet prints the permit number from both sides; keep them
     // identical after an edit.
