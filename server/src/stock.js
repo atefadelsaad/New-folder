@@ -35,7 +35,11 @@ function lineState(line) {
 function voucherDeltas(voucher) {
   const direction = voucher.direction || voucher.dir;
   const kind = voucher.kind || voucher.k;
-  const branchId = voucher.branch_id != null ? voucher.branch_id : voucher.b;
+  const branchId = voucher.branch_id != null
+    ? voucher.branch_id
+    : voucher.b != null
+      ? voucher.b
+      : voucher.branchId;
   const out = [];
 
   for (const line of voucher.lines || []) {
