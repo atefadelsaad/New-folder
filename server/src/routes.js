@@ -1,15 +1,17 @@
 'use strict';
 const express = require('express');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const { sign, auth } = require('./auth');
-const { can } = require('./roles');
+const { CAN, can } = require('./roles');
 const data = require('./data');
+const inspectionPhotos = require('./inspection-photos');
 
 const router = express.Router();
 
 const guard = (perm) => (req, res, next) =>
-  can(req.user.role, perm) ? next() : res.status(403).json({ error: 'لا تملك صلاحية هذا الإجراء' });
+  can(req.user, perm) ? next() : res.status(403).json({ error: 'لا تملك صلاحية هذا الإجراء' });
 
 const text = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
 
@@ -93,10 +95,10 @@ router.post('/auth/login', loginLimiter, route((req, res) => {
   const password = String(body.password == null ? '' : body.password);
   if (!username || !password) data.fail(400, 'أدخل اسم المستخدم وكلمة المرور');
   const user = data.state.users.find((u) => String(u.username).toLowerCase() === username.toLowerCase());
-  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+  if (!user || user.active === false || !bcrypt.compareSync(password, user.password_hash)) {
     data.fail(401, 'اسم المستخدم أو كلمة المرور غير صحيحة');
   }
-  res.json({ token: sign(user), user: { username: user.username, role: user.role, name: user.name } });
+  res.json({ token: sign(user), user: { username: user.username, role: user.role, name: user.name, permissions: user.permissions || {} } });
 }));
 
 router.use(auth);
@@ -110,8 +112,135 @@ router.use((req, res, next) => {
 
 router.get('/auth/me', (req, res) => res.json({ user: req.user }));
 
+router.get('/inspection-photos/:id', (req, res) => {
+  const file = inspectionPhotos.resolve(req.params.id);
+  if (!file || !fs.existsSync(file)) return res.status(404).json({ error: 'الصورة غير موجودة' });
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.type(file.endsWith('.png') ? 'png' : file.endsWith('.webp') ? 'webp' : 'jpg');
+  res.sendFile(file);
+});
+
+const validRole = (role) => ['admin', 'head', 'area', 'store', 'senior', 'junior'].includes(role);
+function normalizePermissions(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) data.fail(400, 'إعدادات الصلاحيات غير صالحة');
+  const permissions = {};
+  for (const [key, allowed] of Object.entries(value)) {
+    if (!Object.prototype.hasOwnProperty.call(CAN, key) || typeof allowed !== 'boolean') {
+      data.fail(400, 'إعداد صلاحية غير صالح');
+    }
+    permissions[key] = allowed;
+  }
+  return permissions;
+}
+const publicUser = (user) => ({
+  id: user.id,
+  username: user.username,
+  name: user.name,
+  role: user.role,
+  active: user.active !== false,
+  permissions: user.permissions || {},
+  created_at: user.created_at || ''
+});
+
+router.get('/users', guard('userAdmin'), route((req, res) => {
+  res.json({
+    permissions: Object.keys(CAN),
+    roles: ['admin', 'head', 'area', 'store', 'senior', 'junior'],
+    users: data.state.users.slice().sort((a, b) => Number(a.id) - Number(b.id)).map(publicUser)
+  });
+}));
+
+router.post('/users', guard('userAdmin'), route((req, res) => {
+  const body = bodyOf(req);
+  const username = text(body.username, 64);
+  const name = text(body.name, 120);
+  const password = String(body.password == null ? '' : body.password);
+  if (!/^[A-Za-z0-9._-]{3,64}$/.test(username)) data.fail(400, 'اسم المستخدم يجب أن يتكون من 3 أحرف على الأقل وبحروف إنجليزية أو أرقام');
+  if (!name) data.fail(400, 'اكتب اسم المستخدم');
+  if (!validRole(body.role)) data.fail(400, 'اختر دورًا صالحًا');
+  if (password.length < 8) data.fail(400, 'كلمة المرور يجب ألا تقل عن 8 أحرف');
+  const permissions = has(body, 'permissions') ? normalizePermissions(body.permissions) : {};
+  const user = data.tx((st) => {
+    if (st.users.some((entry) => String(entry.username).toLowerCase() === username.toLowerCase())) {
+      data.fail(409, 'اسم المستخدم مستخدم بالفعل');
+    }
+    const created = {
+      id: st.users.reduce((max, entry) => Math.max(max, Number(entry.id) || 0), 0) + 1,
+      username,
+      name,
+      role: body.role,
+      password_hash: bcrypt.hashSync(password, 10),
+      active: true,
+      permissions,
+      token_version: 0,
+      created_at: data.nowIso()
+    };
+    st.users.push(created);
+    return created;
+  });
+  res.json({ user: publicUser(user) });
+}));
+
+router.put('/users/:id', guard('userAdmin'), route((req, res) => {
+  const body = bodyOf(req);
+  const id = asInt(req.params.id);
+  const username = has(body, 'username') ? text(body.username, 64) : null;
+  const name = has(body, 'name') ? text(body.name, 120) : null;
+  if (username !== null && !/^[A-Za-z0-9._-]{3,64}$/.test(username)) data.fail(400, 'اسم المستخدم غير صالح');
+  if (name !== null && !name) data.fail(400, 'اكتب اسم المستخدم');
+  if (has(body, 'role') && !validRole(body.role)) data.fail(400, 'اختر دورًا صالحًا');
+  const permissions = has(body, 'permissions') ? normalizePermissions(body.permissions) : null;
+  const user = data.tx((st) => {
+    const target = st.users.find((entry) => Number(entry.id) === id);
+    if (!target) data.fail(404, 'المستخدم غير موجود');
+    if (username !== null && st.users.some((entry) => Number(entry.id) !== id
+      && String(entry.username).toLowerCase() === username.toLowerCase())) data.fail(409, 'اسم المستخدم مستخدم بالفعل');
+    if (has(body, 'active') && typeof body.active !== 'boolean') data.fail(400, 'حالة الحساب غير صالحة');
+    const nextRole = has(body, 'role') ? body.role : target.role;
+    const nextActive = has(body, 'active') ? body.active : target.active !== false;
+    if (target.role === 'admin' && target.active !== false && (!nextActive || nextRole !== 'admin')
+      && !st.users.some((entry) => Number(entry.id) !== id && entry.role === 'admin' && entry.active !== false)) {
+      data.fail(409, 'يجب إبقاء حساب مدير نظام نشط واحد على الأقل');
+    }
+    if (username !== null) target.username = username;
+    if (name !== null) target.name = name;
+    if (has(body, 'role')) target.role = body.role;
+    if (permissions !== null) target.permissions = permissions;
+    if (has(body, 'active')) target.active = body.active;
+    return target;
+  });
+  res.json({ user: publicUser(user) });
+}));
+
+router.put('/auth/password', route((req, res) => {
+  const body = bodyOf(req);
+  const currentPassword = String(body.currentPassword == null ? '' : body.currentPassword);
+  const newPassword = String(body.newPassword == null ? '' : body.newPassword);
+  if (newPassword.length < 8) data.fail(400, 'كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف');
+  const user = data.tx((st) => {
+    const target = st.users.find((entry) => Number(entry.id) === Number(req.user.id));
+    if (!target || !bcrypt.compareSync(currentPassword, target.password_hash)) data.fail(400, 'كلمة المرور الحالية غير صحيحة');
+    target.password_hash = bcrypt.hashSync(newPassword, 10);
+    target.token_version = (Number(target.token_version) || 0) + 1;
+    return target;
+  });
+  res.json({ token: sign(user) });
+}));
+
+router.put('/users/:id/password', guard('userAdmin'), route((req, res) => {
+  const password = String(bodyOf(req).password == null ? '' : bodyOf(req).password);
+  if (password.length < 8) data.fail(400, 'كلمة المرور يجب ألا تقل عن 8 أحرف');
+  data.tx((st) => {
+    const target = st.users.find((entry) => Number(entry.id) === asInt(req.params.id));
+    if (!target) data.fail(404, 'المستخدم غير موجود');
+    target.password_hash = bcrypt.hashSync(password, 10);
+    target.token_version = (Number(target.token_version) || 0) + 1;
+  });
+  res.json({ ok: true });
+}));
+
 router.get('/audit', (req, res) => {
-  if (!can(req.user.role, 'auditView')) return res.status(403).json({ error: 'لا تملك صلاحية عرض سجل الحركة' });
+  if (!can(req.user, 'auditView')) return res.status(403).json({ error: 'لا تملك صلاحية عرض سجل الحركة' });
   const limit = Math.min(100, Math.max(1, asInt(req.query.limit, 50)));
   const offset = Math.max(0, asInt(req.query.offset));
   const rows = data.state.auditLog.slice().reverse();
@@ -122,7 +251,8 @@ router.get('/audit', (req, res) => {
 
 router.get('/bootstrap', route((req, res) => {
   const payload = data.bootstrap(req.user.role);
-  payload.user = { role: req.user.role, name: req.user.name, username: req.user.username };
+  payload.user = { role: req.user.role, name: req.user.name, username: req.user.username, permissions: req.user.permissions || {} };
+  payload.inspectionQueue = can(req.user, 'inspectionReview') ? data.pendingInspections() : [];
   res.json(payload);
 }));
 
@@ -205,6 +335,7 @@ router.post('/items', guard('stock'), route((req, res) => {
       stock: 0,
       maint_qty: 0,
       scrap_qty: 0,
+      inspection_qty: 0,
       created_by: req.user.name,
       created_at: data.nowIso(),
       warranty_until: asDate(body.warranty_until) || null,
@@ -431,7 +562,7 @@ router.delete('/suppliers/:id', guard('stock'), route((req, res) => {
 
 function receiptState(direction, raw) {
   if (direction !== 'in') return 'stock';
-  return String(raw || '') === 'scrap' ? 'scrap' : 'stock';
+  return 'inspection';
 }
 
 function normalizeVoucher(body) {
@@ -446,14 +577,13 @@ function normalizeVoucher(body) {
     reason: text(l.reason, 200),
     note: text(l.note, 2000),
     condition: text(l.condition || l.item_condition, 200),
+    inspectionNotes: text(l.inspection_notes, 2000),
+    photoData: Array.isArray(l.photos) ? l.photos.slice(0, 4).map((photo) => String(photo || '')) : [],
     hasWarranty: !!l.has_warranty,
     warrantyUntil: asDate(l.warranty_until),
     maintenanceFormId: positiveInt(l.maintenance_form_id),
     sourceVoucherId: positiveInt(l.source_voucher_id)
   }));
-  // Branch returns always land in the good stock pool; damaged units are
-  // written off from the scrap screen instead.
-  if (direction === 'in' && kind === 'br') lines.forEach((l) => { l.state = 'stock'; });
   return {
     direction,
     kind,
@@ -491,9 +621,69 @@ function insertLine(st, l) {
     serials: Array.isArray(l.serials) ? l.serials : [],
     reason: l.reason || '',
     note: l.note || '',
+    maintenance_form_id: l.maintenanceFormId || null,
+    inspection: l.state === 'inspection' ? (l.inspection || {
+      status: 'pending',
+      condition: l.condition || '',
+      notes: l.inspectionNotes || '',
+      photos: l.inspectionPhotos || [],
+      reported_by: ''
+    }) : (l.inspection || null),
     has_warranty: !!l.hasWarranty,
     warranty_until: l.warrantyUntil || null
   };
+}
+
+function sameReceiptLine(oldLine, line) {
+  if (!oldLine || Number(oldLine.item_id) !== Number(line.itemId)
+    || Number(oldLine.qty) !== Number(line.qty)) return false;
+  const oldSerials = Array.isArray(oldLine.serials) ? oldLine.serials : [];
+  return oldSerials.length === line.serials.length
+    && oldSerials.every((serial, index) => String(serial).toLowerCase() === String(line.serials[index]).toLowerCase());
+}
+
+function prepareInspectionLines(n, oldVoucher, actor, createdPhotos) {
+  if (n.direction !== 'in') return;
+  let photoCount = 0;
+  n.lines.forEach((line, index) => {
+    const oldLine = oldVoucher && oldVoucher.lines[index];
+    const sameIdentity = sameReceiptLine(oldLine, line);
+    const oldInspection = sameIdentity && oldLine.inspection && typeof oldLine.inspection === 'object'
+      ? oldLine.inspection : null;
+    const photos = oldInspection && Array.isArray(oldInspection.photos) ? oldInspection.photos.slice() : [];
+    if (photos.length + line.photoData.length > 3) data.fail(400, 'يسمح بحد أقصى 3 صور لكل إذن استلام');
+    line.photoData.forEach((dataUri) => {
+      try {
+        const photo = inspectionPhotos.write(dataUri);
+        createdPhotos.push(photo.id);
+        photos.push(photo);
+      } catch (err) {
+        data.fail(400, err.message);
+      }
+    });
+    photoCount += photos.length;
+    const unchanged = oldInspection
+      && !line.photoData.length
+      && String(oldInspection.condition || '') === String(line.condition || '')
+      && String(oldInspection.notes || '') === String(line.inspectionNotes || '');
+    if (unchanged) {
+      line.state = oldLine.state || 'inspection';
+      line.inspection = oldInspection;
+    } else {
+      line.state = 'inspection';
+      line.inspection = {
+        status: 'pending',
+        condition: line.condition || '',
+        notes: line.inspectionNotes || '',
+        photos,
+        reported_by: actor,
+        received_at: data.nowIso()
+      };
+    }
+    line.inspectionPhotos = photos;
+    line.photoData = [];
+  });
+  if (photoCount > 3) data.fail(400, 'يسمح بحد أقصى 3 صور لكل إذن استلام');
 }
 
 function insertVoucher(st, n, user) {
@@ -515,6 +705,26 @@ function insertVoucher(st, n, user) {
   };
   st.vouchers.push(voucher);
   return voucher;
+}
+
+function normalizeHandover(body, voucher) {
+  if (!has(body, 'handover')) return null;
+  const raw = body.handover;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) data.fail(400, 'بيانات تسليم العهدة غير صالحة');
+  if (voucher.direction !== 'out' || voucher.kind !== 'br') data.fail(400, 'تسجيل تسليم العهدة متاح مع إذن الصرف إلى فرع');
+  const handover = {
+    giverName: text(raw.giverName, 160),
+    giverSignature: text(raw.giverSignature, 160),
+    receiverName: text(raw.receiverName, 160),
+    receiverSignature: text(raw.receiverSignature, 160),
+    receiveDate: asDate(raw.receiveDate)
+  };
+  if (!handover.giverName) data.fail(400, 'اكتب اسم الموظف المُسلِّم');
+  if (!handover.giverSignature) data.fail(400, 'اكتب توقيع الموظف المُسلِّم');
+  if (!handover.receiverName) data.fail(400, 'اكتب اسم الموظف المستلم');
+  if (!handover.receiverSignature) data.fail(400, 'اكتب توقيع الموظف المستلم');
+  if (!handover.receiveDate) data.fail(400, 'اختر تاريخ التسليم');
+  return handover;
 }
 
 function selectedMaintenanceForm(body, voucher, n) {
@@ -628,8 +838,8 @@ function linkMaintenanceReturn(st, voucher, n, actor) {
     form.receiptVoucherId = voucher.id;
     form.receiptVoucherNumber = voucher.number;
     form.receivedDate2 = voucher.doc_date;
-    form.inspectionResult3 = line.state === 'scrap' ? 'رفض الصيانة' : 'تم إصلاحه';
-    form.status = 'received_after_maintenance';
+    form.inspectionResult3 = line.state === 'inspection' ? 'قيد الفحص' : line.state === 'scrap' ? 'رفض الصيانة' : 'تم إصلاحه';
+    form.status = line.state === 'inspection' ? 'awaiting_inspection' : 'received_after_maintenance';
     form.updatedBy = actor;
     form.updatedAt = data.nowIso();
   });
@@ -638,7 +848,7 @@ function linkMaintenanceReturn(st, voucher, n, actor) {
 function applyLineWarranty(n) {
   if (n.direction !== 'in' || n.kind === 'sup') return;
   for (const l of n.lines) {
-    if (l.hasWarranty && l.warrantyUntil) {
+    if (l.state !== 'inspection' && l.hasWarranty && l.warrantyUntil) {
       const item = data.itemById(l.itemId);
       if (item) item.warranty_until = l.warrantyUntil;
     }
@@ -657,11 +867,15 @@ router.post('/vouchers', guard('stock'), route((req, res) => {
   const n = normalizeVoucher(body);
   const invalid = validateVoucher(n);
   if (invalid) data.fail(400, invalid);
-  if (data.touchesPool(n) && !can(req.user.role, 'pool')) {
+  const handover = normalizeHandover(body, n);
+  if (data.touchesPool(n) && !can(req.user, 'pool')) {
     data.fail(403, 'حركات الصيانة والخردة متاحة لمدير النظام والمدير الفني فقط');
   }
   const requestId = n.direction === 'out' && n.kind === 'br' ? asInt(body.request_id) || null : null;
-  const out = data.tx((st) => {
+  const createdPhotos = [];
+  let out;
+  try {
+  out = data.tx((st) => {
     let request = null;
     if (requestId) {
       request = st.requests.find((r) => Number(r.id) === requestId);
@@ -669,12 +883,22 @@ router.post('/vouchers', guard('stock'), route((req, res) => {
     }
     const serialError = data.validateSerials(n, null);
     if (serialError) data.fail(400, serialError);
+    prepareInspectionLines(n, null, req.user.name, createdPhotos);
     if (body.maintenance_flow === true && (!body.maintenance_form_id || n.direction !== 'out' || n.kind !== 'sup')) {
       data.fail(400, 'اختر نموذج الصيانة قبل تسجيل إذن الخروج');
     }
     const applied = data.applyChange(null, n);
     if (!applied.ok) data.fail(400, data.stockError(applied));
     const voucher = insertVoucher(st, n, req.user.name);
+    if (handover) {
+      st.dispatchMeta[voucher.id] = Object.assign({
+        destType: 'branch',
+        partyName: (data.branchById(n.branchId) || {}).name || ''
+      }, handover, {
+        updatedBy: req.user.name,
+        updatedAt: data.nowIso()
+      });
+    }
     if (body.maintenance_flow === true) {
       linkMaintenanceIssue(st, voucher, n, body, req.user.name);
     }
@@ -696,6 +920,10 @@ router.post('/vouchers', guard('stock'), route((req, res) => {
     }
     return { ok: true, id: voucher.id };
   });
+  } catch (err) {
+    createdPhotos.forEach((id) => inspectionPhotos.remove(id));
+    throw err;
+  }
   res.json(out);
 }));
 
@@ -705,17 +933,21 @@ router.put('/vouchers/:id', guard('stock'), route((req, res) => {
   const n = normalizeVoucher(body);
   const invalid = validateVoucher(n);
   if (invalid) data.fail(400, invalid);
+  const handover = normalizeHandover(body, n);
   if (body.maintenance_flow === true && (!body.maintenance_form_id || n.direction !== 'out' || n.kind !== 'sup')) {
     data.fail(400, 'اختر نموذج الصيانة قبل تسجيل إذن الخروج');
   }
+  const createdPhotos = [];
+  try {
   data.tx((st) => {
     const old = data.voucherById(id);
     if (!old) data.fail(404, 'الإذن غير موجود');
-    if ((data.touchesPool(n) || data.touchesPool(asVoucherShape(old))) && !can(req.user.role, 'pool')) {
+    if ((data.touchesPool(n) || data.touchesPool(asVoucherShape(old))) && !can(req.user, 'pool')) {
       data.fail(403, 'حركات الصيانة والخردة متاحة لمدير النظام والمدير الفني فقط');
     }
     const serialError = data.validateSerials(n, id);
     if (serialError) data.fail(400, serialError);
+    prepareInspectionLines(n, old, req.user.name, createdPhotos);
     const applied = data.applyChange(asVoucherShape(old), n);
     if (!applied.ok) data.fail(400, data.stockError(applied));
     data.assertUniqueNumber(n.direction, n.number, id);
@@ -728,8 +960,26 @@ router.put('/vouchers/:id', guard('stock'), route((req, res) => {
     if (n.docDate) old.doc_date = n.docDate;
     old.edited_by = req.user.name;
     old.lines = n.lines.map((l) => insertLine(st, l));
+    if (handover) {
+      const previousMeta = st.dispatchMeta[old.id] && typeof st.dispatchMeta[old.id] === 'object'
+        ? st.dispatchMeta[old.id] : {};
+      st.dispatchMeta[old.id] = Object.assign({}, previousMeta, {
+        destType: 'branch',
+        partyName: (data.branchById(n.branchId) || {}).name || '',
+        giverName: handover.giverName,
+        giverSignature: handover.giverSignature,
+        receiverName: handover.receiverName,
+        receiverSignature: handover.receiverSignature,
+        receiveDate: handover.receiveDate,
+        updatedBy: req.user.name,
+        updatedAt: data.nowIso()
+      });
+    }
     if (body.maintenance_flow === true) {
       linkMaintenanceIssue(st, old, n, body, req.user.name);
+    }
+    if (n.direction === 'in' && n.kind === 'maint') {
+      linkMaintenanceReturn(st, old, n, req.user.name);
     }
     applyLineWarranty(n);
     // The dispatch sheet prints the permit number from both sides; keep them
@@ -745,6 +995,48 @@ router.put('/vouchers/:id', guard('stock'), route((req, res) => {
       }
     }
   });
+  } catch (err) {
+    createdPhotos.forEach((photoId) => inspectionPhotos.remove(photoId));
+    throw err;
+  }
+  res.json({ ok: true });
+}));
+
+router.post('/inspections/:voucherId/:lineId/review', guard('inspectionReview'), route((req, res) => {
+  const body = bodyOf(req);
+  const decision = body.decision === 'damaged' ? 'damaged' : body.decision === 'good' ? 'good' : '';
+  if (!decision) data.fail(400, 'اختر نتيجة الفحص');
+  const reviewNotes = text(body.notes, 2000);
+  data.tx((st) => {
+    const voucher = data.voucherById(asInt(req.params.voucherId));
+    if (!voucher || voucher.direction !== 'in') data.fail(404, 'إذن الاستلام غير موجود');
+    const line = voucher.lines.find((entry) => Number(entry.id) === asInt(req.params.lineId));
+    if (!line || line.state !== 'inspection') data.fail(409, 'هذا الصنف ليس بانتظار الفحص');
+    const before = asVoucherShape(voucher);
+    line.state = decision === 'good' ? 'stock' : 'scrap';
+    line.inspection = Object.assign({}, line.inspection || {}, {
+      status: decision === 'good' ? 'approved' : 'rejected',
+      decision,
+      reviewed_by: req.user.name,
+      reviewed_at: data.nowIso(),
+      review_notes: reviewNotes
+    });
+    const applied = data.applyChange(before, asVoucherShape(voucher));
+    if (!applied.ok) data.fail(400, data.stockError(applied));
+    if (line.maintenance_form_id) {
+      const form = data.formById(line.maintenance_form_id);
+      if (form) {
+        form.inspectionResult3 = decision === 'good' ? 'تم إصلاحه' : 'رفض الصيانة';
+        form.status = 'received_after_maintenance';
+        form.updatedBy = req.user.name;
+        form.updatedAt = data.nowIso();
+      }
+    }
+    if (decision === 'good' && line.has_warranty && line.warranty_until) {
+      const item = data.itemById(line.item_id);
+      if (item) item.warranty_until = line.warranty_until;
+    }
+  });
   res.json({ ok: true });
 }));
 
@@ -753,7 +1045,7 @@ router.delete('/vouchers/:id', guard('delRecv'), route((req, res) => {
   data.tx((st) => {
     const old = data.voucherById(id);
     if (!old) data.fail(404, 'الإذن غير موجود');
-    if (data.touchesPool(asVoucherShape(old)) && !can(req.user.role, 'pool')) {
+    if (data.touchesPool(asVoucherShape(old)) && !can(req.user, 'pool')) {
       data.fail(403, 'حركات الصيانة والخردة متاحة لمدير النظام والمدير الفني فقط');
     }
     const applied = data.applyChange(asVoucherShape(old), null);
@@ -1115,6 +1407,8 @@ const META_FIELDS = {
   note: 4000,
   stockOfficer: 160,
   stockOfficerSignature: 160,
+  giverName: 160,
+  giverSignature: 160,
   receiverName: 160,
   receiverSignature: 160,
   gov: 160,

@@ -76,7 +76,26 @@ role-restricted **سجل الحركة** screen; the corresponding endpoint is `G
 The newest 10,000 events are retained in `data/audit_log.json`.
 
 The dashboard highlights zero-stock items, items with 1–3 units, maintenance quantities,
-and requests awaiting action. The low-stock threshold is currently 3 units.
+items held for inspection, and requests awaiting action. The low-stock threshold is currently 3 units.
+
+## User accounts and permissions
+
+Only the IT Manager can create or deactivate accounts, change a user's role, reset a
+password, or override permissions for individual operations. New accounts inherit their
+role's defaults unless the administrator sets a per-user allow/deny override. Users can
+change their own password after confirming the current password. Deactivation and password
+changes invalidate existing sessions immediately; at least one active IT Manager account
+must remain.
+
+## Receipt inspection
+
+New supplier, branch, and maintenance receipts are recorded in the `inspection` pool, not
+the spendable warehouse balance. An authorized reviewer (IT Manager, Technical Head, or
+Warehouse Keeper by default) must approve each line: accepted items enter `stock`, while
+damaged items enter terminal `scrap`. The receipt captures the reported condition, notes,
+and up to three photos per permit (JPG/PNG/WebP, 1 MiB each). Maintenance-return forms stay
+pending until the inspection decision. Photos are kept in `data/inspection_photos/` and
+included in daily data snapshots.
 
 ## Key API endpoints
 
@@ -84,6 +103,10 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
 
 - `POST /api/auth/login` — `{ username, password }` → `{ token, user }`
 - `GET  /api/bootstrap` — items, categories, branches, suppliers, vouchers, requests
+- `GET/POST/PUT /api/users` — administrator-only user and permission management
+- `PUT /api/auth/password`, `PUT /api/users/:id/password` — own password change / admin reset
+- `POST /api/inspections/:voucherId/:lineId/review` — accept or reject an inspection line
+- `GET /api/inspection-photos/:id` — authenticated inspection photo
 - `GET  /api/audit` — recent audit events (admin/head only)
 - `POST/PUT/DELETE /api/items`, `/api/categories`, `/api/branches`, `/api/suppliers`
 - `POST/PUT/DELETE /api/vouchers` — receipts/disbursements (stock validated in a transaction)
@@ -92,22 +115,21 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
 
 ## Business rules
 
-- Three warehouse pools per item: `stock`, `تحت الصيانة` (`maint_qty`) and `خردة`
-  (`scrap_qty`). All are kept non-negative in `server/src/stock.js` and enforced inside a
-  synchronous state transaction before JSON files are atomically written.
+- Four warehouse pools per item: `stock`, `تحت الصيانة` (`maint_qty`), `خردة`
+  (`scrap_qty`), and `inspection` (`inspection_qty`). All are kept non-negative in
+  `server/src/stock.js` and enforced inside a synchronous state transaction before JSON
+  files are atomically written.
 - The document operations are split into dedicated screens (tabs), each with a fixed
   direction/kind and no source selector:
-  - **استلام من مورد** — receipt from a supplier (`in/sup`); always added to `مخزون`.
+  - **استلام من مورد** — receipt from a supplier (`in/sup`); held for inspection.
   - **استلام من فرع** — receipt from a branch (`in/br`); the branch balance is reduced and
-    the qty is always added to `مخزون`. Scrap is not an option on this document.
+    the qty is held for inspection.
   - **صرف إلى فرع** — disbursement to a branch (`out/br`); `مخزون` is reduced and the
     branch balance is increased.
   - **صرف إلى مورد الصيانة** — reached from the **تحت الصيانة** tab (`out/sup`).
-- Receiving goods (`direction = in`) normally moves qty into `stock`. The only receipt
-  that may feed `خردة` is a maintenance return, whose result is **تم إصلاحه** (repaired →
-  `stock`) or **رفض الصيانة** (denied → `خردة`); the pool is adjusted automatically.
-  Supplier and branch receipts always add to `stock` — damaged units are written off from
-  the `الخردة` tab instead.
+- All new goods receipts (`direction = in`) first move qty into `inspection`. The reviewer
+  then moves accepted units into `stock` or damaged units into `خردة`; maintenance returns
+  also leave `تحت الصيانة` when received and remain held until that decision.
 - Sending to maintenance is a **disbursement to a maintenance supplier** (`direction = out`,
   `kind = sup`): qty leaves `stock` and enters `تحت الصيانة`. Such a permit records the
   supplier, permit number, automatic date, items, serials, per-line maintenance reason and
@@ -118,6 +140,10 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
   permits: serials, party, origin branch, reason, explanation, registrar and date) and
   **إقرار استلام من الصيانة** (acknowledgement of the returned goods). The exit list shows
   only the quantity still under maintenance, so fully returned lines disappear.
+- The dashboard flags linked external maintenance forms still marked `sent_external` after
+  30 days, using the linked exit permit date. It also flags items with an active stock,
+  branch, or maintenance balance whose catalog warranty expires within 7 days, including
+  already expired warranties.
 - The acknowledgement page lists the open items with their exit-permit details (number,
   date, supplier, origin branch, reason, explanation, registrar and available qty) and
   records the result and warranty per line. It also shows the acknowledgement history with
@@ -144,10 +170,15 @@ All routes except `POST /api/auth/login` require `Authorization: Bearer <token>`
   becomes reusable.
 - Supplier vouchers store the supplier name; branch vouchers store the branch. Every
   receipt/disbursement shows its party (`الجهة`).
+- For serial-tracked items issued to a branch, the issue permit records the handing-over
+  employee, receiving employee, their typed signatures, and handover date in the same
+  transaction as the voucher. The details appear in the permit list and printed form.
+- Account and inspection decisions are recorded in the audit trail without storing password
+  hashes in audit changes.
 
 ## Tests
 
 ```bash
 node check.js       # validates the inline UI script parses
-cd server && npm test # stock, audit trail, and maintenance issue/return flows
+cd server && npm test # stock, audit, inspection, maintenance, and account permissions
 ```

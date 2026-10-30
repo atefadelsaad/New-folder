@@ -6,6 +6,7 @@
 //   maint   - "under maintenance" pool, filled only by receipts, drained
 //             only by receiving an item back from maintenance (`kind = maint`)
 //   scrap   - "scrap" pool, terminal: it only ever grows
+//   inspection - received units held until an authorized inspection decision
 // A receipt may also move qty into a branch (kind `br`). Reversing an existing
 // voucher is expressed with mult = -1.
 
@@ -45,7 +46,7 @@ function voucherDeltas(voucher) {
   for (const line of voucher.lines || []) {
     const qty = lineQty(line);
     if (!qty) continue;
-    const delta = { itemId: lineItemId(line), stock: 0, maint: 0, scrap: 0, branchId: null, branch: 0 };
+    const delta = { itemId: lineItemId(line), stock: 0, maint: 0, scrap: 0, inspection: 0, branchId: null, branch: 0 };
 
     if (direction === 'in') {
       if (kind === 'maint') {
@@ -53,20 +54,23 @@ function voucherDeltas(voucher) {
         // lines return to stock, damaged lines move to scrap.
         const state = lineState(line);
         delta.maint = -qty;
-        if (state === 'scrap') delta.scrap = qty;
+        if (state === 'inspection') delta.inspection = qty;
+        else if (state === 'scrap') delta.scrap = qty;
         else delta.stock = qty;
       } else if (kind === 'br') {
         // Receive back from a branch: the branch balance drops either way, and
         // the qty lands in stock (good) or scrap (damaged).
         const state = lineState(line);
-        if (state === 'scrap') delta.scrap = qty;
+        if (state === 'inspection') delta.inspection = qty;
+        else if (state === 'scrap') delta.scrap = qty;
         else delta.stock = qty;
         delta.branchId = Number(branchId);
         delta.branch = -qty;
       } else {
         // From a supplier: line state decides the pool.
         const state = lineState(line);
-        if (state === 'maint') delta.maint = qty;
+        if (state === 'inspection') delta.inspection = qty;
+        else if (state === 'maint') delta.maint = qty;
         else if (state === 'scrap') delta.scrap = qty;
         else delta.stock = qty;
       }
@@ -95,6 +99,7 @@ function applyDeltas(current, deltas) {
   const stockDelta = new Map();
   const maintDelta = new Map();
   const scrapDelta = new Map();
+  const inspectionDelta = new Map();
   const branchDelta = new Map();
 
   const add = (map, key, value) => {
@@ -106,6 +111,7 @@ function applyDeltas(current, deltas) {
     add(stockDelta, d.itemId, d.stock * mult);
     add(maintDelta, d.itemId, d.maint * mult);
     add(scrapDelta, d.itemId, d.scrap * mult);
+    add(inspectionDelta, d.itemId, (d.inspection || 0) * mult);
     if (d.branchId != null) {
       const key = d.branchId + ':' + d.itemId;
       const prev = branchDelta.get(key);
@@ -133,6 +139,8 @@ function applyDeltas(current, deltas) {
   if (!maint.ok) return maint;
   const scrap = check(current.scrap, scrapDelta, 'scrap', true);
   if (!scrap.ok) return scrap;
+  const inspection = check(current.inspection || new Map(), inspectionDelta, 'inspection', true);
+  if (!inspection.ok) return inspection;
 
   const branch = new Map();
   for (const [bid, map] of current.branch) branch.set(bid, new Map(map));
@@ -144,7 +152,7 @@ function applyDeltas(current, deltas) {
     map.set(entry.itemId, next);
   }
 
-  return { ok: true, stock: stock.map, maint: maint.map, scrap: scrap.map, branch };
+  return { ok: true, stock: stock.map, maint: maint.map, scrap: scrap.map, inspection: inspection.map, branch };
 }
 
 // Build the combined delta list for replacing `oldVoucher` with `newVoucher`.
@@ -162,7 +170,7 @@ function scrapDeltas(lines) {
   for (const line of lines || []) {
     const qty = lineQty(line);
     if (!qty) continue;
-    out.push({ itemId: lineItemId(line), stock: -qty, maint: 0, scrap: qty, branchId: null, branch: 0 });
+    out.push({ itemId: lineItemId(line), stock: -qty, maint: 0, scrap: qty, inspection: 0, branchId: null, branch: 0 });
   }
   return out;
 }
