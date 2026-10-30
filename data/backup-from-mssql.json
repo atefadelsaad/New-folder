@@ -1,0 +1,741 @@
+{
+  "exportedAt": "2026-10-30T11:53:17.230Z",
+  "source": "MSSQL it_warehouse (FOR JSON PATH)",
+  "tables": {
+    "users": [
+      {
+        "id": 1,
+        "username": "admin",
+        "password_hash": "$2a$10$OznzVMYnAIHIuRE0HChz2eoo/uhJlrij39j8P89q0.7hg.7XiP2q2",
+        "role": "admin",
+        "name": "IT Manager",
+        "created_at": "2026-10-24T11:41:55"
+      },
+      {
+        "id": 2,
+        "username": "head",
+        "password_hash": "$2a$10$FmfIO9.9e4zzDacz5zTQC.wm07Q0CPTnjstFzit8lpz.CzFY1sY3e",
+        "role": "head",
+        "name": "Technical Head",
+        "created_at": "2026-10-24T11:41:55"
+      },
+      {
+        "id": 3,
+        "username": "area",
+        "password_hash": "$2a$10$5fjhYlQdwON.qD1.agc5v.7JxT/qyzex92myoybEwWhTs9Slej2UO",
+        "role": "area",
+        "name": "Area Manager",
+        "created_at": "2026-10-24T11:41:55"
+      },
+      {
+        "id": 4,
+        "username": "store",
+        "password_hash": "$2a$10$L0Q1tHC.jLm6Xk1E2JxaNeOV5KpzDMPcunAGieYmNbdUfJuyx8qG2",
+        "role": "store",
+        "name": "Warehouse Keeper",
+        "created_at": "2026-10-24T11:41:55"
+      },
+      {
+        "id": 5,
+        "username": "senior",
+        "password_hash": "$2a$10$QGXjJGzu5384TKW9dMQFvu4G6Olut.a0FIV3NHPUnKo1DKZ4WBNrG",
+        "role": "senior",
+        "name": "Senior Technical",
+        "created_at": "2026-10-24T11:41:55"
+      },
+      {
+        "id": 6,
+        "username": "junior",
+        "password_hash": "$2a$10$109fqNOYJLrRCwAvkktKku67hxH0Qd/EbUhpuMJzkkLkU5bZEMkMe",
+        "role": "junior",
+        "name": "Junior Technical",
+        "created_at": "2026-10-24T11:41:55"
+      }
+    ],
+    "categories": [
+      {
+        "id": 2004,
+        "name": "pc كمبيوتر",
+        "has_serial": true,
+        "supplier_id": 1,
+        "created_by": "IT Manager",
+        "created_at": "2026-10-24T15:52:58"
+      }
+    ],
+    "items": [
+      {
+        "id": 1,
+        "name": "pc_dell",
+        "category_id": 2004,
+        "stock": 1,
+        "maint_qty": 0,
+        "scrap_qty": 1,
+        "created_by": "IT Manager",
+        "created_at": "2026-10-24T15:54:22",
+        "warranty_until": "2027-10-28"
+      },
+      {
+        "id": 2,
+        "name": "df",
+        "category_id": 2004,
+        "stock": 0,
+        "maint_qty": 0,
+        "scrap_qty": 0,
+        "created_by": "IT Manager",
+        "created_at": "2026-10-24T15:55:02"
+      }
+    ],
+    "branches": [
+      {
+        "id": 1,
+        "name": "فرع سموحة",
+        "gov": "الإسكندرية",
+        "created_by": "Warehouse Keeper",
+        "created_at": "2026-10-24"
+      },
+      {
+        "id": 2,
+        "name": "فرع العجمي",
+        "gov": "الإسكندرية",
+        "created_by": "Warehouse Keeper",
+        "created_at": "2026-10-24"
+      },
+      {
+        "id": 3,
+        "name": "pjoio",
+        "gov": "الغربية",
+        "created_by": "Warehouse Keeper",
+        "created_at": "2026-10-24"
+      }
+    ],
+    "branch_items": [
+      {
+        "branch_id": 1,
+        "item_id": 1,
+        "qty": 0
+      },
+      {
+        "branch_id": 2,
+        "item_id": 1,
+        "qty": 0
+      }
+    ],
+    "suppliers": [
+      {
+        "id": 1,
+        "name": "ATEF",
+        "company": "test",
+        "address": "alex",
+        "phone": "01274985462",
+        "landline": "03660003",
+        "accepts_maintenance": true,
+        "created_by": "IT Manager",
+        "created_at": "2026-10-24T15:52:45"
+      },
+      {
+        "id": 2,
+        "name": "جهة صيانة تجريبية",
+        "accepts_maintenance": false,
+        "created_at": "2026-10-28T19:23:46"
+      }
+    ],
+    "vouchers": [
+      {
+        "id": 1,
+        "direction": "in",
+        "kind": "sup",
+        "supplier_id": 1,
+        "number": "23",
+        "doc_date": "2026-10-24",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-24T15:55:53"
+      },
+      {
+        "id": 1002,
+        "direction": "out",
+        "kind": "sup",
+        "supplier_id": 1,
+        "number": "1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T18:54:19",
+        "deleted_at": "2026-10-28T18:55:15",
+        "source_branch": "فرع سموحة"
+      },
+      {
+        "id": 1003,
+        "direction": "out",
+        "kind": "sup",
+        "supplier_id": 1,
+        "number": "1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T18:55:33",
+        "deleted_at": "2026-10-28T19:01:29",
+        "source_branch": "فرع سموحة"
+      },
+      {
+        "id": 1004,
+        "direction": "out",
+        "kind": "sup",
+        "supplier_id": 1,
+        "number": "1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T19:01:32",
+        "deleted_at": "2026-10-28T19:01:32"
+      },
+      {
+        "id": 1005,
+        "direction": "out",
+        "kind": "br",
+        "branch_id": 1,
+        "number": "list-test-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T19:03:00",
+        "deleted_at": "2026-10-28T19:03:04"
+      },
+      {
+        "id": 1006,
+        "direction": "out",
+        "kind": "br",
+        "branch_id": 1,
+        "number": "list-test-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T19:04:00",
+        "deleted_at": "2026-10-28T19:04:04"
+      },
+      {
+        "id": 1007,
+        "direction": "out",
+        "kind": "br",
+        "branch_id": 1,
+        "number": "list-test-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T19:04:56",
+        "deleted_at": "2026-10-28T19:05:02"
+      },
+      {
+        "id": 1008,
+        "direction": "out",
+        "kind": "br",
+        "branch_id": 1,
+        "number": "list-test-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T19:05:53",
+        "deleted_at": "2026-10-28T19:05:58"
+      },
+      {
+        "id": 1009,
+        "direction": "out",
+        "kind": "br",
+        "branch_id": 1,
+        "number": "list-test-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T19:06:41",
+        "deleted_at": "2026-10-28T19:06:44"
+      },
+      {
+        "id": 1010,
+        "direction": "out",
+        "kind": "br",
+        "branch_id": 1,
+        "number": "list-test-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T19:07:28",
+        "deleted_at": "2026-10-28T19:07:33"
+      },
+      {
+        "id": 1011,
+        "direction": "out",
+        "kind": "sup",
+        "supplier_id": 2,
+        "number": "DSP-TEST-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T19:23:47",
+        "deleted_at": "2026-10-28T19:24:45",
+        "source_branch": "جهة صيانة تجريبية"
+      },
+      {
+        "id": 1012,
+        "direction": "out",
+        "kind": "br",
+        "branch_id": 1,
+        "number": "IB-TEST-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T19:48:18",
+        "deleted_at": "2026-10-28T19:51:03"
+      },
+      {
+        "id": 1013,
+        "direction": "in",
+        "kind": "br",
+        "branch_id": 1,
+        "number": "RB-TEST-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T19:48:19",
+        "deleted_at": "2026-10-28T19:51:03"
+      },
+      {
+        "id": 1014,
+        "direction": "in",
+        "kind": "sup",
+        "supplier_id": 1,
+        "number": "RS-A4-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T20:17:53",
+        "deleted_at": "2026-10-28T20:18:19"
+      },
+      {
+        "id": 1015,
+        "direction": "out",
+        "kind": "br",
+        "branch_id": 2,
+        "number": "IS-A4-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T20:17:55",
+        "deleted_at": "2026-10-28T20:18:19"
+      },
+      {
+        "id": 1016,
+        "direction": "in",
+        "kind": "br",
+        "branch_id": 2,
+        "number": "RB-A4-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T20:17:56",
+        "deleted_at": "2026-10-28T20:18:19"
+      },
+      {
+        "id": 1017,
+        "direction": "in",
+        "kind": "sup",
+        "supplier_id": 1,
+        "number": "RS-UI-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T20:23:47",
+        "deleted_at": "2026-10-28T20:23:48"
+      },
+      {
+        "id": 1018,
+        "direction": "in",
+        "kind": "sup",
+        "supplier_id": 1,
+        "number": "ED-A4-1",
+        "doc_date": "2026-10-27",
+        "created_by": "IT Manager",
+        "edited_by": "IT Manager",
+        "created_at": "2026-10-28T20:24:32",
+        "deleted_at": "2026-10-28T20:24:39"
+      },
+      {
+        "id": 1019,
+        "direction": "in",
+        "kind": "sup",
+        "supplier_id": 1,
+        "number": "ED-A4-1",
+        "doc_date": "2026-10-27",
+        "created_by": "IT Manager",
+        "edited_by": "IT Manager",
+        "created_at": "2026-10-28T20:24:48",
+        "deleted_at": "2026-10-28T20:24:54"
+      },
+      {
+        "id": 1020,
+        "direction": "in",
+        "kind": "sup",
+        "supplier_id": 1,
+        "number": "ED-A4-1",
+        "doc_date": "2026-10-27",
+        "created_by": "IT Manager",
+        "edited_by": "IT Manager",
+        "created_at": "2026-10-28T20:44:04",
+        "deleted_at": "2026-10-28T20:44:11"
+      },
+      {
+        "id": 1021,
+        "direction": "out",
+        "kind": "br",
+        "branch_id": 2,
+        "number": "DSP-T-1",
+        "doc_date": "2026-10-28",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T20:45:42",
+        "deleted_at": "2026-10-28T20:45:44"
+      }
+    ],
+    "voucher_lines": [
+      {
+        "id": 1,
+        "voucher_id": 1,
+        "item_id": 1,
+        "qty": 2,
+        "state": "stock",
+        "serials": "[\"dd\",\"ww\"]",
+        "has_warranty": false
+      },
+      {
+        "id": 1002,
+        "voucher_id": 1002,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"dd\"]",
+        "has_warranty": false
+      },
+      {
+        "id": 1003,
+        "voucher_id": 1002,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "يحتاج صيانة",
+        "state": "stock",
+        "serials": "[\"ww\"]",
+        "line_note": "نموذج صيانة رقم MF-0002",
+        "has_warranty": false
+      },
+      {
+        "id": 1004,
+        "voucher_id": 1003,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"dd\"]",
+        "has_warranty": false
+      },
+      {
+        "id": 1005,
+        "voucher_id": 1003,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "يحتاج صيانة",
+        "state": "stock",
+        "serials": "[\"ww\"]",
+        "line_note": "نموذج صيانة رقم MF-0002",
+        "has_warranty": false
+      },
+      {
+        "id": 1006,
+        "voucher_id": 1004,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"dd\"]",
+        "line_note": "اختبار من الواجهة",
+        "has_warranty": false
+      },
+      {
+        "id": 1007,
+        "voucher_id": 1005,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"dd\"]",
+        "has_warranty": false
+      },
+      {
+        "id": 1008,
+        "voucher_id": 1006,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"dd\"]",
+        "has_warranty": false
+      },
+      {
+        "id": 1009,
+        "voucher_id": 1007,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"dd\"]",
+        "has_warranty": false
+      },
+      {
+        "id": 1010,
+        "voucher_id": 1008,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"dd\"]",
+        "has_warranty": false
+      },
+      {
+        "id": 1011,
+        "voucher_id": 1009,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"dd\"]",
+        "has_warranty": false
+      },
+      {
+        "id": 1012,
+        "voucher_id": 1010,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"dd\"]",
+        "has_warranty": false
+      },
+      {
+        "id": 1013,
+        "voucher_id": 1011,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"dd\"]",
+        "line_note": "سطر أول",
+        "has_warranty": false
+      },
+      {
+        "id": 1014,
+        "voucher_id": 1011,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "يحتاج فحص",
+        "state": "stock",
+        "serials": "[\"ww\"]",
+        "line_note": "سطر ثانٍ",
+        "has_warranty": false
+      },
+      {
+        "id": 1015,
+        "voucher_id": 1012,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"dd\"]",
+        "line_note": "صرف اختبار إلى فرع",
+        "has_warranty": false
+      },
+      {
+        "id": 1016,
+        "voucher_id": 1013,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"dd\"]",
+        "line_note": "استلام اختبار من فرع",
+        "has_warranty": true,
+        "line_warranty_until": "2027-10-28"
+      },
+      {
+        "id": 1017,
+        "voucher_id": 1014,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"a4-in-1\"]",
+        "line_note": "سطر اختبار",
+        "has_warranty": true,
+        "line_warranty_until": "2028-10-28"
+      },
+      {
+        "id": 1018,
+        "voucher_id": 1015,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "يحتاج صيانة",
+        "state": "stock",
+        "serials": "[\"a4-in-1\"]",
+        "line_note": "صرف سطر",
+        "has_warranty": false
+      },
+      {
+        "id": 1019,
+        "voucher_id": 1016,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"a4-in-1\"]",
+        "line_note": "استلام سطر",
+        "has_warranty": false
+      },
+      {
+        "id": 1020,
+        "voucher_id": 1017,
+        "item_id": 1,
+        "qty": 2,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"ui-1\",\"ui-2\"]",
+        "has_warranty": false
+      },
+      {
+        "id": 1022,
+        "voucher_id": 1018,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "تالف",
+        "state": "stock",
+        "serials": "[\"ed-1ملاحظة معدلة\"]",
+        "line_note": "ملاحظة أصلية",
+        "has_warranty": false
+      },
+      {
+        "id": 1024,
+        "voucher_id": 1019,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "تالف",
+        "state": "stock",
+        "serials": "[\"ed-1\"]",
+        "line_note": "ملاحظةملاحظة معدلة أصلية",
+        "has_warranty": false
+      },
+      {
+        "id": 1026,
+        "voucher_id": 1020,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "تالف",
+        "state": "stock",
+        "serials": "[\"ed-1\"]",
+        "line_note": "ملاحظةملاحظة معدلة أصلية",
+        "has_warranty": false
+      },
+      {
+        "id": 1027,
+        "voucher_id": 1021,
+        "item_id": 1,
+        "qty": 1,
+        "item_condition": "سليم",
+        "state": "stock",
+        "serials": "[\"dd\"]",
+        "line_note": "سطر اختبار",
+        "has_warranty": false
+      }
+    ],
+    "scrap_entries": [
+      {
+        "id": 1,
+        "item_id": 1,
+        "qty": 1,
+        "serials": "[]",
+        "created_by": "IT Manager",
+        "created_at": "2026-10-28T20:05:38"
+      }
+    ],
+    "requests": [
+      {
+        "id": 2,
+        "branch_id": 1,
+        "requested_by": "IT Manager",
+        "status": "pending",
+        "created_at": "2026-10-28T20:51:21"
+      }
+    ],
+    "request_lines": [
+      {
+        "id": 3,
+        "request_id": 2,
+        "item_id": 2,
+        "qty": 2
+      }
+    ],
+    "request_logs": [
+      {
+        "id": 2,
+        "request_id": 2,
+        "by_name": "IT Manager",
+        "action": "أرسل الطلب",
+        "kind": "",
+        "note": "",
+        "created_at": "2026-10-28T20:51:21"
+      }
+    ]
+  },
+  "files": {
+    "maintenance_forms": [
+      {
+        "id": 1,
+        "number": "MF-0001",
+        "maintenanceType": "internal",
+        "status": "received",
+        "branchName": "فرع سموحة",
+        "ownerName": "",
+        "employeeCode": "34",
+        "department": "صقف",
+        "deviceType": "pc_dell",
+        "serial": "ww",
+        "faultDescription": "شسيش",
+        "accessoriesNotes": "يي",
+        "permitNumber": "",
+        "supportOfficer": "ATEF",
+        "signature": "ATEF",
+        "inspectionResult": "",
+        "actionTaken": "",
+        "permitNumber2": "",
+        "inspector": "",
+        "signature2": "",
+        "maintenanceEntity": "",
+        "recipientName": "",
+        "signature3": "",
+        "warrantyStatus": "",
+        "accessoriesNotes2": "",
+        "inspector3": "",
+        "signature4": "",
+        "issuePermitNumber": "",
+        "inspectionResult2": "",
+        "actionTaken2": "",
+        "technicianName": "",
+        "signature5": "",
+        "inspectionResult3": "",
+        "actionTaken3": "",
+        "maintenanceDeliveryOfficer": "",
+        "signature6": "",
+        "inspector4": "",
+        "signature7": "",
+        "entryPermitNumber": "",
+        "receiptVoucherNumber": "",
+        "deliveryDate": "2026-02-08",
+        "receivedDate": "",
+        "inspectionDate": "",
+        "releaseToBranchDate": "",
+        "deliveryDate2": "",
+        "date3": "",
+        "receivedDate2": "",
+        "itemId": 1,
+        "branchId": null,
+        "issuePermitId": null,
+        "entryPermitId": null,
+        "receiptVoucherId": null,
+        "dispatchLinks": [],
+        "requestOnly": false,
+        "createdBy": "IT Manager",
+        "createdAt": "2026-10-28T20:27:10.273Z",
+        "updatedBy": "IT Manager",
+        "updatedAt": "2026-10-28T20:27:10.273Z"
+      }
+    ],
+    "dispatch_meta": {}
+  }
+}

@@ -15,6 +15,7 @@ const CAN = {
   approve: ['admin', 'head', 'area'],
   release: ['admin', 'head', 'store'],
   pool: ['admin', 'head'],
+  auditView: ['admin', 'head'],
   // Maintenance forms: keepers/seniors/heads create and edit, juniors may only
   // raise a request, and deletion stays with IT Manager / Technical Head.
   maintView: ['admin', 'head', 'senior', 'store', 'junior'],

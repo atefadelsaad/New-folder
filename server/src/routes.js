@@ -1,18 +1,17 @@
 'use strict';
 const express = require('express');
-const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
-const { getPool, sql } = require('./db');
 const { sign, auth } = require('./auth');
 const { can } = require('./roles');
-const { voucherDeltas, scrapDeltas, applyDeltas, planChange } = require('./stock');
-const store = require('./filestore');
+const data = require('./data');
 
 const router = express.Router();
 
 const guard = (perm) => (req, res, next) =>
   can(req.user.role, perm) ? next() : res.status(403).json({ error: 'لا تملك صلاحية هذا الإجراء' });
+
+const text = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
 
 const asInt = (v, fallback = 0) => {
   const n = parseInt(v, 10);
@@ -24,17 +23,61 @@ const asDate = (v) => {
   return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
 };
 
-const sqlReq = (client) => new sql.Request(client);
+const today = () => new Date().toISOString().slice(0, 10);
 
-function parseSerials(raw) {
-  if (!raw) return [];
+const has = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+
+const bodyOf = (req) => (req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {});
+
+// Every handler is synchronous: a route either finishes (and the state is
+// persisted atomically) or throws, in which case nothing is written.
+const route = (fn) => (req, res, next) => {
   try {
-    const v = JSON.parse(raw);
-    return Array.isArray(v) ? v : [];
-  } catch (_) {
-    return [];
+    if (!req.user) return fn(req, res);
+    const body = bodyOf(req);
+    const method = req.method.toUpperCase();
+    let action = method === 'POST' ? 'إضافة' : method === 'PUT' || method === 'PATCH' ? 'تعديل' : method === 'DELETE' ? 'حذف' : 'تغيير';
+    if (method === 'POST' && req.path === '/scrap') action = 'إتلاف';
+    if (method === 'POST' && /^\/requests\/\d+\/action$/.test(req.path)) {
+      action = ({ no: 'رفض طلب', save: 'تعديل طلب', rev: 'مراجعة طلب', ok: 'اعتماد طلب', out: 'صرف طلب' })[body.action] || 'إجراء على طلب';
+    }
+    data.withAudit({
+      action,
+      method,
+      path: req.baseUrl + req.path,
+      actor: req.user.name,
+      username: req.user.username,
+      role: req.user.role,
+      reason: text(body.reason || body.note, 500)
+    }, () => fn(req, res));
+  } catch (err) {
+    if (err instanceof data.ApiError) return res.status(err.status).json({ error: err.message });
+    next(err);
   }
+};
+
+// Keep arbitrary maintenance-form fields JSON-safe without dropping unknown
+// keys. Only prototype-pollution keys are removed and huge payloads trimmed.
+function sanitize(value, depth) {
+  if (depth > 6) return null;
+  if (value == null) return value;
+  const t = typeof value;
+  if (t === 'string') return value.slice(0, 20000);
+  if (t === 'number') return Number.isFinite(value) ? value : null;
+  if (t === 'boolean') return value;
+  if (Array.isArray(value)) return value.slice(0, 500).map((v) => sanitize(v, depth + 1));
+  if (t === 'object') {
+    const out = {};
+    for (const key of Object.keys(value)) {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+      out[key] = sanitize(value[key], depth + 1);
+    }
+    return out;
+  }
+  return null;
 }
+
+/* --------------------------------- auth --------------------------------- */
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -44,1249 +87,1108 @@ const loginLimiter = rateLimit({
   message: { error: 'محاولات تسجيل دخول كثيرة، حاول لاحقًا' }
 });
 
-/* --------------------------------- auth --------------------------------- */
-
-router.post('/auth/login', loginLimiter, async (req, res, next) => {
-  try {
-    const username = String((req.body && req.body.username) || '').trim();
-    const password = String((req.body && req.body.password) || '');
-    if (!username || !password) return res.status(400).json({ error: 'أدخل اسم المستخدم وكلمة المرور' });
-    const pool = await getPool();
-    const r = await pool.request().input('u', sql.NVarChar(64), username).query('SELECT * FROM users WHERE username = @u');
-    const user = r.recordset[0];
-    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-      return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
-    }
-    res.json({ token: sign(user), user: { username: user.username, role: user.role, name: user.name } });
-  } catch (err) { next(err); }
-});
+router.post('/auth/login', loginLimiter, route((req, res) => {
+  const body = bodyOf(req);
+  const username = text(body.username, 64);
+  const password = String(body.password == null ? '' : body.password);
+  if (!username || !password) data.fail(400, 'أدخل اسم المستخدم وكلمة المرور');
+  const user = data.state.users.find((u) => String(u.username).toLowerCase() === username.toLowerCase());
+  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+    data.fail(401, 'اسم المستخدم أو كلمة المرور غير صحيحة');
+  }
+  res.json({ token: sign(user), user: { username: user.username, role: user.role, name: user.name } });
+}));
 
 router.use(auth);
 
+router.use((req, res, next) => {
+  if (req.method === 'DELETE' && !text(bodyOf(req).reason, 500)) {
+    return res.status(400).json({ error: 'اكتب سبب الحذف قبل التأكيد' });
+  }
+  next();
+});
+
 router.get('/auth/me', (req, res) => res.json({ user: req.user }));
+
+router.get('/audit', (req, res) => {
+  if (!can(req.user.role, 'auditView')) return res.status(403).json({ error: 'لا تملك صلاحية عرض سجل الحركة' });
+  const limit = Math.min(100, Math.max(1, asInt(req.query.limit, 50)));
+  const offset = Math.max(0, asInt(req.query.offset));
+  const rows = data.state.auditLog.slice().reverse();
+  res.json({ total: rows.length, rows: rows.slice(offset, offset + limit) });
+});
 
 /* ------------------------------- bootstrap ------------------------------ */
 
-async function loadBootstrap(role) {
-  const pool = await getPool();
-  const cats = await pool.request().query('SELECT c.id, c.name, c.has_serial, c.created_by, c.created_at, s.name AS supplier FROM categories c LEFT JOIN suppliers s ON s.id = c.supplier_id ORDER BY c.id');
-  const items = await pool.request().query(
-    'SELECT i.id, i.name, i.stock, i.maint_qty, i.scrap_qty, i.created_by, i.created_at, i.warranty_until, i.notes, i.has_warranty, c.name AS category FROM items i JOIN categories c ON c.id = i.category_id ORDER BY i.id'
-  );
-  const branches = await pool.request().query('SELECT id, name, number, gov, manager, phone, address, location, created_by, created_at FROM branches ORDER BY id');
-  const branchItems = await pool.request().query('SELECT branch_id, item_id, qty FROM branch_items');
-  const suppliers = await pool.request().query('SELECT id, name, company, address, phone, landline, accepts_maintenance, created_by, created_at FROM suppliers ORDER BY name');
-  const vouchers = await pool.request().query(
-    `SELECT v.id, v.direction, v.kind, v.number, v.branch_id, v.created_by, v.edited_by, v.doc_date, v.source_branch, s.name AS supplier_name
-       FROM vouchers v LEFT JOIN suppliers s ON s.id = v.supplier_id
-      WHERE v.deleted_at IS NULL ORDER BY v.id DESC`
-  );
-  const lines = await pool.request().query(
-    `SELECT vl.voucher_id, vl.item_id, vl.qty, vl.item_condition, vl.serials, vl.state, vl.reason, vl.line_note, vl.has_warranty, vl.line_warranty_until
-       FROM voucher_lines vl JOIN vouchers v ON v.id = vl.voucher_id
-      WHERE v.deleted_at IS NULL ORDER BY vl.id`
-  );
-  const scrapLog = await pool.request().query(
-    'SELECT id, item_id, qty, serials, created_by, created_at FROM scrap_entries ORDER BY id DESC'
-  );
-  const requests = await pool.request().query('SELECT id, branch_id, requested_by, status, created_at FROM requests ORDER BY id DESC');
-  const reqLines = await pool.request().query('SELECT request_id, item_id, qty FROM request_lines ORDER BY id');
-  const logs = await pool.request().query('SELECT request_id, by_name, action, kind, note FROM request_logs ORDER BY id');
-  const maintenanceForms = store.readList('maintenance_forms.json');
-  const dispatchMeta = role === 'junior' ? {} : store.readMap('dispatch_meta.json');
-
-  const q = {};
-  branchItems.recordset.forEach((r) => { (q[r.branch_id] = q[r.branch_id] || {})[r.item_id] = r.qty; });
-
-  const linesByVoucher = {};
-  lines.recordset.forEach((r) => {
-    const sns = parseSerials(r.serials);
-    (linesByVoucher[r.voucher_id] = linesByVoucher[r.voucher_id] || []).push({
-      i: r.item_id, q: r.qty, sns, cd: r.item_condition || '', st: r.state || 'stock',
-      rs: r.reason || '', nt: r.line_note || '',
-      hw: !!r.has_warranty,
-      wu: r.line_warranty_until ? new Date(r.line_warranty_until).toISOString().slice(0, 10) : ''
-    });
-  });
-
-  const voucherRows = vouchers.recordset.map((r) => ({
-    id: r.id, d: r.doc_date, k: r.kind, sup: r.supplier_name || '',
-    b: r.branch_id, p: r.number, by: r.created_by, ed: r.edited_by,
-    sb: r.source_branch || '',
-    direction: r.direction, lines: linesByVoucher[r.id] || []
-  }));
-
-  const linesByRequest = {};
-  reqLines.recordset.forEach((r) => { (linesByRequest[r.request_id] = linesByRequest[r.request_id] || []).push({ i: r.item_id, q: r.qty }); });
-  const logsByRequest = {};
-  logs.recordset.forEach((r) => {
-    (logsByRequest[r.request_id] = logsByRequest[r.request_id] || []).push({ by: r.by_name, a: r.action, k: r.kind || '', t: r.note || '' });
-  });
-
-  // Warehouse balances are hidden from junior technicians.
-  const junior = role === 'junior';
-  const maintenance = junior ? [] : items.recordset.filter((r) => r.maint_qty > 0).map((r) => ({ i: r.id, q: r.maint_qty }));
-  const scrap = junior ? [] : items.recordset.filter((r) => r.scrap_qty > 0).map((r) => ({ i: r.id, q: r.scrap_qty }));
-
-  return {
-    categories: cats.recordset.map((r) => ({
-      id: r.id, name: r.name, has_serial: !!r.has_serial, supplier: r.supplier || '',
-      by: r.created_by || '', d: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : ''
-    })),
-    items: items.recordset.map((r) => ({
-      id: r.id, n: r.name, c: r.category, s: junior ? 0 : r.stock, by: r.created_by,
-      w: r.warranty_until ? new Date(r.warranty_until).toISOString().slice(0, 10) : '',
-      note: r.notes || '',
-      hw: r.has_warranty == null ? null : !!r.has_warranty,
-      d: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : ''
-    })),
-    branches: branches.recordset.map((r) => ({
-      id: r.id, n: r.name, number: r.number || '', g: r.gov, manager: r.manager || '',
-      phone: r.phone || '', address: r.address || '', location: r.location || '',
-      by: r.created_by,
-      d: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : '',
-      q: q[r.id] || {}
-    })),
-    suppliers: suppliers.recordset.map((r) => ({
-      id: r.id, n: r.name, company: r.company || '', address: r.address || '',
-      phone: r.phone || '', landline: r.landline || '', maint: !!r.accepts_maintenance,
-      by: r.created_by || '', d: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : ''
-    })),
-    maintenance,
-    scrap,
-    vouchers: {
-      in: voucherRows.filter((v) => v.direction === 'in'),
-      out: voucherRows.filter((v) => v.direction === 'out')
-    },
-    scrapLog: junior ? [] : scrapLog.recordset.map((r) => ({
-      id: r.id, i: r.item_id, q: r.qty, sns: parseSerials(r.serials),
-      by: r.created_by || '',
-      at: r.created_at ? new Date(r.created_at).toISOString() : ''
-    })),
-    requests: requests.recordset.map((r) => ({
-      id: r.id, b: r.branch_id, by: r.requested_by, st: r.status,
-      d: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : '',
-      l: linesByRequest[r.id] || [], log: logsByRequest[r.id] || []
-    })),
-    maintenanceForms,
-    dispatchMeta
-  };
-}
-
-router.get('/bootstrap', async (req, res, next) => {
-  try {
-    const data = await loadBootstrap(req.user.role);
-    data.user = { role: req.user.role, name: req.user.name, username: req.user.username };
-    res.json(data);
-  } catch (err) { next(err); }
-});
+router.get('/bootstrap', route((req, res) => {
+  const payload = data.bootstrap(req.user.role);
+  payload.user = { role: req.user.role, name: req.user.name, username: req.user.username };
+  res.json(payload);
+}));
 
 /* ------------------------------ master data ----------------------------- */
 
-async function categoryIdOn(client, name) {
-  const r = await sqlReq(client).input('n', sql.NVarChar(120), name).query('SELECT id FROM categories WHERE name = @n');
-  if (!r.recordset.length) throw new Error('الفئة غير موجودة');
-  return r.recordset[0].id;
-}
+router.post('/categories', guard('stock'), route((req, res) => {
+  const body = bodyOf(req);
+  const name = text(body.name, 120);
+  if (!name) data.fail(400, 'اكتب اسم الفئة');
+  data.tx((st) => {
+    if (data.categoryByName(name)) data.fail(409, 'اسم الفئة موجود بالفعل');
+    const supplierName = text(body.supplier, 160);
+    st.categories.push({
+      id: ++st.counters.category,
+      name,
+      has_serial: body.has_serial !== false,
+      supplier_id: supplierName ? data.ensureSupplier(supplierName) : null,
+      created_by: req.user.name,
+      created_at: data.nowIso()
+    });
+  });
+  res.json({ ok: true });
+}));
 
-async function supplierIdOn(client, name) {
-  await sqlReq(client).input('n', sql.NVarChar(160), name)
-    .query('IF NOT EXISTS (SELECT 1 FROM suppliers WHERE name = @n) INSERT INTO suppliers (name) VALUES (@n)');
-  const r = await sqlReq(client).input('n', sql.NVarChar(160), name).query('SELECT id FROM suppliers WHERE name = @n');
-  return r.recordset[0].id;
-}
-
-router.post('/categories', guard('stock'), async (req, res, next) => {
-  try {
-    const name = String(req.body.name || '').trim();
-    if (!name) return res.status(400).json({ error: 'اكتب اسم الفئة' });
-    const pool = await getPool();
-    const supplier = String(req.body.supplier || '').trim();
-    const supplierId = supplier ? await supplierIdOn(pool, supplier) : null;
-    await pool.request()
-      .input('n', sql.NVarChar(120), name)
-      .input('s', sql.Bit, req.body.has_serial !== false ? 1 : 0)
-      .input('sup', sql.Int, supplierId)
-      .input('by', sql.NVarChar(120), req.user.name)
-      .query('IF NOT EXISTS (SELECT 1 FROM categories WHERE name = @n) INSERT INTO categories (name, has_serial, supplier_id, created_by) VALUES (@n, @s, @sup, @by)');
-    res.json({ ok: true });
-  } catch (err) { next(err); }
-});
-
-router.put('/categories/:name', guard('stock'), async (req, res, next) => {
-  try {
-    const current = req.params.name;
-    const nextName = String(req.body.name || '').trim();
-    const pool = await getPool();
-    const exists = await pool.request().input('n', sql.NVarChar(120), current).query('SELECT id FROM categories WHERE name = @n');
-    if (!exists.recordset.length) return res.status(404).json({ error: 'الفئة غير موجودة' });
-    if (nextName && nextName !== current) {
-      const dup = await pool.request().input('n', sql.NVarChar(120), nextName).query('SELECT 1 AS x FROM categories WHERE name = @n');
-      if (dup.recordset.length) return res.status(400).json({ error: 'اسم الفئة موجود بالفعل' });
-      await pool.request().input('a', sql.NVarChar(120), nextName).input('b', sql.NVarChar(120), current)
-        .query('UPDATE categories SET name = @a WHERE name = @b');
+router.put('/categories/:name', guard('stock'), route((req, res) => {
+  const body = bodyOf(req);
+  data.tx((st) => {
+    const category = data.categoryByName(req.params.name);
+    if (!category) data.fail(404, 'الفئة غير موجودة');
+    if (has(body, 'name')) {
+      const nextName = text(body.name, 120);
+      if (!nextName) data.fail(400, 'اكتب اسم الفئة');
+      if (nextName.toLowerCase() !== String(category.name).toLowerCase()) {
+        const dup = data.categoryByName(nextName);
+        if (dup && Number(dup.id) !== Number(category.id)) data.fail(400, 'اسم الفئة موجود بالفعل');
+        category.name = nextName;
+      }
     }
-    if ('has_serial' in req.body) {
-      await pool.request().input('s', sql.Bit, req.body.has_serial ? 1 : 0).input('n', sql.NVarChar(120), nextName || current)
-        .query('UPDATE categories SET has_serial = @s WHERE name = @n');
+    if (has(body, 'has_serial')) category.has_serial = !!body.has_serial;
+    if (has(body, 'supplier')) {
+      const supplierName = text(body.supplier, 160);
+      category.supplier_id = supplierName ? data.ensureSupplier(supplierName) : null;
     }
-    if ('supplier' in req.body) {
-      const supplier = String(req.body.supplier || '').trim();
-      const supplierId = supplier ? await supplierIdOn(pool, supplier) : null;
-      await pool.request().input('sup', sql.Int, supplierId).input('n', sql.NVarChar(120), nextName || current)
-        .query('UPDATE categories SET supplier_id = @sup WHERE name = @n');
+  });
+  res.json({ ok: true });
+}));
+
+router.delete('/categories/:name', guard('stock'), route((req, res) => {
+  data.tx((st) => {
+    const category = data.categoryByName(req.params.name);
+    if (!category) data.fail(404, 'الفئة غير موجودة');
+    const itemIds = st.items.filter((i) => Number(i.category_id) === Number(category.id)).map((i) => Number(i.id));
+    const usedBranch = st.branchItems.some((r) => itemIds.includes(Number(r.item_id)) && Number(r.qty) > 0);
+    const usedVoucher = st.vouchers.some((v) => (v.lines || []).some((l) => itemIds.includes(Number(l.item_id))));
+    const usedRequest = st.requests.some((r) => (r.lines || []).some((l) => itemIds.includes(Number(l.item_id))));
+    if (usedBranch || usedVoucher || usedRequest) {
+      data.fail(400, 'لا يمكن حذف الفئة: بعض أصنافها مستخدمة في فروع أو أذونات أو طلبات');
     }
-    res.json({ ok: true });
-  } catch (err) { next(err); }
-});
+    st.branchItems = st.branchItems.filter((r) => !itemIds.includes(Number(r.item_id)));
+    st.items = st.items.filter((i) => Number(i.category_id) !== Number(category.id));
+    st.categories = st.categories.filter((c) => Number(c.id) !== Number(category.id));
+  });
+  res.json({ ok: true });
+}));
 
-const ITEM_USED_SQL = `
-  SELECT TOP 1 1 AS x FROM items i
-   WHERE i.category_id = @id AND (
-     EXISTS (SELECT 1 FROM branch_items bi WHERE bi.item_id = i.id AND bi.qty > 0)
-     OR EXISTS (SELECT 1 FROM voucher_lines vl JOIN vouchers v ON v.id = vl.voucher_id WHERE vl.item_id = i.id AND v.deleted_at IS NULL)
-     OR EXISTS (SELECT 1 FROM request_lines rl WHERE rl.item_id = i.id))`;
+router.post('/items', guard('stock'), route((req, res) => {
+  const body = bodyOf(req);
+  const name = text(body.name, 160);
+  if (!name) data.fail(400, 'اكتب اسم الصنف');
+  const notes = text(body.notes, 500);
+  if (body.has_warranty !== true && body.has_warranty !== false) data.fail(400, 'اختر بضمان أو بدون ضمان');
+  const out = data.tx((st) => {
+    const category = data.categoryByName(body.category);
+    if (!category) data.fail(400, 'اختر فئة صحيحة للصنف');
+    const id = ++st.counters.item;
+    st.items.push({
+      id,
+      name,
+      category_id: category.id,
+      stock: 0,
+      maint_qty: 0,
+      scrap_qty: 0,
+      created_by: req.user.name,
+      created_at: data.nowIso(),
+      warranty_until: asDate(body.warranty_until) || null,
+      notes: notes || '',
+      has_warranty: !!body.has_warranty
+    });
+    return { ok: true, id };
+  });
+  res.json(out);
+}));
 
-router.delete('/categories/:name', guard('stock'), async (req, res, next) => {
-  const pool = await getPool();
-  const tx = new sql.Transaction(pool);
-  try {
-    const name = req.params.name;
-    const cat = await pool.request().input('n', sql.NVarChar(120), name).query('SELECT id FROM categories WHERE name = @n');
-    if (!cat.recordset.length) return res.status(404).json({ error: 'الفئة غير موجودة' });
-    const id = cat.recordset[0].id;
-    const used = await pool.request().input('id', sql.Int, id).query(ITEM_USED_SQL);
-    if (used.recordset.length) return res.status(400).json({ error: 'لا يمكن حذف الفئة: بعض أصنافها مستخدمة في فروع أو أذونات أو طلبات' });
-    await tx.begin();
-    await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM branch_items WHERE item_id IN (SELECT id FROM items WHERE category_id = @id)');
-    await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM items WHERE category_id = @id');
-    await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM categories WHERE id = @id');
-    await tx.commit();
-    res.json({ ok: true });
-  } catch (err) {
-    try { await tx.rollback(); } catch (_) {}
-    next(err);
-  }
-});
-
-router.post('/items', guard('stock'), async (req, res, next) => {
-  try {
-    const name = String(req.body.name || '').trim();
-    if (!name) return res.status(400).json({ error: 'اكتب اسم الصنف' });
-    if (name.length > 160) return res.status(400).json({ error: 'اسم الصنف أطول من 160 حرفًا' });
-    const notes = String(req.body.notes == null ? '' : req.body.notes).trim();
-    if (notes.length > 500) return res.status(400).json({ error: 'الملاحظات يجب ألا تتجاوز 500 حرف' });
-    const hw = req.body.has_warranty;
-    if (hw !== true && hw !== false) return res.status(400).json({ error: 'اختر بضمان أو بدون ضمان' });
-    const pool = await getPool();
-    const cid = await categoryIdOn(pool, req.body.category);
-    const r = await pool.request()
-      .input('n', sql.NVarChar(160), name)
-      .input('c', sql.Int, cid)
-      .input('by', sql.NVarChar(120), req.user.name)
-      .input('nt', sql.NVarChar(500), notes || null)
-      .input('hw', sql.Bit, hw ? 1 : 0)
-      .input('w', sql.Date, asDate(req.body.warranty_until))
-      .query(`INSERT INTO items (name, category_id, stock, maint_qty, scrap_qty, created_by, created_at, notes, has_warranty, warranty_until)
-              OUTPUT INSERTED.id
-              VALUES (@n, @c, 0, 0, 0, @by, SYSUTCDATETIME(), @nt, @hw, @w)`);
-    res.json({ ok: true, id: r.recordset[0].id });
-  } catch (err) { next(err); }
-});
-
-router.put('/items/:id', guard('stock'), async (req, res, next) => {
-  try {
-    const name = String(req.body.name || '').trim();
-    if (!name) return res.status(400).json({ error: 'اسم الصنف لا يمكن أن يكون فارغًا' });
-    if (name.length > 160) return res.status(400).json({ error: 'اسم الصنف أطول من 160 حرفًا' });
-    if (Object.prototype.hasOwnProperty.call(req.body, 'notes')) {
-      const notes = String(req.body.notes == null ? '' : req.body.notes).trim();
-      if (notes.length > 500) return res.status(400).json({ error: 'الملاحظات يجب ألا تتجاوز 500 حرف' });
+router.put('/items/:id', guard('stock'), route((req, res) => {
+  const body = bodyOf(req);
+  data.tx((st) => {
+    const item = data.itemById(asInt(req.params.id));
+    if (!item) data.fail(404, 'الصنف غير موجود');
+    if (has(body, 'name')) {
+      const name = text(body.name, 160);
+      if (!name) data.fail(400, 'اسم الصنف لا يمكن أن يكون فارغًا');
+      item.name = name;
     }
-    if (Object.prototype.hasOwnProperty.call(req.body, 'has_warranty')
-        && req.body.has_warranty !== true && req.body.has_warranty !== false) {
-      return res.status(400).json({ error: 'اختر بضمان أو بدون ضمان' });
+    if (has(body, 'category') && text(body.category, 160)) {
+      const category = data.categoryByName(body.category);
+      if (!category) data.fail(400, 'الفئة غير موجودة');
+      item.category_id = category.id;
     }
-    const pool = await getPool();
-    const hasCat = Object.prototype.hasOwnProperty.call(req.body, 'category') && String(req.body.category || '').trim();
-    const sets = ['name = @n'];
-    const request = pool.request()
-      .input('n', sql.NVarChar(160), name).input('id', sql.Int, asInt(req.params.id));
-    if (hasCat) {
-      request.input('c', sql.Int, await categoryIdOn(pool, req.body.category));
-      sets.push('category_id = @c');
+    if (has(body, 'notes')) item.notes = text(body.notes, 500);
+    if (has(body, 'has_warranty')) {
+      if (body.has_warranty !== true && body.has_warranty !== false) data.fail(400, 'اختر بضمان أو بدون ضمان');
+      item.has_warranty = !!body.has_warranty;
     }
-    if (Object.prototype.hasOwnProperty.call(req.body, 'notes')) {
-      request.input('nt', sql.NVarChar(500), String(req.body.notes == null ? '' : req.body.notes).trim() || null);
-      sets.push('notes = @nt');
+    if (has(body, 'warranty_until')) item.warranty_until = asDate(body.warranty_until);
+  });
+  res.json({ ok: true });
+}));
+
+router.delete('/items/:id', guard('stock'), route((req, res) => {
+  if (req.user.role !== 'admin') data.fail(403, 'الحذف متاح لمدير النظام فقط');
+  const id = asInt(req.params.id);
+  data.tx((st) => {
+    const item = data.itemById(id);
+    if (!item) data.fail(404, 'الصنف غير موجود');
+    const usedBranch = st.branchItems.some((r) => Number(r.item_id) === id && Number(r.qty) > 0);
+    const usedVoucher = st.vouchers.some((v) => (v.lines || []).some((l) => Number(l.item_id) === id));
+    const usedScrap = st.scrapEntries.some((r) => Number(r.item_id) === id);
+    const usedRequest = st.requests.some((r) => (r.lines || []).some((l) => Number(l.item_id) === id));
+    if (usedBranch || usedVoucher || usedScrap || usedRequest) {
+      data.fail(400, 'لا يمكن حذف الصنف لأنه مستخدم في فروع أو أذونات أو طلبات');
     }
-    if (Object.prototype.hasOwnProperty.call(req.body, 'has_warranty')) {
-      request.input('hw', sql.Bit, req.body.has_warranty ? 1 : 0);
-      sets.push('has_warranty = @hw');
+    st.branchItems = st.branchItems.filter((r) => Number(r.item_id) !== id);
+    st.items = st.items.filter((i) => Number(i.id) !== id);
+  });
+  res.json({ ok: true });
+}));
+
+const normName = (s) => String(s == null ? '' : s).toLowerCase().replace(/\s+/g, ' ').trim();
+
+router.post('/branches', guard('addBranch'), route((req, res) => {
+  const body = bodyOf(req);
+  const name = text(body.name, 160);
+  if (!name) data.fail(400, 'اكتب اسم الفرع');
+  const gov = text(body.gov, 80);
+  const out = data.tx((st) => {
+    const dup = st.branches.find((b) => normName(b.name) === normName(name) && normName(b.gov) === normName(gov));
+    if (dup) data.fail(409, 'هذا الفرع موجود مسبقاً (نفس الاسم والمحافظة)');
+    const id = ++st.counters.branch;
+    st.branches.push({
+      id,
+      name,
+      gov,
+      number: text(body.number, 20),
+      manager: text(body.manager, 120),
+      phone: text(body.phone, 30),
+      address: text(body.address, 500),
+      location: text(body.location, 500),
+      created_by: req.user.name,
+      created_at: today()
+    });
+    const wanted = new Set();
+    const qty = body.qty && typeof body.qty === 'object' ? body.qty : {};
+    Object.keys(qty).forEach((k) => { if (asInt(qty[k]) > 0) wanted.add(asInt(k)); });
+    (Array.isArray(body.item_ids) ? body.item_ids : []).forEach((v) => { if (asInt(v) > 0) wanted.add(asInt(v)); });
+    for (const itemId of wanted) {
+      if (!data.itemById(itemId)) continue;
+      data.setBranchQty(id, itemId, Math.max(0, asInt(qty[itemId])));
     }
-    if (Object.prototype.hasOwnProperty.call(req.body, 'warranty_until')) {
-      request.input('w', sql.Date, asDate(req.body.warranty_until));
-      sets.push('warranty_until = @w');
+    return { ok: true, id };
+  });
+  res.json(out);
+}));
+
+router.put('/branches/:id', guard('branchEdit'), route((req, res) => {
+  const body = bodyOf(req);
+  data.tx(() => {
+    const branch = data.branchById(asInt(req.params.id));
+    if (!branch) data.fail(404, 'الفرع غير موجود');
+    const name = text(body.name, 160);
+    if (!name) data.fail(400, 'اكتب اسم الفرع');
+    branch.name = name;
+    branch.number = text(body.number, 20);
+    branch.gov = text(body.gov, 80);
+    branch.manager = text(body.manager, 120);
+    branch.phone = text(body.phone, 30);
+    branch.address = text(body.address, 500);
+    branch.location = text(body.location, 500);
+  });
+  res.json({ ok: true });
+}));
+
+router.post('/branches/:id/items', guard('branchEdit'), route((req, res) => {
+  const body = bodyOf(req);
+  const branchId = asInt(req.params.id);
+  const itemId = asInt(body.item_id);
+  if (!itemId) data.fail(400, 'اختر صنفًا');
+  data.tx(() => {
+    if (!data.branchById(branchId)) data.fail(404, 'الفرع غير موجود');
+    if (!data.itemById(itemId)) data.fail(404, 'الصنف غير موجود');
+    if (!data.state.branchItems.some((r) => Number(r.branch_id) === branchId && Number(r.item_id) === itemId)) {
+      data.setBranchQty(branchId, itemId, 0);
     }
-    await request.query('UPDATE items SET ' + sets.join(', ') + ' WHERE id = @id');
-    res.json({ ok: true });
-  } catch (err) { next(err); }
-});
+  });
+  res.json({ ok: true });
+}));
 
-const ITEM_IN_USE_SQL = `
-  SELECT TOP 1 1 AS x FROM items i WHERE i.id = @id AND (
-    EXISTS (SELECT 1 FROM branch_items bi WHERE bi.item_id = i.id AND bi.qty > 0)
-    OR EXISTS (SELECT 1 FROM voucher_lines vl WHERE vl.item_id = i.id)
-    OR EXISTS (SELECT 1 FROM scrap_entries se WHERE se.item_id = i.id)
-    OR EXISTS (SELECT 1 FROM request_lines rl WHERE rl.item_id = i.id))`;
-
-router.delete('/items/:id', guard('stock'), async (req, res, next) => {
-  try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'الحذف متاح لمدير النظام فقط' });
-    const id = asInt(req.params.id);
-    const pool = await getPool();
-    const used = await pool.request().input('id', sql.Int, id).query(ITEM_IN_USE_SQL);
-    if (used.recordset.length) return res.status(400).json({ error: 'لا يمكن حذف الصنف لأنه مستخدم في فروع أو أذونات أو طلبات' });
-    const tx = new sql.Transaction(pool);
-    try {
-      await tx.begin();
-      await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM branch_items WHERE item_id = @id');
-      await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM items WHERE id = @id');
-      await tx.commit();
-      res.json({ ok: true });
-    } catch (err) {
-      try { await tx.rollback(); } catch (_) {}
-      throw err;
+router.delete('/branches/:id/items/:itemId', guard('branchEdit'), route((req, res) => {
+  const branchId = asInt(req.params.id);
+  const itemId = asInt(req.params.itemId);
+  data.tx((st) => {
+    if (!data.branchById(branchId)) data.fail(404, 'الفرع غير موجود');
+    if (data.branchQty(branchId, itemId) > 0) {
+      data.fail(400, 'لا يمكن إزالة صنف موجود فعليًا في الفرع. انقله أولًا.');
     }
-  } catch (err) { next(err); }
-});
+    st.branchItems = st.branchItems.filter((r) => !(Number(r.branch_id) === branchId && Number(r.item_id) === itemId));
+  });
+  res.json({ ok: true });
+}));
 
-router.post('/branches', guard('addBranch'), async (req, res, next) => {
-  const pool = await getPool();
-  const tx = new sql.Transaction(pool);
-  try {
-    const name = String(req.body.name || '').trim();
-    if (!name) return res.status(400).json({ error: 'اكتب اسم الفرع' });
-    const g = String(req.body.gov || '').trim();
-    const dupCheck = await pool.request().input('n', sql.NVarChar(160), name).input('g', sql.NVarChar(80), g)
-      .query(`SELECT id FROM branches WHERE LOWER(REPLACE(LTRIM(RTRIM(name)),' ',' ')) = LOWER(REPLACE(LTRIM(RTRIM(@n)),' ',' ')) AND gov = @g`);
-    if (dupCheck.recordset.length) return res.status(409).json({ error: 'هذا الفرع موجود مسبقاً (نفس الاسم والمحافظة)' });
-    await tx.begin();
-    const r = await sqlReq(tx)
-      .input('n', sql.NVarChar(160), name)
-      .input('num', sql.NVarChar(20), String(req.body.number || '').trim() || null)
-      .input('g', sql.NVarChar(80), String(req.body.gov || ''))
-      .input('man', sql.NVarChar(120), String(req.body.manager || '').trim() || null)
-      .input('ph', sql.NVarChar(30), String(req.body.phone || '').trim() || null)
-      .input('addr', sql.NVarChar(500), String(req.body.address || '').trim() || null)
-      .input('loc', sql.NVarChar(500), String(req.body.location || '').trim() || null)
-      .input('by', sql.NVarChar(120), req.user.name)
-      .query('INSERT INTO branches (name, number, gov, manager, phone, address, location, created_by) OUTPUT INSERTED.id VALUES (@n, @num, @g, @man, @ph, @addr, @loc, @by)');
-    const branchId = r.recordset[0].id;
-    const qty = req.body.qty || {};
-    const ids = new Set((req.body.item_ids || []).map(asInt).filter((n) => n > 0));
-    Object.entries(qty).forEach(([k, v]) => { if (asInt(v) > 0) ids.add(asInt(k)); });
-    for (const itemId of ids) {
-      await sqlReq(tx).input('b', sql.Int, branchId).input('i', sql.Int, itemId).input('q', sql.Int, Math.max(0, asInt(qty[itemId])))
-        .query('IF NOT EXISTS (SELECT 1 FROM branch_items WHERE branch_id = @b AND item_id = @i) INSERT INTO branch_items (branch_id, item_id, qty) VALUES (@b, @i, @q)');
-    }
-    await tx.commit();
-    res.json({ ok: true, id: branchId });
-  } catch (err) {
-    try { await tx.rollback(); } catch (_) {}
-    next(err);
-  }
-});
+router.put('/branches/:id/qty', guard('branchEdit'), route((req, res) => {
+  const body = bodyOf(req);
+  const branchId = asInt(req.params.id);
+  const itemId = asInt(body.item_id);
+  const qty = Math.max(0, asInt(body.qty));
+  data.tx(() => {
+    if (!data.branchById(branchId)) data.fail(404, 'الفرع غير موجود');
+    if (!data.itemById(itemId)) data.fail(404, 'الصنف غير موجود');
+    data.setBranchQty(branchId, itemId, qty);
+  });
+  res.json({ ok: true });
+}));
 
-router.put('/branches/:id', guard('branchEdit'), async (req, res, next) => {
-  try {
-    const bid = asInt(req.params.id);
-    const name = String(req.body.name || '').trim();
-    if (!name) return res.status(400).json({ error: 'اكتب اسم الفرع' });
-    const pool = await getPool();
-    await pool.request()
-      .input('b', sql.Int, bid)
-      .input('n', sql.NVarChar(160), name)
-      .input('num', sql.NVarChar(20), String(req.body.number || '').trim() || null)
-      .input('g', sql.NVarChar(80), String(req.body.gov || ''))
-      .input('man', sql.NVarChar(120), String(req.body.manager || '').trim() || null)
-      .input('ph', sql.NVarChar(30), String(req.body.phone || '').trim() || null)
-      .input('addr', sql.NVarChar(500), String(req.body.address || '').trim() || null)
-      .input('loc', sql.NVarChar(500), String(req.body.location || '').trim() || null)
-      .query('UPDATE branches SET name=@n, number=@num, gov=@g, manager=@man, phone=@ph, address=@addr, location=@loc WHERE id=@b');
-    res.json({ ok: true });
-  } catch (err) { next(err); }
-});
-
-router.post('/branches/:id/items', guard('branchEdit'), async (req, res, next) => {
-  try {
-    const bid = asInt(req.params.id), iid = asInt(req.body.item_id);
-    if (!iid) return res.status(400).json({ error: 'اختر صنفًا' });
-    const pool = await getPool();
-    await pool.request().input('b', sql.Int, bid).input('i', sql.Int, iid)
-      .query('IF NOT EXISTS (SELECT 1 FROM branch_items WHERE branch_id = @b AND item_id = @i) INSERT INTO branch_items (branch_id, item_id, qty) VALUES (@b, @i, 0)');
-    res.json({ ok: true });
-  } catch (err) { next(err); }
-});
-
-router.delete('/branches/:id/items/:itemId', guard('branchEdit'), async (req, res, next) => {
-  try {
-    const bid = asInt(req.params.id), iid = asInt(req.params.itemId);
-    const pool = await getPool();
-    const row = await pool.request().input('b', sql.Int, bid).input('i', sql.Int, iid)
-      .query('SELECT qty FROM branch_items WHERE branch_id = @b AND item_id = @i');
-    if (row.recordset.length && row.recordset[0].qty > 0) {
-      return res.status(400).json({ error: 'لا يمكن إزالة صنف موجود فعليًا في الفرع. انقله أولًا.' });
-    }
-    await pool.request().input('b', sql.Int, bid).input('i', sql.Int, iid)
-      .query('DELETE FROM branch_items WHERE branch_id = @b AND item_id = @i');
-    res.json({ ok: true });
-  } catch (err) { next(err); }
-});
-
-router.put('/branches/:id/qty', guard('branchEdit'), async (req, res, next) => {
-  try {
-    const bid = asInt(req.params.id), iid = asInt(req.body.item_id), qty = Math.max(0, asInt(req.body.qty));
-    const pool = await getPool();
-    await pool.request().input('b', sql.Int, bid).input('i', sql.Int, iid).input('q', sql.Int, qty)
-      .query(`IF EXISTS (SELECT 1 FROM branch_items WHERE branch_id = @b AND item_id = @i)
-                UPDATE branch_items SET qty = @q WHERE branch_id = @b AND item_id = @i
-              ELSE INSERT INTO branch_items (branch_id, item_id, qty) VALUES (@b, @i, @q)`);
-    res.json({ ok: true });
-  } catch (err) { next(err); }
-});
-
-router.delete('/branches/:id', guard('addBranch'), async (req, res, next) => {
-  try {
-    const bid = asInt(req.params.id);
-    const pool = await getPool();
-    // Check usage: vouchers referencing branch_id, requests, scrap, items qty>0
-    const before = (await pool.request().input('b', sql.Int, bid).query('SELECT name, gov FROM branches WHERE id = @b')).recordset[0];
-    const bname = before ? before.name : '';
-    const vRef = await pool.request().input('b', sql.Int, bid).input('n', sql.NVarChar(160), bname)
-      .query('SELECT COUNT(*) AS c FROM vouchers WHERE branch_id = @b OR source_branch = @n');
-    const rRef = await pool.request().input('b', sql.Int, bid).query('SELECT COUNT(*) AS c FROM requests WHERE branch_id = @b');
-    const iRef = await pool.request().input('b', sql.Int, bid).query('SELECT COUNT(*) AS c FROM branch_items WHERE branch_id = @b AND qty > 0');
+router.delete('/branches/:id', guard('addBranch'), route((req, res) => {
+  const branchId = asInt(req.params.id);
+  data.tx((st) => {
+    const branch = data.branchById(branchId);
+    if (!branch) data.fail(404, 'الفرع غير موجود');
+    const vouchers = st.vouchers.filter((v) => Number(v.branch_id) === branchId || normName(v.source_branch) === normName(branch.name));
+    const requests = st.requests.filter((r) => Number(r.branch_id) === branchId);
+    const withQty = st.branchItems.filter((r) => Number(r.branch_id) === branchId && Number(r.qty) > 0);
     const blocks = [];
-    if (vRef.recordset[0].c > 0) blocks.push('أذون: ' + vRef.recordset[0].c);
-    if (rRef.recordset[0].c > 0) blocks.push('طلبات: ' + rRef.recordset[0].c);
-    if (iRef.recordset[0].c > 0) blocks.push('أصناف بالفرع: ' + iRef.recordset[0].c);
-    if (blocks.length) return res.status(409).json({ error: 'لا يمكن الحذف، هنالك مراجع: ' + blocks.join('، ') });
-    const tx = new sql.Transaction(pool);
-    try {
-      await tx.begin();
-      await sqlReq(tx).input('b', sql.Int, bid).query('DELETE FROM branch_items WHERE branch_id = @b');
-      await sqlReq(tx).input('b', sql.Int, bid).query('DELETE FROM branches WHERE id = @b');
-      await tx.commit();
-    } catch (err) {
-      try { await tx.rollback(); } catch (_) {}
-      throw err;
-    }
-    // Audit trail is best effort: the branch is already deleted, so a missing
-    // or unwritable file must never turn a successful delete into a 500.
-    try {
-      fs.mkdirSync('data', { recursive: true });
-      let audit = [];
-      try { audit = JSON.parse(fs.readFileSync('data/audit.json', 'utf8') || '[]'); } catch (_) { audit = []; }
-      if (!Array.isArray(audit)) audit = [];
-      audit.push({ user: req.user?.name || null, action: 'delete-branch', entity: 'branch', entity_id: bid, before: before || null, at: new Date().toISOString() });
-      fs.writeFileSync('data/audit.json', JSON.stringify(audit, null, 2));
-    } catch (_) { /* audit is non-critical */ }
-    res.json({ ok: true });
-  } catch (err) { next(err); }
-});
+    if (vouchers.length) blocks.push('أذون: ' + vouchers.length);
+    if (requests.length) blocks.push('طلبات: ' + requests.length);
+    if (withQty.length) blocks.push('أصناف بالفرع: ' + withQty.length);
+    if (blocks.length) data.fail(409, 'لا يمكن الحذف، هنالك مراجع: ' + blocks.join('، '));
+    st.branchItems = st.branchItems.filter((r) => Number(r.branch_id) !== branchId);
+    st.branches = st.branches.filter((b) => Number(b.id) !== branchId);
+  });
+  res.json({ ok: true });
+}));
 
-const supText = (v, n) => String(v == null ? '' : v).trim().slice(0, n) || null;
+router.post('/suppliers', guard('stock'), route((req, res) => {
+  const body = bodyOf(req);
+  const name = text(body.name, 160);
+  if (!name) data.fail(400, 'اكتب اسم المورد');
+  data.tx((st) => {
+    if (data.supplierByName(name)) return;
+    st.suppliers.push({
+      id: ++st.counters.supplier,
+      name,
+      company: text(body.company, 200),
+      address: text(body.address, 300),
+      phone: text(body.phone, 60),
+      landline: text(body.landline, 60),
+      accepts_maintenance: !!body.accepts_maintenance,
+      created_by: req.user.name,
+      created_at: data.nowIso()
+    });
+  });
+  res.json({ ok: true });
+}));
 
-router.post('/suppliers', guard('stock'), async (req, res, next) => {
-  try {
-    const name = String(req.body.name || '').trim();
-    if (!name) return res.status(400).json({ error: 'اكتب اسم المورد' });
-    const pool = await getPool();
-    await pool.request()
-      .input('n', sql.NVarChar(160), name)
-      .input('co', sql.NVarChar(200), supText(req.body.company, 200))
-      .input('ad', sql.NVarChar(300), supText(req.body.address, 300))
-      .input('ph', sql.NVarChar(60), supText(req.body.phone, 60))
-      .input('ll', sql.NVarChar(60), supText(req.body.landline, 60))
-      .input('mt', sql.Bit, req.body.accepts_maintenance ? 1 : 0)
-      .input('by', sql.NVarChar(120), req.user.name)
-      .query(`IF NOT EXISTS (SELECT 1 FROM suppliers WHERE name = @n)
-                INSERT INTO suppliers (name, company, address, phone, landline, accepts_maintenance, created_by)
-                VALUES (@n, @co, @ad, @ph, @ll, @mt, @by)`);
-    res.json({ ok: true });
-  } catch (err) { next(err); }
-});
+router.put('/suppliers/:id', guard('stock'), route((req, res) => {
+  const body = bodyOf(req);
+  const name = text(body.name, 160);
+  if (!name) data.fail(400, 'اكتب اسم المورد');
+  data.tx((st) => {
+    const supplier = st.suppliers.find((s) => Number(s.id) === asInt(req.params.id));
+    if (!supplier) data.fail(404, 'المورد غير موجود');
+    const dup = st.suppliers.find((s) => Number(s.id) !== Number(supplier.id) && normName(s.name) === normName(name));
+    if (dup) data.fail(400, 'اسم المورد موجود بالفعل');
+    supplier.name = name;
+    supplier.company = text(body.company, 200);
+    supplier.address = text(body.address, 300);
+    supplier.phone = text(body.phone, 60);
+    supplier.landline = text(body.landline, 60);
+    supplier.accepts_maintenance = !!body.accepts_maintenance;
+  });
+  res.json({ ok: true });
+}));
 
-router.put('/suppliers/:id', guard('stock'), async (req, res, next) => {
-  try {
-    const id = Number(req.params.id);
-    const name = String(req.body.name || '').trim();
-    if (!name) return res.status(400).json({ error: 'اكتب اسم المورد' });
-    const pool = await getPool();
-    const exists = await pool.request().input('id', sql.Int, id).query('SELECT 1 AS x FROM suppliers WHERE id = @id');
-    if (!exists.recordset.length) return res.status(404).json({ error: 'المورد غير موجود' });
-    const dup = await pool.request().input('n', sql.NVarChar(160), name).input('id', sql.Int, id)
-      .query('SELECT 1 AS x FROM suppliers WHERE name = @n AND id <> @id');
-    if (dup.recordset.length) return res.status(400).json({ error: 'اسم المورد موجود بالفعل' });
-    await pool.request()
-      .input('id', sql.Int, id)
-      .input('n', sql.NVarChar(160), name)
-      .input('co', sql.NVarChar(200), supText(req.body.company, 200))
-      .input('ad', sql.NVarChar(300), supText(req.body.address, 300))
-      .input('ph', sql.NVarChar(60), supText(req.body.phone, 60))
-      .input('ll', sql.NVarChar(60), supText(req.body.landline, 60))
-      .input('mt', sql.Bit, req.body.accepts_maintenance ? 1 : 0)
-      .query('UPDATE suppliers SET name = @n, company = @co, address = @ad, phone = @ph, landline = @ll, accepts_maintenance = @mt WHERE id = @id');
-    res.json({ ok: true });
-  } catch (err) { next(err); }
-});
-
-router.delete('/suppliers/:id', guard('stock'), async (req, res, next) => {
-  try {
-    const id = Number(req.params.id);
-    const pool = await getPool();
-    const used = await pool.request().input('id', sql.Int, id)
-      .query('SELECT TOP 1 1 AS x FROM vouchers WHERE supplier_id = @id OR EXISTS (SELECT 1 FROM categories WHERE supplier_id = @id)');
-    if (used.recordset.length) return res.status(400).json({ error: 'لا يمكن حذف المورد: مستخدم في أذونات أو فئات' });
-    await pool.request().input('id', sql.Int, id).query('DELETE FROM suppliers WHERE id = @id');
-    res.json({ ok: true });
-  } catch (err) { next(err); }
-});
+router.delete('/suppliers/:id', guard('stock'), route((req, res) => {
+  const id = asInt(req.params.id);
+  data.tx((st) => {
+    const supplier = st.suppliers.find((s) => Number(s.id) === id);
+    if (!supplier) data.fail(404, 'المورد غير موجود');
+    const usedVoucher = st.vouchers.some((v) => Number(v.supplier_id) === id);
+    const usedCategory = st.categories.some((c) => Number(c.supplier_id) === id);
+    if (usedVoucher || usedCategory) data.fail(400, 'لا يمكن حذف المورد: مستخدم في أذونات أو فئات');
+    st.suppliers = st.suppliers.filter((s) => Number(s.id) !== id);
+  });
+  res.json({ ok: true });
+}));
 
 /* -------------------------------- vouchers ------------------------------ */
 
-async function readState(client, itemIds, branchIds) {
-  const stock = new Map(), maint = new Map(), scrap = new Map(), branch = new Map();
-  if (itemIds.length) {
-    const r = await sqlReq(client).input('ids', sql.NVarChar(sql.MAX), JSON.stringify(itemIds))
-      .query('SELECT id, stock, maint_qty, scrap_qty FROM items WITH (UPDLOCK, ROWLOCK) WHERE id IN (SELECT CAST(value AS INT) FROM OPENJSON(@ids))');
-    for (const row of r.recordset) { stock.set(row.id, row.stock); maint.set(row.id, row.maint_qty); scrap.set(row.id, row.scrap_qty); }
-  }
-  if (branchIds.length) {
-    const r = await sqlReq(client).input('ids', sql.NVarChar(sql.MAX), JSON.stringify(branchIds))
-      .query('SELECT branch_id, item_id, qty FROM branch_items WHERE branch_id IN (SELECT CAST(value AS INT) FROM OPENJSON(@ids))');
-    for (const row of r.recordset) {
-      if (!branch.has(row.branch_id)) branch.set(row.branch_id, new Map());
-      branch.get(row.branch_id).set(row.item_id, row.qty);
-    }
-  }
-  return { stock, maint, scrap, branch };
-}
-
-async function applyAndPersist(client, deltas, itemIds, branchIds) {
-  const current = await readState(client, itemIds, branchIds);
-  const result = applyDeltas(current, deltas);
-  if (!result.ok) return result;
-  for (const [id, val] of result.stock) {
-    if ((current.stock.get(id) || 0) !== val) await sqlReq(client).input('v', sql.Int, val).input('id', sql.Int, id).query('UPDATE items SET stock = @v WHERE id = @id');
-  }
-  for (const [id, val] of result.maint) {
-    if ((current.maint.get(id) || 0) !== val) await sqlReq(client).input('v', sql.Int, val).input('id', sql.Int, id).query('UPDATE items SET maint_qty = @v WHERE id = @id');
-  }
-  for (const [id, val] of result.scrap) {
-    if ((current.scrap.get(id) || 0) !== val) await sqlReq(client).input('v', sql.Int, val).input('id', sql.Int, id).query('UPDATE items SET scrap_qty = @v WHERE id = @id');
-  }
-  for (const [bid, map] of result.branch) {
-    const before = current.branch.get(bid) || new Map();
-    for (const [iid, val] of map) {
-      if (before.get(iid) !== val) {
-        await sqlReq(client).input('b', sql.Int, bid).input('i', sql.Int, iid).input('q', sql.Int, val)
-          .query(`IF EXISTS (SELECT 1 FROM branch_items WHERE branch_id = @b AND item_id = @i)
-                    UPDATE branch_items SET qty = @q WHERE branch_id = @b AND item_id = @i
-                  ELSE INSERT INTO branch_items (branch_id, item_id, qty) VALUES (@b, @i, @q)`);
-      }
-    }
-  }
-  return result;
-}
-
-function collectIds(vouchers) {
-  const itemIds = new Set(), branchIds = new Set();
-  for (const v of vouchers) {
-    if (!v) continue;
-    for (const d of voucherDeltas(v)) {
-      itemIds.add(d.itemId);
-      if (d.branchId != null) branchIds.add(d.branchId);
-    }
-  }
-  return { itemIds: [...itemIds], branchIds: [...branchIds] };
-}
-
-function stockError(r) {
-  if (r.error === 'maint') return { error: 'لا يمكن الإرجاع: الكمية أكبر من الرصيد تحت الصيانة' };
-  if (r.error === 'scrap') return { error: 'لا يمكن الصرف: الكمية أكبر من رصيد الخردة' };
-  if (r.error === 'stock') return { error: 'لا يمكن إتمام الصرف: الكمية المطلوبة أكبر من رصيد المخزن' };
-  return { error: 'الكمية غير كافية في الفرع المحدد' };
-}
-
-// Pool state carried by a receipt line. Any received line is either good
-// (`stock`) or damaged (`scrap`), whatever its source: a supplier receipt may
-// be marked خردة, a branch return may arrive damaged, and a maintenance return
-// is either repaired (`stock`) or denied (`scrap`).
 function receiptState(direction, raw) {
   if (direction !== 'in') return 'stock';
   return String(raw || '') === 'scrap' ? 'scrap' : 'stock';
 }
 
-function normalize(b) {
-  const direction = b.direction === 'in' ? 'in' : 'out';
-  const kind = ['sup', 'maint', 'br'].includes(b.kind) ? b.kind : 'sup';
-  const branchId = kind === 'br' ? asInt(b.branch_id) || null : null;
-  const supplierName = String(b.supplier_name || '').trim();
-  const number = String(b.number || '').trim();
-  const sourceBranch = String(b.source_branch || '').trim();
-  const docDate = asDate(b.doc_date);
-  const lines = (Array.isArray(b.lines) ? b.lines : []).map((l) => ({
+function normalizeVoucher(body) {
+  const direction = body.direction === 'in' ? 'in' : 'out';
+  const kind = ['sup', 'maint', 'br'].includes(body.kind) ? body.kind : 'sup';
+  const branchId = kind === 'br' ? asInt(body.branch_id) || null : null;
+  const lines = (Array.isArray(body.lines) ? body.lines : []).map((l) => ({
     itemId: Number(l.item_id),
     qty: Number(l.qty),
     state: receiptState(direction, l.state),
     serials: Array.isArray(l.serials) ? l.serials.map((s) => String(s).trim()) : [],
-    reason: String(l.reason || '').trim(),
-    note: String(l.note || '').trim(),
-    condition: String(l.condition || l.item_condition || '').trim().slice(0, 200),
+    reason: text(l.reason, 200),
+    note: text(l.note, 2000),
+    condition: text(l.condition || l.item_condition, 200),
     hasWarranty: !!l.has_warranty,
-    warrantyUntil: asDate(l.warranty_until)
+    warrantyUntil: asDate(l.warranty_until),
+    maintenanceFormId: positiveInt(l.maintenance_form_id),
+    sourceVoucherId: positiveInt(l.source_voucher_id)
   }));
-  // Branch receipts no longer feed the scrap pool: a unit coming back from a
-  // branch is always stored as good. Damaged units are written off from the
-  // Scrap screen, which deducts them from the warehouse balance.
+  // Branch returns always land in the good stock pool; damaged units are
+  // written off from the scrap screen instead.
   if (direction === 'in' && kind === 'br') lines.forEach((l) => { l.state = 'stock'; });
-  return { direction, kind, branchId, supplierName, number, sourceBranch, docDate, lines };
+  return {
+    direction,
+    kind,
+    branchId,
+    supplierName: text(body.supplier_name, 160),
+    number: text(body.number, 60),
+    sourceBranch: text(body.source_branch, 160),
+    docDate: asDate(body.doc_date),
+    lines
+  };
 }
 
-function validate(n) {
+function validateVoucher(n) {
   if (!n.number) return 'اكتب رقم الإذن';
-  if (n.number.length > 60) return 'رقم الإذن أطول من 60 حرفًا';
   if (n.direction === 'out' && n.kind === 'maint') return 'لا يمكن الصرف إلى الصيانة';
   if (n.kind === 'br' && !n.branchId) return 'اختر فرعًا مسجلًا';
+  if (n.kind === 'br' && !data.branchById(n.branchId)) return 'الفرع المحدد غير موجود';
   if (n.kind === 'sup' && !n.supplierName) return 'اختر المورد';
   if (!n.lines.length) return 'أضف صنفًا واحدًا على الأقل';
   for (const l of n.lines) {
     if (!Number.isInteger(l.itemId) || l.itemId <= 0) return 'اختر الصنف في كل سطر';
     if (!Number.isInteger(l.qty) || l.qty <= 0) return 'اكتب عددًا صحيحًا أكبر من صفر في كل سطر';
+    if (!data.itemById(l.itemId)) return 'الصنف المحدد غير موجود';
   }
   return null;
 }
 
-// Current serial ledger for the given items: replays every live voucher line in
-// order plus scrap entries so we know where each serial is right now
-// (stock / branch:<id> / maint / scrap). A voucher being edited is excluded so
-// its own lines do not block the replacement.
-async function serialLedger(client, itemIds, excludeVoucherId) {
-  const ledger = new Map();
-  if (!itemIds.length) return ledger;
-  const put = (itemId, sn, state, branchId) => {
-    const key = itemId + '|' + String(sn).toLowerCase();
-    ledger.set(key, { state, branchId: branchId == null ? null : Number(branchId) });
+function insertLine(st, l) {
+  return {
+    id: ++st.counters.voucherLine,
+    item_id: l.itemId,
+    qty: l.qty,
+    item_condition: l.condition || '',
+    state: l.state || 'stock',
+    serials: Array.isArray(l.serials) ? l.serials : [],
+    reason: l.reason || '',
+    note: l.note || '',
+    has_warranty: !!l.hasWarranty,
+    warranty_until: l.warrantyUntil || null
   };
-  const rows = await sqlReq(client)
-    .input('ids', sql.NVarChar(sql.MAX), JSON.stringify(itemIds))
-    .input('ex', sql.Int, excludeVoucherId || null)
-    .query(`SELECT vl.item_id, vl.serials, vl.state, v.direction, v.kind, v.branch_id
-              FROM voucher_lines vl JOIN vouchers v ON v.id = vl.voucher_id
-             WHERE v.deleted_at IS NULL
-               AND vl.item_id IN (SELECT CAST(value AS INT) FROM OPENJSON(@ids))
-               AND (@ex IS NULL OR v.id <> @ex)
-             ORDER BY vl.id`);
-  for (const r of rows.recordset) {
-    for (const sn of parseSerials(r.serials)) {
-      if (!String(sn || '').trim()) continue;
-      if (r.direction === 'out') {
-        put(r.item_id, sn, r.kind === 'br' ? 'branch' : 'maint', r.kind === 'br' ? r.branch_id : null);
-      } else {
-        put(r.item_id, sn, String(r.state) === 'scrap' ? 'scrap' : 'stock', null);
-      }
+}
+
+function insertVoucher(st, n, user) {
+  data.assertUniqueNumber(n.direction, n.number, null);
+  const voucher = {
+    id: ++st.counters.voucher,
+    direction: n.direction,
+    kind: n.kind,
+    supplier_id: n.kind === 'br' ? null : data.ensureSupplier(n.supplierName),
+    branch_id: n.branchId,
+    number: n.number,
+    doc_date: n.docDate || today(),
+    source_branch: n.sourceBranch || '',
+    created_by: user,
+    edited_by: null,
+    created_at: data.nowIso(),
+    deleted_at: null,
+    lines: n.lines.map((l) => insertLine(st, l))
+  };
+  st.vouchers.push(voucher);
+  return voucher;
+}
+
+function selectedMaintenanceForm(body, voucher, n) {
+  if (n.direction !== 'out' || n.kind !== 'sup') data.fail(400, 'إذن الصرف المحدد للصيانة غير صالح');
+  const formId = positiveInt(body.maintenance_form_id);
+  if (!formId) data.fail(400, 'اختر نموذج الصيانة قبل تسجيل إذن الخروج');
+  const form = data.formById(formId);
+  if (!form) data.fail(404, 'نموذج الصيانة المحدد غير موجود');
+  if (form.issuePermitId != null && Number(form.issuePermitId) !== Number(voucher.id)) {
+    const linkedVoucher = data.voucherById(form.issuePermitId);
+    if (linkedVoucher) data.fail(409, 'نموذج الصيانة مرتبط بإذن خروج آخر');
+  }
+  if (n.lines.length !== 1 || Number(form.itemId) !== Number(n.lines[0].itemId)) {
+    data.fail(400, 'الصنف في إذن الخروج يجب أن يطابق نموذج الصيانة المحدد');
+  }
+  if (data.hasSerial(n.lines[0].itemId)) {
+    const line = n.lines[0];
+    if (line.qty !== 1 || line.serials.length !== 1 || (form.serial && !line.serials.some((serial) => String(serial).toLowerCase() === String(form.serial).toLowerCase()))) {
+      data.fail(400, 'السيريال في إذن الخروج يجب أن يطابق نموذج الصيانة المحدد');
     }
   }
-  const scrap = await sqlReq(client)
-    .input('ids', sql.NVarChar(sql.MAX), JSON.stringify(itemIds))
-    .query('SELECT item_id, serials FROM scrap_entries WHERE item_id IN (SELECT CAST(value AS INT) FROM OPENJSON(@ids))');
-  for (const r of scrap.recordset) {
-    for (const sn of parseSerials(r.serials)) if (String(sn || '').trim()) put(r.item_id, sn, 'scrap', null);
-  }
-  return ledger;
+  return form;
 }
 
-// Validates serial rules for a voucher inside its transaction. Returns an
-// Arabic error message or null. Duplicates are checked across every line of the
-// same item (repeated lines are treated as one aggregate request).
-async function validateVoucherSerials(client, n, excludeVoucherId) {
-  const itemIds = [...new Set(n.lines.map((l) => l.itemId))];
-  if (!itemIds.length) return null;
-  const rows = await sqlReq(client)
-    .input('ids', sql.NVarChar(sql.MAX), JSON.stringify(itemIds))
-    .query(`SELECT i.id, i.name, c.has_serial FROM items i JOIN categories c ON c.id = i.category_id
-             WHERE i.id IN (SELECT CAST(value AS INT) FROM OPENJSON(@ids))`);
-  const info = new Map(rows.recordset.map((r) => [r.id, { serial: !!r.has_serial, name: r.name }]));
-  for (const id of itemIds) if (!info.has(id)) return 'الصنف المحدد غير موجود';
-
-  const ledger = await serialLedger(client, itemIds, excludeVoucherId);
-  const seen = new Map(); // itemId -> Set(lowercase serial)
-
-  for (const l of n.lines) {
-    const meta = info.get(l.itemId);
-    if (!meta.serial) { l.serials = []; continue; }
-    if (l.serials.length !== l.qty) return `اكتب سيريال لكل قطعة من صنف ${meta.name}`;
-    if (l.serials.some((s) => !s)) return `اكتب كل سيريالات صنف ${meta.name}`;
-    if (!seen.has(l.itemId)) seen.set(l.itemId, new Set());
-    const itemSeen = seen.get(l.itemId);
-    for (const sn of l.serials) {
-      const key = sn.toLowerCase();
-      if (itemSeen.has(key)) return `سيريال مكرر: ${sn}`;
-      itemSeen.add(key);
-      const cur = ledger.get(l.itemId + '|' + key);
-      if (n.direction === 'out') {
-        if (!cur || cur.state !== 'stock') return `السيريال ${sn} غير متاح في المخزن للصنف ${meta.name}`;
-      } else if (n.kind === 'maint') {
-        if (!cur || cur.state !== 'maint') return `السيريال ${sn} غير موجود تحت الصيانة للصنف ${meta.name}`;
-      } else if (n.kind === 'br') {
-        if (!cur || cur.state !== 'branch' || cur.branchId !== Number(n.branchId)) {
-          return `السيريال ${sn} غير موجود في الفرع المحدد للصنف ${meta.name}`;
-        }
-      } else if (cur) {
-        return `السيريال ${sn} مسجل من قبل للصنف ${meta.name}`;
-      }
+function linkMaintenanceIssue(st, voucher, n, body, actor) {
+  const form = selectedMaintenanceForm(body, voucher, n);
+  const previous = st.dispatchMeta[voucher.id] && typeof st.dispatchMeta[voucher.id] === 'object'
+    ? st.dispatchMeta[voucher.id] : {};
+  const previousFormId = previous.maintenanceFormId == null ? null : Number(previous.maintenanceFormId);
+  if (previousFormId && previousFormId !== Number(form.id)) {
+    const previousForm = data.formById(previousFormId);
+    if (previousForm && String(previousForm.issuePermitId) === String(voucher.id)) {
+      data.unlinkFormFromDispatch(previousForm, actor);
     }
   }
-  return null;
+  const meta = Object.assign({}, previous, {
+    destType: 'maintenance',
+    maintenanceFormId: form.id,
+    partyName: n.supplierName,
+    note: text(body.note, META_FIELDS.note),
+    stockOfficer: text(body.stockOfficer, 160),
+    stockOfficerSignature: text(body.stockOfficerSignature, 160),
+    receiverName: text(body.receiverName, 160),
+    receiverSignature: text(body.receiverSignature, 160),
+    receiveDate: asDate(body.receiveDate) || '',
+    gov: text(body.gov, 160),
+    address: text(body.address, 500),
+    updatedBy: actor,
+    updatedAt: data.nowIso()
+  });
+  form.maintenanceEntity = n.supplierName;
+  form.itemId = n.lines[0].itemId;
+  if (!form.serial && n.lines[0].serials.length) form.serial = n.lines[0].serials[0];
+  if (n.lines[0].reason) form.faultDescription = n.lines[0].reason;
+  if (n.lines[0].note) form.accessoriesNotes = n.lines[0].note;
+  form.branchName = voucher.source_branch || form.branchName || '';
+  form.deliveryDate = voucher.doc_date;
+  form.permitNumber = voucher.number;
+  form.supportOfficer = actor;
+  form.deliveryDate2 = voucher.doc_date;
+  form.issuePermitNumber = voucher.number;
+  form.maintenanceType = 'external';
+  form.status = 'sent_external';
+  data.syncFormToDispatch(form, voucher, actor);
+  st.dispatchMeta[voucher.id] = meta;
 }
 
-// Movements that touch the under-maintenance / scrap pools: a return from
-// maintenance (`maint`) or a disbursement to a supplier (sent for repair).
-const touchesPool = (n) =>
-  (n.direction === 'out' && n.kind === 'sup') || n.kind === 'maint' || n.lines.some((l) => l.state !== 'stock');
-
-async function insertLine(client, voucherId, l) {
-  await sqlReq(client)
-    .input('v', sql.Int, voucherId).input('i', sql.Int, l.itemId).input('q', sql.Int, l.qty)
-    .input('st', sql.NVarChar(8), l.state).input('sn', sql.NVarChar(sql.MAX), JSON.stringify(l.serials))
-    .input('rs', sql.NVarChar(200), l.reason || null)
-    .input('nt', sql.NVarChar(sql.MAX), l.note || null)
-    .input('cd', sql.NVarChar(200), l.condition || null)
-    .input('hw', sql.Bit, l.hasWarranty ? 1 : 0)
-    .input('wu', sql.Date, l.warrantyUntil || null)
-    .query(`INSERT INTO voucher_lines (voucher_id, item_id, qty, item_condition, state, serials, reason, line_note, has_warranty, line_warranty_until)
-            VALUES (@v, @i, @q, @cd, @st, @sn, @rs, @nt, @hw, @wu)`);
+function linkMaintenanceReturn(st, voucher, n, actor) {
+  n.lines.forEach((line) => {
+    if (!line.maintenanceFormId) return;
+    const form = data.formById(line.maintenanceFormId);
+    if (!form) data.fail(404, 'نموذج الصيانة المرتبط غير موجود');
+    const issueId = form.issuePermitId || line.sourceVoucherId;
+    const issue = issueId ? data.voucherById(issueId) : null;
+    if (!issue || issue.direction !== 'out' || issue.kind !== 'sup') {
+      data.fail(400, 'نموذج الصيانة غير مرتبط بإذن خروج للصيانة');
+    }
+    if (form.issuePermitId && Number(form.issuePermitId) !== Number(issue.id)) {
+      data.fail(400, 'نموذج الصيانة مرتبط بإذن خروج مختلف');
+    }
+    if (form.itemId && Number(form.itemId) !== Number(line.itemId)) {
+      data.fail(400, 'الصنف المستلم لا يطابق نموذج الصيانة');
+    }
+    if (form.serial && (line.qty !== 1 || !line.serials.some((serial) => String(serial).toLowerCase() === String(form.serial).toLowerCase()))) {
+      data.fail(400, 'السيريال المستلم لا يطابق نموذج الصيانة');
+    }
+    const issueLine = issue.lines.find((candidate) => Number(candidate.item_id) === Number(line.itemId)
+      && (!form.serial || (candidate.serials || []).some((serial) => String(serial).toLowerCase() === String(form.serial).toLowerCase())));
+    if (!issueLine) data.fail(400, 'نموذج الصيانة لا يطابق صنف أو سيريال إذن الخروج');
+    if (!form.issuePermitId) {
+      const meta = st.dispatchMeta[issue.id] && typeof st.dispatchMeta[issue.id] === 'object'
+        ? st.dispatchMeta[issue.id] : {};
+      if (meta.maintenanceFormId && Number(meta.maintenanceFormId) !== Number(form.id)) {
+        data.fail(409, 'إذن الخروج مرتبط بنموذج صيانة آخر');
+      }
+      if (st.forms.some((candidate) => Number(candidate.id) !== Number(form.id) && Number(candidate.issuePermitId) === Number(issue.id))) {
+        data.fail(409, 'إذن الخروج مرتبط بنموذج صيانة آخر');
+      }
+      form.itemId = line.itemId;
+      form.maintenanceType = 'external';
+      form.maintenanceEntity = form.maintenanceEntity || (st.suppliers.find((supplier) => Number(supplier.id) === Number(issue.supplier_id)) || {}).name || '';
+      data.syncFormToDispatch(form, issue, actor);
+      st.dispatchMeta[issue.id] = Object.assign({}, meta, {
+        destType: 'maintenance',
+        maintenanceFormId: form.id,
+        partyName: form.maintenanceEntity
+      });
+    }
+    form.entryPermitId = voucher.id;
+    form.entryPermitNumber = voucher.number;
+    form.receiptVoucherId = voucher.id;
+    form.receiptVoucherNumber = voucher.number;
+    form.receivedDate2 = voucher.doc_date;
+    form.inspectionResult3 = line.state === 'scrap' ? 'رفض الصيانة' : 'تم إصلاحه';
+    form.status = 'received_after_maintenance';
+    form.updatedBy = actor;
+    form.updatedAt = data.nowIso();
+  });
 }
 
-// A warranty captured on a receipt that is not from a supplier (a unit back
-// from maintenance or from a branch) is also written onto the catalogue item.
-async function applyLineWarranty(client, n) {
+function applyLineWarranty(n) {
   if (n.direction !== 'in' || n.kind === 'sup') return;
   for (const l of n.lines) {
     if (l.hasWarranty && l.warrantyUntil) {
-      await sqlReq(client).input('w', sql.Date, l.warrantyUntil).input('id', sql.Int, l.itemId)
-        .query('UPDATE items SET warranty_until = @w WHERE id = @id');
+      const item = data.itemById(l.itemId);
+      if (item) item.warranty_until = l.warrantyUntil;
     }
   }
 }
 
-router.post('/vouchers', guard('stock'), async (req, res, next) => {
-  const pool = await getPool();
-  const tx = new sql.Transaction(pool);
-  try {
-    const n = normalize(req.body);
-    const invalid = validate(n);
-    if (invalid) return res.status(400).json({ error: invalid });
-    if (touchesPool(n) && !can(req.user.role, 'pool')) {
-      return res.status(403).json({ error: 'حركات الصيانة والخردة متاحة لمدير النظام والمدير الفني فقط' });
-    }
-    const requestId = n.direction === 'out' && n.kind === 'br' ? asInt(req.body.request_id) || null : null;
-    const newVoucher = { direction: n.direction, kind: n.kind, branch_id: n.branchId, lines: n.lines };
-    const { itemIds, branchIds } = collectIds([newVoucher]);
-
-    await tx.begin();
-    if (requestId) {
-      const rr = await sqlReq(tx).input('id', sql.Int, requestId)
-        .query('SELECT status FROM requests WITH (UPDLOCK) WHERE id = @id');
-      if (!rr.recordset.length || rr.recordset[0].status !== 'approved') {
-        await tx.rollback();
-        return res.status(400).json({ error: 'الطلب غير معتمد أو تم صرفه من قبل' });
-      }
-    }
-    const serialError = await validateVoucherSerials(tx, n, null);
-    if (serialError) { await tx.rollback(); return res.status(400).json({ error: serialError }); }
-    const applied = await applyAndPersist(tx, planChange(null, newVoucher), itemIds, branchIds);
-    if (!applied.ok) { await tx.rollback(); return res.status(400).json(stockError(applied)); }
-
-    const supId = n.kind !== 'br' && n.supplierName ? await supplierIdOn(tx, n.supplierName) : null;
-    const vr = await sqlReq(tx)
-      .input('d', sql.NVarChar(3), n.direction).input('k', sql.NVarChar(8), n.kind)
-      .input('s', sql.Int, supId).input('b', sql.Int, n.branchId).input('n', sql.NVarChar(60), n.number)
-      .input('sb', sql.NVarChar(160), n.sourceBranch || null)
-      .input('dt', sql.NVarChar(40), n.docDate || new Date().toLocaleDateString('en-CA'))
-      .input('by', sql.NVarChar(120), req.user.name)
-      .query('INSERT INTO vouchers (direction, kind, supplier_id, branch_id, number, source_branch, doc_date, created_by) OUTPUT INSERTED.id VALUES (@d, @k, @s, @b, @n, @sb, @dt, @by)');
-    const vid = vr.recordset[0].id;
-    for (const l of n.lines) await insertLine(tx, vid, l);
-    await applyLineWarranty(tx, n);
-    if (requestId) {
-      await sqlReq(tx).input('id', sql.Int, requestId).query("UPDATE requests SET status = 'released' WHERE id = @id");
-      await sqlReq(tx).input('r', sql.Int, requestId).input('by', sql.NVarChar(120), req.user.name)
-        .query("INSERT INTO request_logs (request_id, by_name, action, kind, note) VALUES (@r, @by, N'أكد الصرف', N'ok', N'')");
-    }
-    await tx.commit();
-    res.json({ ok: true, id: vid });
-  } catch (err) {
-    try { await tx.rollback(); } catch (_) {}
-    if (err.number === 2601 || err.number === 2627) return res.status(400).json({ error: 'رقم الإذن مسجل من قبل' });
-    next(err);
-  }
+const asVoucherShape = (v) => ({
+  direction: v.direction,
+  kind: v.kind,
+  branch_id: v.branch_id,
+  lines: (v.lines || []).map((l) => ({ itemId: l.item_id, qty: l.qty, state: l.state }))
 });
 
-async function loadVoucher(client, id) {
-  const v = await sqlReq(client).input('id', sql.Int, id)
-    .query('SELECT * FROM vouchers WITH (UPDLOCK) WHERE id = @id AND deleted_at IS NULL');
-  if (!v.recordset.length) return null;
-  const row = v.recordset[0];
-  const lines = await sqlReq(client).input('id', sql.Int, id)
-    .query('SELECT item_id, qty, state FROM voucher_lines WHERE voucher_id = @id');
-  return {
-    voucher: {
-      direction: row.direction, kind: row.kind, branch_id: row.branch_id,
-      lines: lines.recordset.map((r) => ({ itemId: r.item_id, qty: r.qty, state: r.state }))
-    },
-    row
-  };
-}
-
-router.put('/vouchers/:id', guard('stock'), async (req, res, next) => {
-  const pool = await getPool();
-  const tx = new sql.Transaction(pool);
-  try {
-    const id = asInt(req.params.id);
-    const n = normalize(req.body);
-    const invalid = validate(n);
-    if (invalid) return res.status(400).json({ error: invalid });
-
-    await tx.begin();
-    const old = await loadVoucher(tx, id);
-    if (!old) { await tx.rollback(); return res.status(404).json({ error: 'الإذن غير موجود' }); }
-    const newVoucher = { direction: n.direction, kind: n.kind, branch_id: n.branchId, lines: n.lines };
-    if ((touchesPool(n) || touchesPool(old.voucher)) && !can(req.user.role, 'pool')) {
-      await tx.rollback();
-      return res.status(403).json({ error: 'حركات الصيانة والخردة متاحة لمدير النظام والمدير الفني فقط' });
-    }
-    const { itemIds, branchIds } = collectIds([old.voucher, newVoucher]);
-    const serialError = await validateVoucherSerials(tx, n, id);
-    if (serialError) { await tx.rollback(); return res.status(400).json({ error: serialError }); }
-    const applied = await applyAndPersist(tx, planChange(old.voucher, newVoucher), itemIds, branchIds);
-    if (!applied.ok) { await tx.rollback(); return res.status(400).json(stockError(applied)); }
-
-    const supId = n.kind !== 'br' && n.supplierName ? await supplierIdOn(tx, n.supplierName) : null;
-    await sqlReq(tx)
-      .input('d', sql.NVarChar(3), n.direction).input('k', sql.NVarChar(8), n.kind)
-      .input('s', sql.Int, supId).input('b', sql.Int, n.branchId).input('n', sql.NVarChar(60), n.number)
-      .input('sb', sql.NVarChar(160), n.sourceBranch || null)
-      .input('dt', sql.NVarChar(40), n.docDate || null)
-      .input('ed', sql.NVarChar(120), req.user.name).input('id', sql.Int, id)
-      .query('UPDATE vouchers SET direction = @d, kind = @k, supplier_id = @s, branch_id = @b, number = @n, source_branch = @sb, doc_date = COALESCE(@dt, doc_date), edited_by = @ed WHERE id = @id');
-    await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM voucher_lines WHERE voucher_id = @id');
-    for (const l of n.lines) await insertLine(tx, id, l);
-    await applyLineWarranty(tx, n);
-    await tx.commit();
-    res.json({ ok: true });
-  } catch (err) {
-    try { await tx.rollback(); } catch (_) {}
-    if (err.number === 2601 || err.number === 2627) return res.status(400).json({ error: 'رقم الإذن مسجل من قبل' });
-    next(err);
+router.post('/vouchers', guard('stock'), route((req, res) => {
+  const body = bodyOf(req);
+  const n = normalizeVoucher(body);
+  const invalid = validateVoucher(n);
+  if (invalid) data.fail(400, invalid);
+  if (data.touchesPool(n) && !can(req.user.role, 'pool')) {
+    data.fail(403, 'حركات الصيانة والخردة متاحة لمدير النظام والمدير الفني فقط');
   }
-});
-
-router.delete('/vouchers/:id', guard('delRecv'), async (req, res, next) => {
-  const pool = await getPool();
-  const tx = new sql.Transaction(pool);
-  try {
-    const id = asInt(req.params.id);
-    await tx.begin();
-    const old = await loadVoucher(tx, id);
-    if (!old) { await tx.rollback(); return res.status(404).json({ error: 'الإذن غير موجود' }); }
-    if (touchesPool(old.voucher) && !can(req.user.role, 'pool')) {
-      await tx.rollback();
-      return res.status(403).json({ error: 'حركات الصيانة والخردة متاحة لمدير النظام والمدير الفني فقط' });
+  const requestId = n.direction === 'out' && n.kind === 'br' ? asInt(body.request_id) || null : null;
+  const out = data.tx((st) => {
+    let request = null;
+    if (requestId) {
+      request = st.requests.find((r) => Number(r.id) === requestId);
+      if (!request || request.status !== 'approved') data.fail(400, 'الطلب غير معتمد أو تم صرفه من قبل');
     }
-    const { itemIds, branchIds } = collectIds([old.voucher]);
-    const applied = await applyAndPersist(tx, planChange(old.voucher, null), itemIds, branchIds);
-    if (!applied.ok) { await tx.rollback(); return res.status(400).json(stockError(applied)); }
-    await sqlReq(tx).input('id', sql.Int, id).query('UPDATE vouchers SET deleted_at = SYSUTCDATETIME() WHERE id = @id');
-    await tx.commit();
-    try {
-      const meta = store.readMap('dispatch_meta.json');
-      if (meta[id]) { delete meta[id]; store.writeMap('dispatch_meta.json', meta); }
-      const forms = store.readList('maintenance_forms.json');
-      let changed = false;
-      for (const f of forms) {
-        if (String(f.issuePermitId || '') === String(id)) {
-          f.issuePermitId = null; f.issuePermitNumber = '';
-          if (f.status === 'sent_external') f.status = 'received';
-          changed = true;
+    const serialError = data.validateSerials(n, null);
+    if (serialError) data.fail(400, serialError);
+    if (body.maintenance_flow === true && (!body.maintenance_form_id || n.direction !== 'out' || n.kind !== 'sup')) {
+      data.fail(400, 'اختر نموذج الصيانة قبل تسجيل إذن الخروج');
+    }
+    const applied = data.applyChange(null, n);
+    if (!applied.ok) data.fail(400, data.stockError(applied));
+    const voucher = insertVoucher(st, n, req.user.name);
+    if (body.maintenance_flow === true) {
+      linkMaintenanceIssue(st, voucher, n, body, req.user.name);
+    }
+    if (n.direction === 'in' && n.kind === 'maint') {
+      linkMaintenanceReturn(st, voucher, n, req.user.name);
+    }
+    applyLineWarranty(n);
+    if (request) {
+      request.status = 'released';
+      request.releasedVoucherId = voucher.id;
+      request.log.push({
+        id: ++st.counters.requestLog,
+        by_name: req.user.name,
+        action: 'أكد الصرف',
+        kind: 'ok',
+        note: '',
+        created_at: data.nowIso()
+      });
+    }
+    return { ok: true, id: voucher.id };
+  });
+  res.json(out);
+}));
+
+router.put('/vouchers/:id', guard('stock'), route((req, res) => {
+  const body = bodyOf(req);
+  const id = asInt(req.params.id);
+  const n = normalizeVoucher(body);
+  const invalid = validateVoucher(n);
+  if (invalid) data.fail(400, invalid);
+  if (body.maintenance_flow === true && (!body.maintenance_form_id || n.direction !== 'out' || n.kind !== 'sup')) {
+    data.fail(400, 'اختر نموذج الصيانة قبل تسجيل إذن الخروج');
+  }
+  data.tx((st) => {
+    const old = data.voucherById(id);
+    if (!old) data.fail(404, 'الإذن غير موجود');
+    if ((data.touchesPool(n) || data.touchesPool(asVoucherShape(old))) && !can(req.user.role, 'pool')) {
+      data.fail(403, 'حركات الصيانة والخردة متاحة لمدير النظام والمدير الفني فقط');
+    }
+    const serialError = data.validateSerials(n, id);
+    if (serialError) data.fail(400, serialError);
+    const applied = data.applyChange(asVoucherShape(old), n);
+    if (!applied.ok) data.fail(400, data.stockError(applied));
+    data.assertUniqueNumber(n.direction, n.number, id);
+    old.direction = n.direction;
+    old.kind = n.kind;
+    old.supplier_id = n.kind === 'br' ? null : data.ensureSupplier(n.supplierName);
+    old.branch_id = n.branchId;
+    old.number = n.number;
+    old.source_branch = n.sourceBranch || '';
+    if (n.docDate) old.doc_date = n.docDate;
+    old.edited_by = req.user.name;
+    old.lines = n.lines.map((l) => insertLine(st, l));
+    if (body.maintenance_flow === true) {
+      linkMaintenanceIssue(st, old, n, body, req.user.name);
+    }
+    applyLineWarranty(n);
+    // The dispatch sheet prints the permit number from both sides; keep them
+    // identical after an edit.
+    const meta = old.direction === 'out' ? st.dispatchMeta[old.id] : null;
+    if (meta && meta.maintenanceFormId != null) {
+      const form = data.formById(meta.maintenanceFormId);
+      if (form && String(form.issuePermitId) === String(old.id)) {
+        form.issuePermitNumber = old.number;
+        if (Array.isArray(form.dispatchLinks)) {
+          form.dispatchLinks.forEach((l) => { if (String(l.permitId) === String(old.id)) l.permitNumber = old.number; });
         }
       }
-      if (changed) store.writeJson('maintenance_forms.json', forms);
-    } catch (_) { /* file metadata is best-effort */ }
-    res.json({ ok: true });
-  } catch (err) {
-    try { await tx.rollback(); } catch (_) {}
-    next(err);
-  }
-});
+    }
+  });
+  res.json({ ok: true });
+}));
+
+router.delete('/vouchers/:id', guard('delRecv'), route((req, res) => {
+  const id = asInt(req.params.id);
+  data.tx((st) => {
+    const old = data.voucherById(id);
+    if (!old) data.fail(404, 'الإذن غير موجود');
+    if (data.touchesPool(asVoucherShape(old)) && !can(req.user.role, 'pool')) {
+      data.fail(403, 'حركات الصيانة والخردة متاحة لمدير النظام والمدير الفني فقط');
+    }
+    const applied = data.applyChange(asVoucherShape(old), null);
+    if (!applied.ok) data.fail(400, data.stockError(applied));
+    old.deleted_at = data.nowIso();
+    data.clearVoucherLinks(old.id, req.user.name);
+  });
+  res.json({ ok: true });
+}));
 
 /* --------------------------------- scrap -------------------------------- */
 
-// Write damaged units off the warehouse balance and into the terminal scrap
-// pool. The qty is validated and applied atomically, serials are mandatory for
-// serialised categories, and every action is kept in scrap_entries.
-router.post('/scrap', guard('pool'), async (req, res, next) => {
-  const pool = await getPool();
-  const tx = new sql.Transaction(pool);
-  try {
-    const mode = req.body.mode === 'plain' ? 'plain' : 'serial';
-    const rawLines = Array.isArray(req.body.lines) ? req.body.lines : [];
-    if (!rawLines.length) return res.status(400).json({ error: 'أضف صنفًا واحدًا على الأقل' });
-    const lines = rawLines.map((l) => ({
-      itemId: Number(l.item_id),
-      qty: Number(l.qty),
-      serials: Array.isArray(l.serials) ? l.serials.map((s) => String(s).trim()) : []
-    }));
-    for (const l of lines) {
-      if (!Number.isInteger(l.itemId) || l.itemId <= 0) return res.status(400).json({ error: 'اختر الصنف في كل سطر' });
-      if (!Number.isInteger(l.qty) || l.qty <= 0) return res.status(400).json({ error: 'اكتب عددًا صحيحًا أكبر من صفر في كل سطر' });
-    }
-
+router.post('/scrap', guard('pool'), route((req, res) => {
+  const body = bodyOf(req);
+  const mode = body.mode === 'plain' ? 'plain' : 'serial';
+  const rawLines = Array.isArray(body.lines) ? body.lines : [];
+  if (!rawLines.length) data.fail(400, 'أضف صنفًا واحدًا على الأقل');
+  const lines = rawLines.map((l) => ({
+    itemId: Number(l.item_id),
+    qty: Number(l.qty),
+    serials: Array.isArray(l.serials) ? l.serials.map((s) => String(s).trim()) : []
+  }));
+  for (const l of lines) {
+    if (!Number.isInteger(l.itemId) || l.itemId <= 0) data.fail(400, 'اختر الصنف في كل سطر');
+    if (!Number.isInteger(l.qty) || l.qty <= 0) data.fail(400, 'اكتب عددًا صحيحًا أكبر من صفر في كل سطر');
+  }
+  data.tx((st) => {
     const ids = [...new Set(lines.map((l) => l.itemId))];
-    await tx.begin();
-
-    const cats = await sqlReq(tx).input('ids', sql.NVarChar(sql.MAX), JSON.stringify(ids))
-      .query(`SELECT i.id, c.has_serial FROM items i JOIN categories c ON c.id = i.category_id
-               WHERE i.id IN (SELECT CAST(value AS INT) FROM OPENJSON(@ids))`);
-    const serialised = new Map(cats.recordset.map((r) => [r.id, !!r.has_serial]));
-    for (const id of ids) {
-      if (!serialised.has(id)) { await tx.rollback(); return res.status(400).json({ error: 'الصنف المحدد غير موجود' }); }
-    }
-
-    // Serial checks are aggregated per item across repeated lines.
-    const ledger = mode === 'serial' ? await serialLedger(tx, ids, null) : new Map();
+    for (const id of ids) if (!data.itemById(id)) data.fail(400, 'الصنف المحدد غير موجود');
+    const ledger = mode === 'serial' ? data.serialLedger(ids, null) : new Map();
     const seen = new Set();
     for (const l of lines) {
-      // `plain` write-offs are quantity-only even for serialised categories.
-      if (mode === 'serial' && serialised.get(l.itemId)) {
-        if (l.serials.length !== l.qty) {
-          await tx.rollback();
-          return res.status(400).json({ error: 'اكتب سيريال لكل قطعة' });
-        }
-        if (l.serials.some((s) => !s)) {
-          await tx.rollback();
-          return res.status(400).json({ error: 'اكتب كل السيريالات' });
-        }
-        for (const s of l.serials) {
-          const key = l.itemId + '|' + s.toLowerCase();
-          if (seen.has(key)) {
-            await tx.rollback();
-            return res.status(400).json({ error: 'سيريال مكرر: ' + s });
-          }
+      if (mode === 'serial' && data.hasSerial(l.itemId)) {
+        if (l.serials.length !== l.qty) data.fail(400, 'اكتب سيريال لكل قطعة');
+        if (l.serials.some((s) => !s)) data.fail(400, 'اكتب كل السيريالات');
+        for (const sn of l.serials) {
+          const key = data.serialKey(l.itemId, sn);
+          if (seen.has(key)) data.fail(400, 'سيريال مكرر: ' + sn);
           seen.add(key);
-          const cur = ledger.get(key);
-          if (!cur || cur.state !== 'stock') {
-            await tx.rollback();
-            return res.status(400).json({ error: 'السيريال ' + s + ' غير متاح في المخزن' });
-          }
+          const current = ledger.get(key);
+          if (!current || current.state !== 'stock') data.fail(400, 'السيريال ' + sn + ' غير متاح في المخزن');
         }
       } else {
         l.serials = [];
       }
     }
-
-    const applied = await applyAndPersist(tx, scrapDeltas(lines), ids, []);
-    if (!applied.ok) {
-      await tx.rollback();
-      return res.status(400).json({ error: 'الكمية المطلوبة أكبر من رصيد المخزن' });
-    }
-
+    const applied = data.applyScrap(lines);
+    if (!applied.ok) data.fail(400, 'الكمية المطلوبة أكبر من رصيد المخزن');
     for (const l of lines) {
-      await sqlReq(tx)
-        .input('i', sql.Int, l.itemId).input('q', sql.Int, l.qty)
-        .input('sn', sql.NVarChar(sql.MAX), JSON.stringify(l.serials))
-        .input('by', sql.NVarChar(120), req.user.name)
-        .query('INSERT INTO scrap_entries (item_id, qty, serials, created_by) VALUES (@i, @q, @sn, @by)');
+      st.scrapEntries.push({
+        id: ++st.counters.scrapEntry,
+        item_id: l.itemId,
+        qty: l.qty,
+        serials: l.serials,
+        created_by: req.user.name,
+        created_at: data.nowIso()
+      });
     }
-
-    await tx.commit();
-    res.json({ ok: true });
-  } catch (err) {
-    try { await tx.rollback(); } catch (_) {}
-    next(err);
-  }
-});
+  });
+  res.json({ ok: true });
+}));
 
 /* -------------------------------- requests ------------------------------ */
 
-router.post('/requests', guard('request'), async (req, res, next) => {
-  const pool = await getPool();
-  const tx = new sql.Transaction(pool);
-  try {
-    const branchId = asInt(req.body.branch_id);
-    const rawLines = Array.isArray(req.body.lines) ? req.body.lines : [];
-    const lines = rawLines.map((l) => ({ item_id: Number(l.item_id), qty: Number(l.qty) }));
-    if (!branchId) return res.status(400).json({ error: 'اختر الفرع' });
-    if (!lines.length) return res.status(400).json({ error: 'اختر صنفًا واحدًا على الأقل' });
-    for (const l of lines) {
-      if (!Number.isInteger(l.item_id) || l.item_id <= 0) return res.status(400).json({ error: 'اختر الصنف في كل سطر' });
-      if (!Number.isInteger(l.qty) || l.qty <= 0) return res.status(400).json({ error: 'اكتب عددًا صحيحًا أكبر من صفر في كل سطر' });
-    }
-    await tx.begin();
-    const r = await sqlReq(tx)
-      .input('b', sql.Int, branchId)
-      .input('by', sql.NVarChar(120), req.user.name)
-      .input('st', sql.NVarChar(12), req.user.role === 'junior' ? 'review' : 'pending')
-      .query('INSERT INTO requests (branch_id, requested_by, status) OUTPUT INSERTED.id VALUES (@b, @by, @st)');
-    const rid = r.recordset[0].id;
-    for (const l of lines) {
-      await sqlReq(tx).input('r', sql.Int, rid).input('i', sql.Int, asInt(l.item_id)).input('q', sql.Int, asInt(l.qty))
-        .query('INSERT INTO request_lines (request_id, item_id, qty) VALUES (@r, @i, @q)');
-    }
-    await sqlReq(tx).input('r', sql.Int, rid).input('by', sql.NVarChar(120), req.user.name).input('note', sql.NVarChar(sql.MAX), String(req.body.note || ''))
-      .query("INSERT INTO request_logs (request_id, by_name, action, kind, note) VALUES (@r, @by, N'أرسل الطلب', N'', @note)");
-    await tx.commit();
-    res.json({ ok: true, id: rid });
-  } catch (err) {
-    try { await tx.rollback(); } catch (_) {}
-    next(err);
+function readRequestLines(raw) {
+  const lines = (Array.isArray(raw) ? raw : []).map((l) => ({ itemId: Number(l.item_id), qty: Number(l.qty) }));
+  for (const l of lines) {
+    if (!Number.isInteger(l.itemId) || l.itemId <= 0) data.fail(400, 'اختر الصنف في كل سطر');
+    if (!Number.isInteger(l.qty) || l.qty <= 0) data.fail(400, 'اكتب عددًا صحيحًا أكبر من صفر في كل سطر');
+    if (!data.itemById(l.itemId)) data.fail(400, 'الصنف المحدد غير موجود');
   }
-});
+  return lines;
+}
 
-router.post('/requests/:id/action', async (req, res, next) => {
-  const pool = await getPool();
-  const tx = new sql.Transaction(pool);
-  try {
-    const id = asInt(req.params.id);
-    const action = String(req.body.action || '');
-    const role = req.user.role;
+router.post('/requests', guard('request'), route((req, res) => {
+  const body = bodyOf(req);
+  const branchId = asInt(body.branch_id);
+  if (!branchId) data.fail(400, 'اختر الفرع');
+  if (!data.branchById(branchId)) data.fail(400, 'الفرع المحدد غير موجود');
+  const lines = readRequestLines(body.lines);
+  if (!lines.length) data.fail(400, 'اختر صنفًا واحدًا على الأقل');
+  const out = data.tx((st) => {
+    const id = ++st.counters.request;
+    const logId = ++st.counters.requestLog;
+    st.requests.push({
+      id,
+      branch_id: branchId,
+      requested_by: req.user.name,
+      status: req.user.role === 'junior' ? 'review' : 'pending',
+      created_at: data.nowIso(),
+      releasedVoucherId: null,
+      lines: lines.map((l, idx) => ({ id: ++st.counters.requestLine, item_id: l.itemId, qty: l.qty })),
+      log: [{
+        id: logId,
+        by_name: req.user.name,
+        action: 'أرسل الطلب',
+        kind: '',
+        note: text(body.note, 2000),
+        created_at: data.nowIso()
+      }]
+    });
+    return { ok: true, id };
+  });
+  res.json(out);
+}));
 
-    await tx.begin();
-    const rr = await sqlReq(tx).input('id', sql.Int, id).query('SELECT * FROM requests WITH (UPDLOCK) WHERE id = @id');
-    if (!rr.recordset.length) { await tx.rollback(); return res.status(404).json({ error: 'الطلب غير موجود' }); }
-    const request = rr.recordset[0];
-    const log = (a, k, t) => sqlReq(tx).input('r', sql.Int, id).input('by', sql.NVarChar(120), req.user.name)
-      .input('a', sql.NVarChar(120), a).input('k', sql.NVarChar(16), k)
-      .input('note', sql.NVarChar(sql.MAX), t || '')
-      .query('INSERT INTO request_logs (request_id, by_name, action, kind, note) VALUES (@r, @by, @a, @k, @note)');
+router.post('/requests/:id/action', route((req, res) => {
+  const body = bodyOf(req);
+  const id = asInt(req.params.id);
+  const action = String(body.action || '');
+  const role = req.user.role;
+  data.tx((st) => {
+    const request = st.requests.find((r) => Number(r.id) === id);
+    if (!request) data.fail(404, 'الطلب غير موجود');
+    if (request.status === 'rejected') data.fail(400, 'الطلب مرفوض ومغلق');
+    if (request.status === 'released') data.fail(400, 'تم صرف الطلب بالفعل');
+
+    const log = (a, k, t) => {
+      request.log.push({
+        id: ++st.counters.requestLog,
+        by_name: req.user.name,
+        action: a,
+        kind: k || '',
+        note: t || '',
+        created_at: data.nowIso()
+      });
+    };
 
     if (action === 'no') {
-      if (!can(role, 'reject')) { await tx.rollback(); return res.status(403).json({ error: 'لا تملك صلاحية هذا الإجراء' }); }
-      const note = String(req.body.note || '').trim();
-      if (!note) { await tx.rollback(); return res.status(400).json({ error: 'اكتب سبب الرفض' }); }
-      await log('رفض', 'no', note);
-      await sqlReq(tx).input('id', sql.Int, id).query("UPDATE requests SET status = 'rejected' WHERE id = @id");
+      if (!can(role, 'reject')) data.fail(403, 'لا تملك صلاحية هذا الإجراء');
+      const note = text(body.note, 2000);
+      if (!note) data.fail(400, 'اكتب سبب الرفض');
+      log('رفض', 'no', note);
+      request.status = 'rejected';
     } else if (action === 'save') {
-      if (!can(role, 'edit')) { await tx.rollback(); return res.status(403).json({ error: 'لا تملك صلاحية هذا الإجراء' }); }
-      const lines = (Array.isArray(req.body.lines) ? req.body.lines : []).map((l) => ({ item_id: Number(l.item_id), qty: Number(l.qty) }));
-      if (!lines.length) { await tx.rollback(); return res.status(400).json({ error: 'اترك صنفًا واحدًا على الأقل أو ارفض الطلب' }); }
-      for (const l of lines) {
-        if (!Number.isInteger(l.item_id) || l.item_id <= 0) { await tx.rollback(); return res.status(400).json({ error: 'اختر الصنف في كل سطر' }); }
-        if (!Number.isInteger(l.qty) || l.qty <= 0) { await tx.rollback(); return res.status(400).json({ error: 'اكتب عددًا صحيحًا أكبر من صفر في كل سطر' }); }
+      if (!can(role, 'edit')) data.fail(403, 'لا تملك صلاحية هذا الإجراء');
+      const lines = readRequestLines(body.lines);
+      if (!lines.length) data.fail(400, 'اترك صنفًا واحدًا على الأقل أو ارفض الطلب');
+      if (has(body, 'branch_id')) {
+        const nextBranch = asInt(body.branch_id);
+        if (!nextBranch || !data.branchById(nextBranch)) data.fail(400, 'الفرع المحدد غير موجود');
+        request.branch_id = nextBranch;
       }
-      await sqlReq(tx).input('id', sql.Int, id).query('DELETE FROM request_lines WHERE request_id = @id');
-      for (const l of lines) {
-        await sqlReq(tx).input('r', sql.Int, id).input('i', sql.Int, l.item_id).input('q', sql.Int, l.qty)
-          .query('INSERT INTO request_lines (request_id, item_id, qty) VALUES (@r, @i, @q)');
-      }
-      await log('عدّل الطلب', '', String(req.body.note || 'تم التعديل'));
+      request.lines = lines.map((l) => ({ id: ++st.counters.requestLine, item_id: l.itemId, qty: l.qty }));
+      log('عدّل الطلب', '', text(body.note, 2000) || 'تم التعديل');
     } else if (action === 'rev') {
-      if (!can(role, 'review') || request.status !== 'review') { await tx.rollback(); return res.status(400).json({ error: 'لا يمكن تنفيذ هذا الإجراء' }); }
-      await log('أكد الطلب', 'ok', '');
-      await sqlReq(tx).input('id', sql.Int, id).query("UPDATE requests SET status = 'pending' WHERE id = @id");
+      if (!can(role, 'review') || request.status !== 'review') data.fail(400, 'لا يمكن تنفيذ هذا الإجراء');
+      log('أكد الطلب', 'ok', '');
+      request.status = 'pending';
     } else if (action === 'ok') {
-      if (!can(role, 'approve') || request.status !== 'pending') { await tx.rollback(); return res.status(400).json({ error: 'لا يمكن تنفيذ هذا الإجراء' }); }
-      await log('وافق', 'ok', '');
-      await sqlReq(tx).input('id', sql.Int, id).query("UPDATE requests SET status = 'approved' WHERE id = @id");
+      if (!can(role, 'approve') || request.status !== 'pending') data.fail(400, 'لا يمكن تنفيذ هذا الإجراء');
+      log('وافق', 'ok', '');
+      request.status = 'approved';
     } else if (action === 'out') {
-      if (!can(role, 'release') || request.status !== 'approved') { await tx.rollback(); return res.status(400).json({ error: 'لا يمكن تنفيذ هذا الإجراء' }); }
-      const rl = await sqlReq(tx).input('id', sql.Int, id).query('SELECT item_id, qty FROM request_lines WHERE request_id = @id');
-      const newVoucher = {
-        direction: 'out', kind: 'br', branch_id: request.branch_id,
-        lines: rl.recordset.map((r) => ({ itemId: r.item_id, qty: r.qty }))
+      if (!can(role, 'release') || request.status !== 'approved') data.fail(400, 'لا يمكن تنفيذ هذا الإجراء');
+      const lines = request.lines.map((l) => ({ itemId: l.item_id, qty: l.qty }));
+      for (const l of lines) {
+        if (!data.hasSerial(l.itemId)) continue;
+        const serials = data.pickStockSerials(l.itemId, l.qty);
+        if (!serials) {
+          const item = data.itemById(l.itemId);
+          data.fail(400, 'لا توجد سيريالات كافية في المخزن للصنف ' + (item ? item.name : ''));
+        }
+        l.serials = serials;
+      }
+      const n = {
+        direction: 'out',
+        kind: 'br',
+        branchId: request.branch_id,
+        supplierName: '',
+        number: 'REQ-' + String(request.id).padStart(4, '0'),
+        sourceBranch: '',
+        docDate: today(),
+        lines: lines.map((l) => ({
+          itemId: l.itemId,
+          qty: l.qty,
+          state: 'stock',
+          serials: l.serials || [],
+          reason: '',
+          note: '',
+          condition: '',
+          hasWarranty: false,
+          warrantyUntil: null
+        }))
       };
-      const { itemIds, branchIds } = collectIds([newVoucher]);
-      const applied = await applyAndPersist(tx, planChange(null, newVoucher), itemIds, branchIds);
-      if (!applied.ok) { await tx.rollback(); return res.status(400).json(stockError(applied)); }
-      await log('أكد الصرف', 'ok', '');
-      await sqlReq(tx).input('id', sql.Int, id).query("UPDATE requests SET status = 'released' WHERE id = @id");
+      const applied = data.applyChange(null, n);
+      if (!applied.ok) data.fail(400, data.stockError(applied));
+      const voucher = insertVoucher(st, n, req.user.name);
+      log('أكد الصرف', 'ok', '');
+      request.status = 'released';
+      request.releasedVoucherId = voucher.id;
     } else {
-      await tx.rollback();
-      return res.status(400).json({ error: 'إجراء غير معروف' });
+      data.fail(400, 'إجراء غير معروف');
     }
-
-    await tx.commit();
-    res.json({ ok: true });
-  } catch (err) {
-    try { await tx.rollback(); } catch (_) {}
-    next(err);
-  }
-});
+  });
+  res.json({ ok: true });
+}));
 
 /* ---------------------- maintenance forms (JSON files) ------------------ */
 
 const MF_TYPES = new Set(['internal', 'external']);
 const MF_STATUS = new Set(['received', 'internal_check', 'sent_external', 'received_after_maintenance', 'returned_to_branch']);
-const MF_TEXT_FIELDS = [
-  'branchName', 'ownerName', 'employeeCode', 'department', 'deviceType', 'serial',
-  'faultDescription', 'accessoriesNotes', 'permitNumber', 'supportOfficer', 'signature',
-  'inspectionResult', 'actionTaken', 'permitNumber2', 'inspector', 'signature2',
-  'maintenanceEntity', 'recipientName', 'signature3', 'warrantyStatus', 'accessoriesNotes2',
-  'inspector3', 'signature4', 'issuePermitNumber', 'inspectionResult2', 'actionTaken2',
-  'technicianName', 'signature5', 'inspectionResult3', 'actionTaken3',
-  'maintenanceDeliveryOfficer', 'signature6', 'inspector4', 'signature7', 'entryPermitNumber',
-  'receiptVoucherNumber'
-];
-const MF_DATE_FIELDS = ['deliveryDate', 'receivedDate', 'inspectionDate', 'releaseToBranchDate', 'deliveryDate2', 'date3', 'receivedDate2'];
-const MF_ID_FIELDS = ['itemId', 'branchId', 'issuePermitId', 'entryPermitId', 'receiptVoucherId'];
+const MF_STATUS_AR = {
+  received: 'تم الاستلام',
+  internal_check: 'فحص داخلي',
+  sent_external: 'مرسل لصيانة خارجية',
+  received_after_maintenance: 'تم الاستلام بعد الصيانة',
+  returned_to_branch: 'تم الإرجاع للفرع'
+};
 
-const mfText = (v, max = 2000) => String(v == null ? '' : v).trim().slice(0, max);
-const mfInt = (v) => {
+const positiveInt = (v) => {
   const n = parseInt(v, 10);
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 
-function maintenanceFields(body) {
-  const out = {};
-  MF_TEXT_FIELDS.forEach((k) => { if (Object.prototype.hasOwnProperty.call(body, k)) out[k] = mfText(body[k]); });
-  MF_DATE_FIELDS.forEach((k) => { if (Object.prototype.hasOwnProperty.call(body, k)) out[k] = asDate(body[k]) || ''; });
-  MF_ID_FIELDS.forEach((k) => { if (Object.prototype.hasOwnProperty.call(body, k)) out[k] = mfInt(body[k]); });
-  if (Object.prototype.hasOwnProperty.call(body, 'dispatchLinks')) {
-    out.dispatchLinks = (Array.isArray(body.dispatchLinks) ? body.dispatchLinks : []).slice(0, 50).map((x) => ({
-      permitId: mfInt(x && x.permitId),
-      permitNumber: mfText(x && x.permitNumber, 60),
-      date: asDate(x && x.date) || ''
-    }));
-  }
-  return out;
+function formBase(body) {
+  const clean = sanitize(body, 0);
+  if (!clean || typeof clean !== 'object' || Array.isArray(clean)) data.fail(400, 'بيانات النموذج غير صالحة');
+  delete clean.id;
+  delete clean.number;
+  delete clean.createdBy;
+  delete clean.createdAt;
+  delete clean.updatedBy;
+  delete clean.updatedAt;
+  return clean;
 }
 
-router.get('/maintenance-forms', (req, res) => {
-  res.json({ forms: store.readList('maintenance_forms.json') });
-});
+function validateFormType(status, type) {
+  if (type != null && !MF_TYPES.has(type)) data.fail(400, 'نوع صيانة غير صالح');
+  if (status != null && !MF_STATUS.has(status)) data.fail(400, 'حالة نموذج غير صالحة');
+}
 
-router.post('/maintenance-forms', guard('maintCreate'), (req, res) => {
-  try {
-    const body = req.body || {};
-    const rows = store.readList('maintenance_forms.json');
-    const nextId = rows.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) + 1;
-    const nextNo = rows.reduce((m, r) => {
-      const n = parseInt(String(r.number || '').replace(/\D/g, ''), 10);
-      return Math.max(m, Number.isFinite(n) ? n : 0);
-    }, 0) + 1;
-    const type = MF_TYPES.has(body.maintenanceType) ? body.maintenanceType : 'internal';
-    let status = MF_STATUS.has(body.status) ? body.status : 'received';
-    if (req.user.role === 'junior') status = 'received';
-    const now = new Date().toISOString();
-    const rec = Object.assign({
-      id: nextId,
-      number: 'MF-' + String(nextNo).padStart(4, '0'),
-      maintenanceType: type,
-      status
-    }, maintenanceFields(body), {
+function linkFormVouchers(form, body, actor) {
+  const keys = ['issuePermitId', 'entryPermitId', 'receiptVoucherId'];
+  for (const key of keys) {
+    if (!has(body, key)) continue;
+    if (body[key] == null || body[key] === '') {
+      form[key] = null;
+      if (key === 'issuePermitId') form.issuePermitNumber = '';
+      if (key === 'entryPermitId') form.entryPermitNumber = '';
+      if (key === 'receiptVoucherId') form.receiptVoucherNumber = '';
+      continue;
+    }
+    data.voucherLink(form, key, body[key], actor);
+  }
+  if (Array.isArray(body.dispatchLinks)) {
+    form.dispatchLinks = body.dispatchLinks
+      .slice(0, 50)
+      .map((l) => sanitize(l, 0))
+      .filter((l) => l && typeof l === 'object')
+      .map((l) => Object.assign({}, l, {
+        permitId: positiveInt(l.permitId),
+        permitNumber: text(l.permitNumber, 60),
+        date: asDate(l.date) || ''
+      }))
+      .filter((l) => {
+        if (l.permitId == null) return false;
+        const v = data.voucherById(l.permitId);
+        return !!v && v.direction === 'out';
+      });
+  }
+}
+
+router.get('/maintenance-forms', route((req, res) => {
+  res.json({ forms: data.state.forms });
+}));
+
+router.post('/maintenance-forms', guard('maintCreate'), route((req, res) => {
+  const body = bodyOf(req);
+  const clean = formBase(body);
+  validateFormType(clean.status, clean.maintenanceType);
+  const out = data.tx((st) => {
+    const seq = ++st.counters.form;
+    const now = data.nowIso();
+    const rec = Object.assign({}, clean, {
+      id: seq,
+      number: 'MF-' + String(seq).padStart(4, '0'),
+      maintenanceType: MF_TYPES.has(clean.maintenanceType) ? clean.maintenanceType : 'internal',
+      status: MF_STATUS.has(clean.status) ? clean.status : 'received',
+      dispatchLinks: Array.isArray(clean.dispatchLinks) ? clean.dispatchLinks : [],
       requestOnly: req.user.role === 'junior',
       createdBy: req.user.name,
       createdAt: now,
       updatedBy: req.user.name,
       updatedAt: now
     });
-    rows.push(rec);
-    store.writeJson('maintenance_forms.json', rows);
-    res.json({ ok: true, form: rec });
-  } catch (err) { next(err); }
-});
+    if (req.user.role === 'junior') rec.status = 'received';
+    linkFormVouchers(rec, body, req.user.name);
+    st.forms.push(rec);
+    return { ok: true, form: rec };
+  });
+  res.json(out);
+}));
 
-router.put('/maintenance-forms/:id', guard('maintEdit'), (req, res) => {
-  try {
-    const id = mfInt(req.params.id);
-    const rows = store.readList('maintenance_forms.json');
-    const idx = rows.findIndex((r) => Number(r.id) === Number(id));
-    if (idx < 0) return res.status(404).json({ error: 'نموذج الصيانة غير موجود' });
-    const body = req.body || {};
-    if (Object.prototype.hasOwnProperty.call(body, 'maintenanceType') && !MF_TYPES.has(body.maintenanceType)) {
-      return res.status(400).json({ error: 'نوع صيانة غير صالح' });
-    }
-    if (Object.prototype.hasOwnProperty.call(body, 'status') && !MF_STATUS.has(body.status)) {
-      return res.status(400).json({ error: 'حالة نموذج غير صالحة' });
-    }
-    const rec = Object.assign({}, rows[idx], maintenanceFields(body), {
+router.put('/maintenance-forms/:id', guard('maintEdit'), route((req, res) => {
+  const id = positiveInt(req.params.id);
+  if (!id) data.fail(400, 'رقم النموذج غير صالح');
+  const body = bodyOf(req);
+  const clean = formBase(body);
+  validateFormType(clean.status, clean.maintenanceType);
+  const out = data.tx((st) => {
+    const idx = st.forms.findIndex((f) => Number(f.id) === id);
+    if (idx < 0) data.fail(404, 'نموذج الصيانة غير موجود');
+    const before = st.forms[idx];
+    // True merge: only the keys present in the request change.
+    const rec = Object.assign({}, before, clean, {
+      id: before.id,
+      number: before.number,
+      createdBy: before.createdBy,
+      createdAt: before.createdAt,
       updatedBy: req.user.name,
-      updatedAt: new Date().toISOString()
+      updatedAt: data.nowIso()
     });
-    if (Object.prototype.hasOwnProperty.call(body, 'maintenanceType')) rec.maintenanceType = body.maintenanceType;
-    if (Object.prototype.hasOwnProperty.call(body, 'status')) rec.status = body.status;
-    rows[idx] = rec;
-    store.writeJson('maintenance_forms.json', rows);
-    res.json({ ok: true, form: rec });
-  } catch (err) { next(err); }
-});
+    if (has(clean, 'maintenanceType')) rec.maintenanceType = clean.maintenanceType;
+    if (has(clean, 'status')) rec.status = clean.status;
+    linkFormVouchers(rec, body, req.user.name);
 
-router.delete('/maintenance-forms/:id', guard('maintDelete'), (req, res) => {
-  try {
-    const id = mfInt(req.params.id);
-    const rows = store.readList('maintenance_forms.json');
-    const next = rows.filter((r) => Number(r.id) !== Number(id));
-    if (next.length === rows.length) return res.status(404).json({ error: 'نموذج الصيانة غير موجود' });
-    store.writeJson('maintenance_forms.json', next);
-    const meta = store.readMap('dispatch_meta.json');
-    let changed = false;
-    Object.keys(meta).forEach((key) => {
-      if (Number(meta[key] && meta[key].maintenanceFormId) === Number(id)) {
-        meta[key].maintenanceFormId = null;
-        changed = true;
+    // A form linked to an external maintenance dispatch keeps the dispatch
+    // metadata in sync on the server, not only from the browser.
+    if (rec.issuePermitId != null) {
+      const voucher = data.voucherById(rec.issuePermitId);
+      if (voucher && (rec.status === 'sent_external' || rec.maintenanceType === 'external')) {
+        const key = String(voucher.id);
+        const prev = st.dispatchMeta[key] && typeof st.dispatchMeta[key] === 'object' ? st.dispatchMeta[key] : {};
+        st.dispatchMeta[key] = Object.assign({}, prev, {
+          destType: 'maintenance',
+          maintenanceFormId: rec.id,
+          partyName: prev.partyName || rec.maintenanceEntity || '',
+          updatedBy: req.user.name,
+          updatedAt: data.nowIso()
+        });
+      }
+    }
+    st.forms[idx] = rec;
+    return { ok: true, form: rec };
+  });
+  res.json(out);
+}));
+
+router.delete('/maintenance-forms/:id', guard('maintDelete'), route((req, res) => {
+  const id = positiveInt(req.params.id);
+  if (!id) data.fail(400, 'رقم النموذج غير صالح');
+  data.tx((st) => {
+    const exists = st.forms.some((f) => Number(f.id) === id);
+    if (!exists) data.fail(404, 'نموذج الصيانة غير موجود');
+    st.forms = st.forms.filter((f) => Number(f.id) !== id);
+    Object.keys(st.dispatchMeta).forEach((key) => {
+      if (Number(st.dispatchMeta[key] && st.dispatchMeta[key].maintenanceFormId) === id) {
+        st.dispatchMeta[key].maintenanceFormId = null;
       }
     });
-    if (changed) store.writeMap('dispatch_meta.json', meta);
-    res.json({ ok: true });
-  } catch (err) { next(err); }
-});
+  });
+  res.json({ ok: true });
+}));
 
 /* ------------------- dispatch printable metadata (file) ------------------ */
 
-router.get('/dispatch-meta', (req, res) => {
-  res.json({ meta: store.readMap('dispatch_meta.json') });
-});
+const META_FIELDS = {
+  note: 4000,
+  stockOfficer: 160,
+  stockOfficerSignature: 160,
+  receiverName: 160,
+  receiverSignature: 160,
+  gov: 160,
+  address: 500,
+  partyName: 200
+};
 
-router.put('/dispatch-meta/:id', guard('stock'), (req, res) => {
-  try {
-    const id = mfInt(req.params.id);
-    if (!id) return res.status(400).json({ error: 'رقم الإذن غير صالح' });
-    const body = req.body || {};
-    const map = store.readMap('dispatch_meta.json');
-    const prev = map[id] && typeof map[id] === 'object' ? map[id] : {};
-    const dest = ['branch', 'supplier', 'maintenance'].includes(body.destType) ? body.destType : (prev.destType || 'branch');
-    const next = Object.assign({}, prev, {
-      destType: dest,
-      maintenanceFormId: Object.prototype.hasOwnProperty.call(body, 'maintenanceFormId') ? mfInt(body.maintenanceFormId) : (prev.maintenanceFormId || null),
-      requestId: Object.prototype.hasOwnProperty.call(body, 'requestId') ? mfInt(body.requestId) : (prev.requestId || null),
-      note: Object.prototype.hasOwnProperty.call(body, 'note') ? mfText(body.note, 4000) : (prev.note || ''),
-      stockOfficer: Object.prototype.hasOwnProperty.call(body, 'stockOfficer') ? mfText(body.stockOfficer, 160) : (prev.stockOfficer || ''),
-      stockOfficerSignature: Object.prototype.hasOwnProperty.call(body, 'stockOfficerSignature') ? mfText(body.stockOfficerSignature, 160) : (prev.stockOfficerSignature || ''),
-      receiverName: Object.prototype.hasOwnProperty.call(body, 'receiverName') ? mfText(body.receiverName, 160) : (prev.receiverName || ''),
-      receiverSignature: Object.prototype.hasOwnProperty.call(body, 'receiverSignature') ? mfText(body.receiverSignature, 160) : (prev.receiverSignature || ''),
-      gov: Object.prototype.hasOwnProperty.call(body, 'gov') ? mfText(body.gov, 160) : (prev.gov || ''),
-      address: Object.prototype.hasOwnProperty.call(body, 'address') ? mfText(body.address, 500) : (prev.address || ''),
-      partyName: Object.prototype.hasOwnProperty.call(body, 'partyName') ? mfText(body.partyName, 200) : (prev.partyName || ''),
-      receiveDate: Object.prototype.hasOwnProperty.call(body, 'receiveDate') ? (asDate(body.receiveDate) || '') : (prev.receiveDate || ''),
-      updatedBy: req.user.name,
-      updatedAt: new Date().toISOString()
+router.get('/dispatch-meta', route((req, res) => {
+  res.json({ meta: data.state.dispatchMeta });
+}));
+
+router.put('/dispatch-meta/:id', guard('stock'), route((req, res) => {
+  const id = positiveInt(req.params.id);
+  if (!id) data.fail(400, 'رقم الإذن غير صالح');
+  const body = bodyOf(req);
+  const out = data.tx((st) => {
+    const voucher = data.voucherById(id);
+    if (!voucher || voucher.direction !== 'out') data.fail(404, 'إذن الصرف غير موجود');
+    const prev = st.dispatchMeta[id] && typeof st.dispatchMeta[id] === 'object' ? st.dispatchMeta[id] : {};
+    const dest = ['branch', 'supplier', 'maintenance'].includes(body.destType)
+      ? body.destType
+      : (prev.destType || 'branch');
+    const next = Object.assign({}, prev, { destType: dest });
+    for (const [field, max] of Object.entries(META_FIELDS)) {
+      if (has(body, field)) next[field] = text(body[field], max);
+    }
+    if (has(body, 'receiveDate')) next.receiveDate = asDate(body.receiveDate) || '';
+    ['maintenanceFormId', 'requestId'].forEach((field) => {
+      if (has(body, field)) next[field] = positiveInt(body[field]);
     });
-    map[id] = next;
-    store.writeMap('dispatch_meta.json', map);
-    res.json({ ok: true, meta: next });
-  } catch (err) { next(err); }
-});
+    next.updatedBy = req.user.name;
+    next.updatedAt = data.nowIso();
 
-router.delete('/dispatch-meta/:id', guard('delRecv'), (req, res) => {
-  try {
-    const id = mfInt(req.params.id);
-    const map = store.readMap('dispatch_meta.json');
-    delete map[id];
-    store.writeMap('dispatch_meta.json', map);
-    res.json({ ok: true });
-  } catch (err) { next(err); }
-});
+    const oldFormId = prev.maintenanceFormId != null ? Number(prev.maintenanceFormId) : null;
+    const newFormId = next.maintenanceFormId != null ? Number(next.maintenanceFormId) : null;
+
+    if (oldFormId && oldFormId !== newFormId) {
+      const oldForm = data.formById(oldFormId);
+      if (oldForm && String(oldForm.issuePermitId) === String(voucher.id)) {
+        data.unlinkFormFromDispatch(oldForm, req.user.name);
+      }
+    }
+
+    if (dest === 'maintenance' && newFormId) {
+      const form = data.formById(newFormId);
+      if (!form) data.fail(400, 'نموذج الصيانة غير موجود');
+      form.maintenanceEntity = form.maintenanceEntity || next.partyName || '';
+      data.syncFormToDispatch(form, voucher, req.user.name);
+    } else if (dest !== 'maintenance' && oldFormId) {
+      const oldForm = data.formById(oldFormId);
+      if (oldForm) data.unlinkFormFromDispatch(oldForm, req.user.name);
+    }
+
+    st.dispatchMeta[id] = next;
+    return { ok: true, meta: next };
+  });
+  res.json(out);
+}));
+
+router.delete('/dispatch-meta/:id', guard('delRecv'), route((req, res) => {
+  const id = positiveInt(req.params.id);
+  if (!id) data.fail(400, 'رقم الإذن غير صالح');
+  data.tx((st) => {
+    const entry = st.dispatchMeta[id];
+    delete st.dispatchMeta[id];
+    const formId = entry && entry.maintenanceFormId != null ? Number(entry.maintenanceFormId) : null;
+    const candidates = [];
+    if (formId) { const f = data.formById(formId); if (f) candidates.push(f); }
+    for (const form of st.forms) {
+      if (String(form.issuePermitId) === String(id) && !candidates.includes(form)) candidates.push(form);
+    }
+    candidates.forEach((form) => data.unlinkFormFromDispatch(form, req.user.name));
+  });
+  res.json({ ok: true });
+}));
 
 module.exports = router;

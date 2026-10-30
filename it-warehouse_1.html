@@ -157,6 +157,13 @@ body:has(nav:empty) #t{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 .mf-hint{font-size:12.5px;color:var(--mut);line-height:1.7;margin:0}
 .print-only{display:none}
 .paper-wrap{width:100%;overflow-x:auto;padding:4px 0 18px;-webkit-overflow-scrolling:touch}
+.maintenance-form-preview{margin-top:12px;padding:12px;border:1px solid var(--ln);border-radius:12px;background:var(--soft)}
+.maintenance-form-preview .paper-wrap{max-height:680px;overflow:auto;background:#202733;border-radius:8px;padding:12px}
+.maintenance-form-preview .paper-sheet{width:100%;min-height:0;margin:0 auto;box-shadow:none;border-radius:0}
+.maintenance-form-page{break-before:page;page-break-before:always}
+.maintenance-form-link{margin-top:8px;padding:10px 12px;border:1px solid var(--ln);border-radius:9px;background:var(--soft);font-weight:700}
+.maintenance-form-link summary{cursor:pointer;color:var(--acc)}
+.maintenance-form-link .maintenance-form-preview{background:transparent}
 .paper-sheet{width:210mm;min-height:296mm;background:#fff;color:#000;margin:0 auto;padding:7mm 8mm 6mm;box-shadow:0 18px 42px rgba(0,0,0,.42);border-radius:2px;font-family:Cairo,Tahoma,Arial,sans-serif;font-size:8.8pt;line-height:1.35;direction:rtl}
 .paper-sheet *{box-sizing:border-box}
 .mf-head{position:relative;background:#000;color:#fff;height:11.5mm;display:flex;align-items:center;justify-content:center;margin-bottom:2.2mm;border:1px solid #000}
@@ -210,9 +217,51 @@ body:has(nav:empty) #t{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 .dsp-list-types{display:flex;gap:5px;flex-wrap:wrap}
 .tw .acts{gap:6px}
 .tw .acts .btn{padding:6px 9px;font-size:12px;min-height:30px}
+.nav-more{position:relative;margin-top:8px;padding-top:8px;border-top:1px solid var(--ln)}
+.nav-more-toggle{color:var(--ink);background:var(--soft);border-color:var(--ln)}
+.nav-more-list{display:grid;gap:4px;margin-top:6px}
+.nav-more-list[hidden]{display:none}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:14px 0}
+.dash-card{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:16px;box-shadow:var(--sh)}
+.dash-card span{display:block;color:var(--mut);font-size:13px;font-weight:700}
+.dash-card b{display:block;font-size:28px;line-height:1.35;margin-top:4px}
+.dash-card.warn b{color:#fbbf24}.dash-card.bad b{color:var(--bad)}.dash-card.ok b{color:var(--ok)}
+.dash-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.dash-action{text-align:start;white-space:normal;min-height:62px}
+.low-stock{color:#fbbf24;font-weight:800}
+.required>span:first-child::after{content:" *";color:var(--bad);font-weight:800}
+.form-error{display:none;margin:0 0 14px;padding:10px 14px;border:1px solid var(--bad);border-radius:10px;background:var(--badb);color:#fecaca;font-weight:700}
+.form-error.show{display:block}
+.delete-backdrop{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.68);display:grid;place-items:center;padding:16px}
+.delete-dialog{width:min(100%,480px);background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:20px;box-shadow:var(--sh2)}
+.delete-dialog h2{font-size:20px}.delete-dialog p{color:var(--mut);margin:0 0 12px}
+.delete-dialog textarea{width:100%;min-height:90px}
+.audit-change{margin:8px 0;padding:10px;border:1px solid var(--ln);border-radius:9px;background:var(--soft)}
+.audit-change summary{cursor:pointer;font-weight:700}
+.audit-change pre{white-space:pre-wrap;word-break:break-word;direction:ltr;text-align:left;max-height:300px;overflow:auto}
+.filter-row{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin:0 0 12px}
+.filter-row label{flex:1 1 160px}.filter-row .btn{align-self:end}
 @media (max-width:860px){
  .paper-wrap{overflow-x:auto}
  .mf-bar{align-items:flex-start}
+}
+@media (max-width:860px){
+ .nav-more{margin:0;padding:0;border:0;flex:0 0 auto}
+ .nav-more-toggle{height:100%}
+ .nav-more-list{position:fixed;inset-inline-end:10px;bottom:calc(70px + env(safe-area-inset-bottom,0px));min-width:220px;max-height:min(65vh,520px);overflow:auto;padding:8px;background:var(--sf);border:1px solid var(--ln);border-radius:12px;box-shadow:var(--sh2)}
+}
+@media (max-width:640px){
+ main{padding:16px 12px 30px}
+ .box{padding:13px}
+ .tw.mobile-cards{overflow:visible}
+ .tw.mobile-cards table,.tw.mobile-cards tbody{display:block;width:100%}
+ .tw.mobile-cards tr:first-child{display:none}
+ .tw.mobile-cards tr:not(:first-child){display:grid;grid-template-columns:minmax(0,1fr);margin:0 0 10px;padding:8px;border:1px solid var(--ln);border-radius:10px;background:var(--sf)}
+ .tw.mobile-cards td{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:7px 4px;white-space:normal;border-bottom:1px solid var(--ln);text-align:start}
+ .tw.mobile-cards td:last-child{border-bottom:0}
+ .tw.mobile-cards td::before{content:attr(data-label);flex:0 0 35%;color:var(--mut);font-size:12px;font-weight:700}
+ .tw.mobile-cards td .acts{justify-content:flex-start}
+ .dash-card b{font-size:24px}
 }
 @media print{
  @page{size:A4 portrait;margin:0}
@@ -226,6 +275,9 @@ body:has(nav:empty) #t{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
  .paper-sheet{width:210mm!important;min-height:0!important;height:297mm!important;margin:0!important;padding:7mm 8mm 6mm!important;box-shadow:none!important;border:0!important;border-radius:0!important;page-break-after:avoid;break-after:avoid;font-size:8.6pt!important}
  .mf-page{display:block!important;gap:0!important}
  .mf-page>.no-print{display:none!important}
+ .maintenance-form-page{break-before:page!important;page-break-before:always!important}
+ .maintenance-form-page>.maintenance-form-preview{display:block!important;margin:0!important;padding:0!important;border:0!important;background:#fff!important}
+ .maintenance-form-page>.maintenance-form-preview>.paper-wrap{max-height:none!important;overflow:visible!important;padding:0!important;background:#fff!important}
  .paper-sheet input,.paper-sheet textarea,.paper-sheet select{appearance:none!important;-webkit-appearance:none!important;background:transparent!important;color:#000!important;box-shadow:none!important}
  .paper-sheet input::placeholder,.paper-sheet textarea::placeholder{color:transparent!important;opacity:0!important}
  .paper-sheet input[type=date]::-webkit-calendar-picker-indicator{display:none!important}
@@ -251,7 +303,7 @@ body:has(nav:empty) #t{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 const GOV=['القاهرة','الجيزة','الإسكندرية','القليوبية','بورسعيد','السويس','دمياط','الدقهلية','الشرقية','كفر الشيخ','الغربية','المنوفية','البحيرة','الإسماعيلية','بني سويف','الفيوم','المنيا','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مطروح','شمال سيناء','جنوب سيناء'];
 const govList=g=>!g||GOV.includes(g)?GOV:[...GOV,g];
 const R={admin:'IT Manager',head:'Technical Head',area:'Area Manager',store:'Warehouse Keeper',senior:'Senior Technical',junior:'Junior Technical'};
-const CAN={addBranch:['admin','head'],stock:['admin','head','store'],view:['admin','head','senior','area','store'],review:['admin','head','senior'],reject:['admin','head','area','store'],edit:['admin','head','area','store'],delRecv:['admin','head'],request:['admin','head','senior','junior'],branchEdit:['admin','head','senior'],approve:['admin','head','area'],release:['admin','head','store'],pool:['admin','head'],maintView:['admin','head','senior','store','junior'],maintCreate:['admin','head','senior','store','junior'],maintEdit:['admin','head','senior','store'],maintDelete:['admin','head']};
+const CAN={addBranch:['admin','head'],stock:['admin','head','store'],view:['admin','head','senior','area','store'],review:['admin','head','senior'],reject:['admin','head','area','store'],edit:['admin','head','area','store'],delRecv:['admin','head'],request:['admin','head','senior','junior'],branchEdit:['admin','head','senior'],approve:['admin','head','area'],release:['admin','head','store'],pool:['admin','head'],auditView:['admin','head'],maintView:['admin','head','senior','store','junior'],maintCreate:['admin','head','senior','store','junior'],maintEdit:['admin','head','senior','store'],maintDelete:['admin','head']};
 const MF_STATUS=[['received','تم الاستلام'],['internal_check','فحص داخلي'],['sent_external','مرسل لصيانة خارجية'],['received_after_maintenance','مستلم بعد الصيانة'],['returned_to_branch','تم الإرجاع للفرع']];
 const MF_STATUS_LABEL=Object.fromEntries(MF_STATUS);
 const MF_TYPE=[['internal','صيانة داخلية'],['external','صيانة خارجية']];
@@ -291,13 +343,15 @@ const STATE={token:localStorage.getItem('wh_token')||'',user:null};
 let CATS=[];const SER={};const CATINFO={};
 let items=[],branches=[],reqs=[],suppliers=[],DB={in:[],out:[]},MAINT={},SCRAP={},SCRAPLOG=[];
 let MFORMS=[],DSPMETA={};
-let MF=null,mfView='list',mfBlank=false,mfFilterStatus='',mfFilterDate='',mfPendDel=null;
+let MF=null,mfView='list',mfBlank=false,mfFilterStatus='',mfFilterDate='',mfPendDel=null,mfReturnToIssue=false;
 let DSP=null,dspView='list',dspPendDel=null,dspPrintFlag=false;
 let docView='list';
-let rqView='list',RQ=null;
+let rqView='list',RQ=null,editReqId=null;
 let supEdit=null,pendSup=null;
-let role='junior',tab='stock',sel=null,q='',branchEditState=null;
+let role='junior',tab='dashboard',sel=null,q='',branchEditState=null,moreOpen=false;
 let SAVING=false;
+const AUDIT={rows:[],total:0,offset:0,limit:50,loaded:false,loading:false};
+const FILTER={stockStatus:'',reqStatus:'',reqBranch:'',reqFrom:'',reqTo:'',docBranch:'',docFrom:'',docTo:''};
 const SEARCH={stock:'',maint:'',scrap:'',doc_recvsup:'',doc_recvbr:'',doc_issbr:'',doc_issmaint:'',br:'',britems:'',items:'',cats:'',sup:'',rq:'',reqbr:'',mf:'',dispatch:''};
 const PV={stock:'P_stock',maint:'P_maint',scrap:'P_scrap',scraplog:'P_scraplog',doc_recvsup:'P_recvsup',doc_recvbr:'P_recvbr',doc_issbr:'P_issbr',doc_issmaint:'P_issmaint',br:'P_br',britems:'P_britems',items:'P_items',cats:'P_cats',sup:'P_sup',rq:'P_rq',reqbr:'P_reqb',mf:'P_mf',dispatch:'P_dispatch'};
 const PAGE_SIZE=10;
@@ -348,6 +402,19 @@ function repaint(key){
   const d=fn();
   const el=document.getElementById('res_'+key);if(el)el.innerHTML=d.html;
   const c=document.getElementById('cnt_'+key);if(c)c.textContent=countLabel(d.total);
+  decorateTables(el);
+}
+function decorateTables(root){
+  if(!root)return;
+  root.querySelectorAll('.tw table').forEach(table=>{
+    const header=table.querySelector('tr');
+    if(!header||!Array.from(header.children).length||!Array.from(header.children).every(cell=>cell.tagName==='TH'))return;
+    const labels=Array.from(header.children).map(cell=>cell.textContent.trim());
+    table.classList.add('mobile-cards');
+    Array.from(table.querySelectorAll('tr')).slice(1).forEach(row=>{
+      Array.from(row.querySelectorAll('td')).forEach((cell,index)=>{cell.dataset.label=labels[index]||''});
+    });
+  });
 }
 function currentPageKey(){
   if(tab==='stock')return 'stock';
@@ -395,13 +462,48 @@ async function api(path,method='GET',body){
     const headers=Object.assign({'Content-Type':'application/json'},STATE.token?{'Authorization':'Bearer '+STATE.token}:{});
     const res=await fetch('/api'+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});
     let data={};try{data=await res.json()}catch(_){}
-    if(!res.ok){const err=new Error(data.error||('خطأ '+res.status));err.status=res.status;throw err}
+    if(!res.ok){const err=new Error(data.error||('خطأ '+res.status));err.status=res.status;setFormError(err.message);throw err}
     return data;
   }finally{
     if(!--BUSY)document.documentElement.classList.remove('busy');
   }
 }
+function setFormError(message,focusId){
+  const box=$('#formError');
+  if(box){box.textContent=String(message||'');box.classList.toggle('show',!!message)}
+  const field=focusId?document.getElementById(focusId):null;
+  if(field){field.setAttribute('aria-invalid','true');field.focus()}
+}
+function clearFormError(){
+  const box=$('#formError');if(box){box.textContent='';box.classList.remove('show')}
+  document.querySelectorAll('[aria-invalid="true"]').forEach(el=>el.removeAttribute('aria-invalid'));
+}
+document.addEventListener('input',event=>{if(event.target.closest('#m'))clearFormError()});
+document.addEventListener('change',event=>{if(event.target.closest('#m'))clearFormError()});
 function toast(m){const t=$('#t');t.textContent=m;t.className='show';setTimeout(()=>t.className='',2600)}
+function confirmDelete(title,detail){
+  return new Promise(resolve=>{
+    const backdrop=document.createElement('div');
+    backdrop.className='delete-backdrop';
+    backdrop.innerHTML=`<section class="delete-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteTitle"><h2 id="deleteTitle">تأكيد الحذف: ${e(title)}</h2><p>${e(detail||'هذا الإجراء لا يمكن التراجع عنه.')}</p><label class="required"><span>سبب الحذف</span><textarea id="deleteReason" maxlength="500" required placeholder="اكتب سببًا واضحًا للحذف"></textarea></label><p id="deleteError" class="form-error" role="alert"></p><div class="acts" style="margin-top:14px"><button type="button" class="btn bad" id="deleteConfirm">تأكيد الحذف</button><button type="button" class="btn ghost" id="deleteCancel">إلغاء</button></div></section>`;
+    document.body.appendChild(backdrop);
+    const finish=value=>{
+      if(value===true){
+        const reason=backdrop.querySelector('#deleteReason').value.trim();
+        if(!reason){const error=backdrop.querySelector('#deleteError');error.textContent='سبب الحذف مطلوب';error.classList.add('show');backdrop.querySelector('#deleteReason').focus();return}
+        cleanup(reason);return;
+      }
+      cleanup(null);
+    };
+    const onKey=event=>{if(event.key==='Escape')finish(false)};
+    const cleanup=value=>{document.removeEventListener('keydown',onKey);backdrop.remove();resolve(value)};
+    backdrop.querySelector('#deleteConfirm').addEventListener('click',()=>finish(true));
+    backdrop.querySelector('#deleteCancel').addEventListener('click',()=>finish(false));
+    document.addEventListener('keydown',onKey);
+    backdrop.addEventListener('click',event=>{if(event.target===backdrop)finish(false)});
+    backdrop.querySelector('#deleteReason').focus();
+  });
+}
 
 function renderLogin(msg){
   $('#nav').innerHTML='';$('#roleBar').innerHTML='';
@@ -415,7 +517,7 @@ async function login(){
   try{
     const d=await api('/auth/login','POST',{username:u.trim(),password:p});
     STATE.token=d.token;STATE.user=d.user;localStorage.setItem('wh_token',d.token);
-    tab='stock';sel=null;stockLoc=null;await boot();
+    tab='dashboard';sel=null;stockLoc=null;await boot();
   }catch(err){renderLogin(err.message)}
 }
 function logout(){STATE.token='';STATE.user=null;localStorage.removeItem('wh_token');renderLogin()}
@@ -455,16 +557,74 @@ function read(p){const o={};items.forEach(i=>{const el=$('#'+p+i.id);const v=el?
 function itemPick(p){return CATS.filter(c=>!q||((String(c||'')+String((CATINFO[c]||{}).sup||'')+String([...new Set(items.filter(i=>i.c==c).map(i=>i.t))].filter(Boolean).join(' '))).toLowerCase().includes(q.toLowerCase()))).map(c=>{const g=items.filter(i=>i.c==c);return g.length?`<div style="margin-bottom:8px"><b>${e(c)}</b><div class="grid">`+g.map(i=>`<label class="ln"><input type="checkbox" id="${p}${i.id}"> ${e(i.n)}</label>`).join('')+'</div></div>':''}).join('')||'<p class="mut">لا توجد أصناف.</p>'}
 function readPick(p){return items.filter(i=>{const el=$('#'+p+i.id);return el&&el.checked}).map(i=>i.id)}
 
+function selectTab(key){
+  tab=key;sel=null;maintView=null;scrapMode=null;SCR=null;scrapBal=true;mfView='list';MF=null;mfReturnToIssue=false;dspView='list';DSP=null;docView='list';rqView='list';RQ=null;editReqId=null;PRINT=null;
+  moreOpen=['mf','scrap','recvbr','dispatch','items','cats','sup','reqbr','audit'].includes(key);
+  if(key==='audit'){AUDIT.loaded=false;AUDIT.offset=0}
+  go();
+}
 function go(){
   syncSearchScope();
   const todo=reqs.filter(r=>(r.st=='review'&&ok('review'))||(r.st=='pending'&&ok('approve'))||(r.st=='approved'&&ok('release'))).length;
-  const tabs=[['stock','الأصناف والمخزن'],['maint','تحت الصيانة'],['mf','نماذج الصيانة'],['scrap','الخردة'],['recvsup','استلام من مورد'],['recvbr','استلام من فرع'],['issbr','صرف إلى فرع'],['dispatch','إرسال البضاعة'],['br','الفروع'],['items','إدارة الأصناف'],['cats','الفئات'],['sup','الموردون'],['rq','الطلبات'+(todo?` (${todo})`:'')],['reqbr','متطلبات الفروع']].filter(t=>{
+  const tabs=[['dashboard','لوحة التحكم'],['stock','الأصناف والمخزن'],['maint','تحت الصيانة'],['recvsup','استلام من مورد'],['issbr','صرف إلى فرع'],['rq','الطلبات'+(todo?` (${todo})`:'')],['br','الفروع'],['mf','نماذج الصيانة'],['scrap','الخردة'],['recvbr','استلام من فرع'],['dispatch','إرسال البضاعة'],['items','إدارة الأصناف'],['cats','الفئات'],['sup','الموردون'],['reqbr','متطلبات الفروع'],['audit','سجل الحركة']].filter(t=>{
     if(t[0]=='rq')return true;
+    if(t[0]=='dashboard')return true;
+    if(t[0]=='audit')return ok('auditView');
     if(t[0]=='mf')return ok('maintView');
     if(t[0]=='dispatch')return ok('stock');
     return (t[0]=='items'||t[0]=='recvsup'||t[0]=='recvbr'||t[0]=='issbr'||t[0]=='sup'||t[0]=='cats')?ok('stock'):ok('view');
-  });if(tab!=='docprint'&&!tabs.some(t=>t[0]==tab))tab='rq';$('#nav').innerHTML=tabs.map(([k,v])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';sel=null;maintView=null;scrapMode=null;SCR=null;scrapBal=true;mfView='list';MF=null;dspView='list';DSP=null;docView='list';rqView='list';RQ=null;PRINT=null;go()">${icon(k)}<span>${v}</span></button>`).join('');
-  $('#m').innerHTML=tab=='docprint'?vDocPrint():tab=='stock'?vStock():tab=='maint'?(maintView==='out'?vDoc('issmaint'):vMaint()):tab=='mf'?vMaintForms():tab=='scrap'?vScrap():tab=='recvsup'?vDoc('recvsup'):tab=='recvbr'?vDoc('recvbr'):tab=='issbr'?vDoc('issbr'):tab=='dispatch'?vDispatch():tab=='items'?vItems():tab=='cats'?vCats():tab=='sup'?vSuppliers():tab=='br'?(sel?vBranch():vBranches()):tab=='reqbr'?vBranchReqs():vReqs();
+  });
+  const mainTabs=tabs.filter(([key])=>['dashboard','stock','maint','recvsup','issbr','rq','br'].includes(key));
+  const moreTabs=tabs.filter(([key])=>!['dashboard','stock','maint','recvsup','issbr','rq','br'].includes(key));
+  if(tab!=='docprint'&&!tabs.some(t=>t[0]===tab))tab='dashboard';
+  const navButton=([key,label])=>`<button class="${tab===key?'on':''}" onclick="selectTab('${key}')">${icon(key)}<span>${label}</span></button>`;
+  $('#nav').innerHTML=mainTabs.map(navButton).join('')+(moreTabs.length?`<div class="nav-more"><button type="button" class="nav-more-toggle ${moreTabs.some(([key])=>key===tab)?'on':''}" aria-expanded="${moreOpen}" onclick="moreOpen=!moreOpen;go()">${icon('box')}<span>المزيد</span></button><div class="nav-more-list" ${moreOpen?'':'hidden'}>${moreTabs.map(navButton).join('')}</div></div>`:'');
+  const content=tab==='docprint'?vDocPrint():tab==='dashboard'?vDashboard(todo):tab==='stock'?vStock():tab==='maint'?(maintView==='out'?vDoc('issmaint'):vMaint()):tab==='mf'?vMaintForms():tab==='scrap'?vScrap():tab==='recvsup'?vDoc('recvsup'):tab==='recvbr'?vDoc('recvbr'):tab==='issbr'?vDoc('issbr'):tab==='dispatch'?vDispatch():tab==='items'?vItems():tab==='cats'?vCats():tab==='sup'?vSuppliers():tab==='br'?(sel?vBranch():vBranches()):tab==='reqbr'?vBranchReqs():tab==='audit'?vAudit():vReqs();
+  $('#m').innerHTML=`<div id="formError" class="form-error" role="alert" aria-live="polite"></div>${content}`;
+  decorateTables($('#m'));
+  if(tab==='audit'&&!AUDIT.loaded&&!AUDIT.loading)loadAudit();
+}
+function vDashboard(todo){
+  const stockKnown=role!=='junior';
+  const out=stockKnown?items.filter(i=>Number(i.s)===0).length:0;
+  const low=stockKnown?items.filter(i=>Number(i.s)>0&&Number(i.s)<=3).length:0;
+  const maint=stockKnown?Object.values(MAINT).reduce((sum,value)=>sum+(Number(value)||0),0):0;
+  const metrics=[
+    `<div class="dash-card"><span>إجمالي الأصناف</span><b>${items.length}</b></div>`,
+    `<div class="dash-card bad"><span>نفد رصيدها</span><b>${stockKnown?out:'—'}</b></div>`,
+    `<div class="dash-card warn"><span>رصيد منخفض (٣ أو أقل)</span><b>${stockKnown?low:'—'}</b></div>`,
+    `<div class="dash-card"><span>قطع تحت الصيانة</span><b>${stockKnown?maint:'—'}</b></div>`,
+    `<div class="dash-card ${todo?'warn':'ok'}"><span>طلبات تنتظر إجراءً</span><b>${todo}</b></div>`
+  ].join('');
+  const actions=[
+    ok('stock')?`<button class="btn dash-action" onclick="selectTab('recvsup')">${icon('recvsup')} استلام من مورد</button>`:'',
+    ok('stock')?`<button class="btn dash-action" onclick="selectTab('issbr')">${icon('issbr')} صرف إلى فرع</button>`:'',
+    ok('request')?`<button class="btn dash-action ghost" onclick="selectTab('rq')">${icon('rq')} متابعة الطلبات / إنشاء طلب</button>`:'',
+    ok('maintView')?`<button class="btn dash-action ghost" onclick="selectTab('maint')">${icon('maint')} متابعة الصيانة</button>`:'',
+    ok('view')?`<button class="btn dash-action ghost" onclick="selectTab('br')">${icon('br')} استعراض الفروع</button>`:''
+  ].filter(Boolean).join('');
+  return `<section class="hero"><div><div class="eyebrow">نظرة عامة</div><h2>لوحة التحكم</h2><p>ملخص سريع لحالة الأصناف والعمليات التي تحتاج إلى متابعة. تنبيه انخفاض الرصيد مضبوط حاليًا على ٣ قطع أو أقل.</p></div></section>
+    <div class="dash-grid">${metrics}</div><section class="box"><h3>إجراءات سريعة</h3><div class="dash-actions">${actions||'<p class="mut">لا توجد إجراءات متاحة لهذا الحساب.</p>'}</div></section>`;
+}
+async function loadAudit(){
+  AUDIT.loading=true;
+  try{
+    const result=await api(`/audit?limit=${AUDIT.limit}&offset=${AUDIT.offset}`);
+    AUDIT.rows=result.rows||[];AUDIT.total=Number(result.total)||0;AUDIT.loaded=true;
+  }catch(err){
+    AUDIT.loaded=true;AUDIT.rows=[];toast(err.message);
+  }finally{
+    AUDIT.loading=false;
+    if(tab==='audit')go();
+  }
+}
+function vAudit(){
+  if(AUDIT.loading)return '<h2>سجل الحركة</h2><p class="mut">جارٍ تحميل السجل…</p>';
+  const entityNames={category:'فئة',item:'صنف',branch:'فرع',supplier:'مورد',voucher:'إذن',scrap:'محضر خردة',request:'طلب', 'maintenance-form':'نموذج صيانة','branch-item':'رصيد فرع','dispatch-meta':'بيانات إرسال'};
+  const changes=(event)=>event.changes.map(change=>`<details class="audit-change"><summary>${e(entityNames[change.entity]||change.entity)} #${e(change.entityId)}</summary><pre>${e(JSON.stringify({before:change.before,after:change.after},null,2))}</pre></details>`).join('');
+  const body=AUDIT.rows.length?AUDIT.rows.map(row=>`<article class="box"><div class="rq"><div><h3>${e(row.action)} · ${e(row.actor)} (${e(row.username)})</h3><div class="mut"><span class="dt">${e(row.at)}</span> · ${e(row.method)} ${e(row.path)} · الدور: ${e(R[row.role]||row.role)}</div></div></div><p><b>السبب:</b> ${row.reason?e(row.reason):'<span class="mut">لم يُذكر سبب</span>'}</p>${changes(row)}</article>`).join(''):'<div class="empty">لا توجد أحداث مسجلة حتى الآن.</div>';
+  const start=AUDIT.total?AUDIT.offset+1:0,end=Math.min(AUDIT.offset+AUDIT.limit,AUDIT.total);
+  return `<h2>سجل الحركة</h2><p class="mut">سجل موحد للعمليات المسجلة، متاح لمدير النظام والمدير الفني فقط.</p><div class="row" style="justify-content:space-between;margin-bottom:12px"><span class="rcnt">عرض ${start}–${end} من ${AUDIT.total}</span><div class="acts"><button class="btn ghost" ${AUDIT.offset<=0?'disabled':''} onclick="AUDIT.offset=Math.max(0,AUDIT.offset-AUDIT.limit);AUDIT.loaded=false;loadAudit()">الأحدث</button><button class="btn ghost" ${end>=AUDIT.total?'disabled':''} onclick="AUDIT.offset+=AUDIT.limit;AUDIT.loaded=false;loadAudit()">الأقدم</button><button class="btn ghost" onclick="AUDIT.loaded=false;loadAudit()">تحديث</button></div></div>${body}`;
 }
 
 function itemWarranty(i){
@@ -479,7 +639,7 @@ function resItems(){
   const pg=paginate(rows,PV.items);
   const body=pg.rows.map(i=>editId==i.id
     ?`<tr><td><select id="eic">${cs(i)}</select></td><td><input id="ein" class="nmin" maxlength="160" value="${e(i.n)}"></td><td>${i.s}</td><td><select id="eihw"><option value="">اختر</option><option value="1"${i.hw===true?' selected':''}>بضمان</option><option value="0"${i.hw===false?' selected':''}>بدون ضمان</option></select></td><td><textarea id="eint" class="noteinput" maxlength="500" rows="2" placeholder="ملاحظات (اختياري)">${e(i.note||'')}</textarea></td><td class="mut">${e(i.by||'-')}</td><td>${i.d?dcell(i.d):'-'}</td><td><div class="acts"><button class="btn" onclick="saveItem(${i.id})">تأكيد</button><button class="btn ghost" onclick="editId=null;go()">إلغاء</button></div></td></tr>`
-    :`<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td class="nmcell">${e(i.n)}</td><td>${i.s}</td><td>${itemWarranty(i)}</td><td class="nmcell">${i.note?e(i.note):'<span class="mut">-</span>'}</td><td class="mut">${e(i.by||'-')}</td><td>${i.d?dcell(i.d):'-'}</td><td><div class="acts"><button class="btn ghost" onclick="editId=${i.id};pendDel=null;go()">تعديل</button>${adm?`<button class="btn bad" onclick="del(${i.id})">${pendDel==i.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></td></tr>`).join('');
+    :`<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td class="nmcell">${e(i.n)}</td><td>${i.s}</td><td>${itemWarranty(i)}</td><td class="nmcell">${i.note?e(i.note):'<span class="mut">-</span>'}</td><td class="mut">${e(i.by||'-')}</td><td>${i.d?dcell(i.d):'-'}</td><td><div class="acts"><button class="btn ghost" onclick="editId=${i.id};pendDel=null;go()">تعديل</button>${adm?`<button class="btn bad" onclick="del(${i.id})">حذف</button>`:''}</div></td></tr>`).join('');
   const html=rows.length
     ?`<div class="box tw"><h3>الأصناف (${rows.length})</h3><table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>الضمان</th><th>الملاحظات</th><th>سُجّل بواسطة</th><th>تاريخ التسجيل</th><th></th></tr>${body}</table></div>`+pager('items',PV.items,pg.p,pg.n)
     :noRes('items');
@@ -488,9 +648,9 @@ function resItems(){
 function vItems(){
   const d=resItems();
   return `<div class="box"><h3>إضافة صنف جديد</h3><div class="row">
-   <label style="flex:1 1 360px;min-width:280px">اسم الصنف<input id="nn" class="nmin" maxlength="160"></label>
-   <label>الفئة<select id="nc">${opts(CATS)}</select></label>
-   <label>الضمان<select id="nhw"><option value="">اختر</option><option value="1">بضمان</option><option value="0">بدون ضمان</option></select></label></div>
+   <label class="required" style="flex:1 1 360px;min-width:280px"><span>اسم الصنف</span><input id="nn" class="nmin" maxlength="160" required></label>
+   <label class="required"><span>الفئة</span><select id="nc" required>${opts(CATS)}</select></label>
+   <label class="required"><span>الضمان</span><select id="nhw" required><option value="">اختر</option><option value="1">بضمان</option><option value="0">بدون ضمان</option></select></label></div>
    <label style="margin-top:10px">ملاحظات (اختياري، 500 حرف كحد أقصى)<textarea id="nnt" maxlength="500" rows="2"></textarea></label>
    <div class="row" style="margin-top:10px"><button class="btn" onclick="newItem()">حفظ الصنف</button></div>
    <p class="mut" style="margin:10px 0 0">تُضاف الكميات من أذون الاستلام فقط، ولا يمكن إدخال رصيد يدويًا. عمود الضمان يوضّح بضمان / بدون ضمان، وتبقى تواريخ الضمان القديمة كما هي.</p></div>
@@ -501,7 +661,7 @@ function catCard(c,k){
   return `<div class="box"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
    ${ed?`<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="cen" value="${e(c)}"><select id="cse" style="min-width:180px">${supplierOptions(info.sup||'')}</select><button class="btn" onclick="saveCat(${k})">تأكيد</button><button class="btn ghost" onclick="catEdit=null;go()">إلغاء</button></span>`
       :`<div><h3 style="margin:0">${catIcon(c)} ${e(c)} <button class="chip ${SER[c]?'ok':''}" style="border:0;cursor:pointer;font-family:inherit" onclick="togSer(${k})">${SER[c]?'بسيريال':'بدون سيريال'}</button></h3><div class="mut" style="margin-top:4px">المورد: ${e(info.sup||'-')} · تاريخ الإنشاء: ${info.d?dcell(info.d):'-'} · أنشأها: ${e(info.by||'-')}</div></div>`}
-   ${ed?'':`<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="mut">${its.length} نوع · ${its.reduce((a,i)=>a+i.s,0)} بالمخزن</span><button class="btn ghost" onclick="catEdit=${k};pendCat=null;go()">تعديل الاسم</button><button class="btn bad" onclick="delCat(${k})">${pendCat==k?'تأكيد الحذف':'حذف الفئة'}</button></span>`}</div>
+   ${ed?'':`<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="mut">${its.length} نوع · ${its.reduce((a,i)=>a+i.s,0)} بالمخزن</span><button class="btn ghost" onclick="catEdit=${k};pendCat=null;go()">تعديل الاسم</button><button class="btn bad" onclick="delCat(${k})">حذف الفئة</button></span>`}</div>
    ${its.length?`<div class="tw" style="margin-top:8px"><table><tr><th>النوع</th><th>رصيد المخزن</th><th>في الفروع</th><th></th></tr>`+its.map(i=>`<tr><td class="${editId==i.id?'':'nmcell'}">${editId==i.id?`<input id="ein" class="nmin" maxlength="160" value="${e(i.n)}">`:e(i.n)}</td><td>${i.s}</td><td>${dist(i.id)}</td><td>${editId==i.id?`<div class="acts"><button class="btn" onclick="saveItem(${i.id})">تأكيد</button><button class="btn ghost" onclick="editId=null;go()">إلغاء</button></div>`:`<button class="btn ghost" onclick="editId=${i.id};go()">تعديل الاسم</button>`}</td></tr>`).join('')+'</table></div>':'<p class="mut" style="margin:8px 0 0">لا توجد أنواع في هذه الفئة بعد.</p>'}
    <div class="row" style="margin-top:10px"><label style="flex:1 1 260px">اسم النوع<input id="cin${k}" class="nmin" maxlength="160"></label><label>الضمان<select id="cinhw${k}"><option value="">اختر</option><option value="1">بضمان</option><option value="0">بدون ضمان</option></select></label><label style="flex:1 1 260px">ملاحظات<input id="cinnt${k}" maxlength="500"></label><button class="btn" onclick="addItemTo(${k})">إضافة نوع للفئة</button></div></div>`;
 }
@@ -517,7 +677,7 @@ function resCats(){
 function vCats(){
   const d=resCats();
   return `<div class="box"><h3>إضافة فئة جديدة</h3><div class="row">
-   <label style="min-width:220px">اسم الفئة<input id="cn"></label>
+   <label class="required" style="min-width:220px"><span>اسم الفئة</span><input id="cn" required></label>
    <label style="min-width:200px">المورد<select id="csu">${supplierOptions('')}</select></label>
    <label>السيريال<select id="cs"><option value="yes">يوجد سيريال</option><option value="no">بدون سيريال</option></select></label>
    <button class="btn" onclick="addCat()">إضافة فئة</button></div>
@@ -526,49 +686,49 @@ function vCats(){
 }
 async function addItemTo(k){
   const c=CATS[k],nm=(($('#cin'+k)||{}).value||'').trim();
-  if(!nm)return toast('اكتب اسم الصنف');
+  if(!nm)return setFormError('اكتب اسم الصنف','cin'+k);
   const hw=(($('#cinhw'+k)||{}).value||'');
-  if(hw!=='1'&&hw!=='0')return toast('اختر بضمان أو بدون ضمان');
+  if(hw!=='1'&&hw!=='0')return setFormError('اختر حالة الضمان','cinhw'+k);
   try{await api('/items','POST',{name:nm,category:c,notes:(($('#cinnt'+k)||{}).value||'').trim(),has_warranty:hw==='1'});await refresh();toast('تمت إضافة الصنف إلى '+c);go()}catch(err){toast(err.message)}
 }
 async function saveCat(k){
   const old=CATS[k],n=(($('#cen')||{}).value||'').trim();
-  if(!n)return toast('اكتب اسم الفئة');
+  if(!n)return setFormError('اكتب اسم الفئة','cen');
   const sup=(($('#cse')||{}).value||'').trim();
   try{await api('/categories/'+encodeURIComponent(old),'PUT',{name:n,has_serial:SER[old],supplier:sup});catEdit=null;await refresh();toast('تم حفظ الفئة');go()}catch(err){toast(err.message)}
 }
 async function delCat(k){
   const c=CATS[k];
-  if(pendCat!=k){pendCat=k;toast('اضغط تأكيد الحذف للمتابعة');return go()}
-  try{await api('/categories/'+encodeURIComponent(c),'DELETE');pendCat=null;await refresh();toast('تم حذف الفئة وأنواعها');go()}catch(err){pendCat=null;toast(err.message);go()}
+  const reason=await confirmDelete(c,'سيتم حذف الفئة وأنواعها التابعة إذا لم تكن مستخدمة في الحركات.');if(!reason)return;
+  try{await api('/categories/'+encodeURIComponent(c),'DELETE',{reason});pendCat=null;await refresh();toast('تم حذف الفئة وأنواعها');go()}catch(err){toast(err.message)}
 }
 async function addCat(){
   const n=$('#cn').value.trim();
-  if(!n)return toast('اكتب اسم الفئة');
-  if(CATS.includes(n))return toast('الفئة موجودة بالفعل');
+  if(!n)return setFormError('اكتب اسم الفئة','cn');
+  if(CATS.includes(n))return setFormError('الفئة موجودة بالفعل','cn');
   try{await api('/categories','POST',{name:n,has_serial:$('#cs').value=='yes',supplier:(($('#csu')||{}).value||'').trim()});await refresh();toast('تمت إضافة الفئة');go()}catch(err){toast(err.message)}
 }
 async function togSer(k){if(!ok('stock'))return;const name=CATS[k];
   try{await api('/categories/'+encodeURIComponent(name),'PUT',{has_serial:!SER[name]});await refresh();toast('تم تغيير خاصية السيريال للفئة');go()}catch(err){toast(err.message)}}
 async function saveItem(id){
   const n=(($('#ein')||{}).value||'').trim();
-  if(!n)return toast('اسم الصنف لا يمكن أن يكون فارغًا');
+  if(!n)return setFormError('اسم الصنف لا يمكن أن يكون فارغًا','ein');
   const body={name:n};
   const el=$('#eic');if(el)body.category=el.value;
   const hw=$('#eihw');
-  if(hw){if(hw.value!=='1'&&hw.value!=='0')return toast('اختر بضمان أو بدون ضمان');body.has_warranty=hw.value==='1';}
+  if(hw){if(hw.value!=='1'&&hw.value!=='0')return setFormError('اختر بضمان أو بدون ضمان','eihw');body.has_warranty=hw.value==='1';}
   const nt=$('#eint');if(nt)body.notes=nt.value.trim();
   try{await api('/items/'+id,'PUT',body);editId=null;await refresh();toast('تم حفظ التعديل');go()}catch(err){toast(err.message)}
 }
 async function del(id){
-  if(role!='admin')return;const i=it(id);
-  if(pendDel!=id){pendDel=id;toast('اضغط تأكيد الحذف للمتابعة');return go()}
-  try{await api('/items/'+id,'DELETE');pendDel=null;await refresh();toast('تم حذف الصنف');go()}catch(err){pendDel=null;toast(err.message);go()}
+  if(role!='admin')return;const i=it(id);if(!i)return;
+  const reason=await confirmDelete(i.n,'سيُحذف الصنف نهائيًا إذا لم يكن مرتبطًا بحركات أو أرصدة.');if(!reason)return;
+  try{await api('/items/'+id,'DELETE',{reason});pendDel=null;await refresh();toast('تم حذف الصنف');go()}catch(err){toast(err.message)}
 }
 async function newItem(){
-  const n=(($('#nn')||{}).value||'').trim();if(!n)return toast('اكتب اسم الصنف');
+  const n=(($('#nn')||{}).value||'').trim();if(!n)return setFormError('اكتب اسم الصنف','nn');
   const hw=(($('#nhw')||{}).value||'');
-  if(hw!=='1'&&hw!=='0')return toast('اختر بضمان أو بدون ضمان');
+  if(hw!=='1'&&hw!=='0')return setFormError('اختر حالة الضمان','nhw');
   try{await api('/items','POST',{name:n,category:(($('#nc')||{}).value||''),notes:(($('#nnt')||{}).value||'').trim(),has_warranty:hw==='1'});await refresh();toast('تمت إضافة الصنف');go()}catch(err){toast(err.message)}
 }
 
@@ -592,13 +752,13 @@ function resSup(){
   const rows=all.filter(r=>hit(q,[r.n,r.company,r.address,r.phone,r.landline].join(' ')));
   const pg=paginate(rows,PV.sup);
   const html=!all.length?'<p class="mut">لا يوجد موردون مسجلون بعد.</p>'
-    :(rows.length?`<div class="box tw"><h3>الموردون (${rows.length})</h3><table><tr><th>اسم المورد</th><th>الشركة</th><th>العنوان</th><th>هاتف الشركة</th><th>الأرضي</th><th>يقبل الصيانة</th><th>أُنشئ بواسطة</th><th>تاريخ الإنشاء</th><th></th></tr>${pg.rows.map(r=>`<tr><td>${e(r.n)}${r.used?' <span class="chip">من الأذونات</span>':''}</td><td>${e(r.company||'-')}</td><td>${e(r.address||'-')}</td><td>${e(r.phone||'-')}</td><td>${e(r.landline||'-')}</td><td>${r.maint?'<span class="chip ok">نعم</span>':'لا'}</td><td>${e(r.by||'-')}</td><td>${r.d?dcell(r.d):'-'}</td><td>${r.id?`<div class="acts"><button class="btn ghost" onclick="editSup(${r.id})">تعديل</button>${role=='admin'?`<button class="btn bad" onclick="delSup(${r.id})">${pendSup==r.id?'تأكيد الحذف':'حذف'}</button>`:''}</div>`:''}</td></tr>`).join('')}</table></div>`+pager('sup',PV.sup,pg.p,pg.n):noRes('sup'));
+    :(rows.length?`<div class="box tw"><h3>الموردون (${rows.length})</h3><table><tr><th>اسم المورد</th><th>الشركة</th><th>العنوان</th><th>هاتف الشركة</th><th>الأرضي</th><th>يقبل الصيانة</th><th>أُنشئ بواسطة</th><th>تاريخ الإنشاء</th><th></th></tr>${pg.rows.map(r=>`<tr><td>${e(r.n)}${r.used?' <span class="chip">من الأذونات</span>':''}</td><td>${e(r.company||'-')}</td><td>${e(r.address||'-')}</td><td>${e(r.phone||'-')}</td><td>${e(r.landline||'-')}</td><td>${r.maint?'<span class="chip ok">نعم</span>':'لا'}</td><td>${e(r.by||'-')}</td><td>${r.d?dcell(r.d):'-'}</td><td>${r.id?`<div class="acts"><button class="btn ghost" onclick="editSup(${r.id})">تعديل</button>${role=='admin'?`<button class="btn bad" onclick="delSup(${r.id})">حذف</button>`:''}</div>`:''}</td></tr>`).join('')}</table></div>`+pager('sup',PV.sup,pg.p,pg.n):noRes('sup'));
   return {html,total:rows.length};
 }
 function vSuppliers(){
   const ed=supEdit,d=resSup();
   return `<div class="box"><h3>${ed?'تعديل مورد':'إضافة مورد جديد'}</h3><div class="grid">
-   <label>اسم المورد<input id="supName" placeholder="اسم المورد أو جهة الصيانة" value="${ed?e(ed.n):''}"></label>
+   <label class="required"><span>اسم المورد</span><input id="supName" required placeholder="اسم المورد أو جهة الصيانة" value="${ed?e(ed.n):''}"></label>
    <label>اسم الشركة<input id="supCompany" value="${ed?e(ed.company||''):''}"></label>
    <label>العنوان<input id="supAddress" value="${ed?e(ed.address||''):''}"></label>
    <label>هاتف الشركة<input id="supPhone" value="${ed?e(ed.phone||''):''}"></label>
@@ -611,10 +771,10 @@ function vSuppliers(){
 function editSup(id){supEdit=suppliers.find(s=>s.id==id)||null;pendSup=null;go()}
 async function saveSup(){
   const name=(($('#supName')||{}).value||'').trim();
-  if(!name)return toast('اكتب اسم المورد');
+  if(!name)return setFormError('اكتب اسم المورد','supName');
   const body={name,company:(($('#supCompany')||{}).value||'').trim(),address:(($('#supAddress')||{}).value||'').trim(),phone:(($('#supPhone')||{}).value||'').trim(),landline:(($('#supLandline')||{}).value||'').trim(),accepts_maintenance:!!(($('#supMaint')||{}).checked)};
   const editing=!!supEdit;
-  if(!editing&&registeredSuppliers().includes(name))return toast('المورد مسجل بالفعل');
+  if(!editing&&registeredSuppliers().includes(name))return setFormError('المورد مسجل بالفعل','supName');
   try{
     if(editing)await api('/suppliers/'+supEdit.id,'PUT',body);else await api('/suppliers','POST',body);
     supEdit=null;await refresh();toast(editing?'تم حفظ المورد':'تمت إضافة المورد');go();
@@ -622,8 +782,9 @@ async function saveSup(){
 }
 async function delSup(id){
   if(role!='admin')return;
-  if(pendSup!=id){pendSup=id;toast('اضغط تأكيد الحذف للمتابعة');return go()}
-  try{await api('/suppliers/'+id,'DELETE');pendSup=null;await refresh();toast('تم حذف المورد');go()}catch(err){pendSup=null;toast(err.message);go()}
+  const supplier=suppliers.find(row=>Number(row.id)===Number(id));if(!supplier)return;
+  const reason=await confirmDelete(supplier.n,'سيُحذف المورد إذا لم يكن مستخدمًا في أذونات أو فئات.');if(!reason)return;
+  try{await api('/suppliers/'+id,'DELETE',{reason});pendSup=null;await refresh();toast('تم حذف المورد');go()}catch(err){toast(err.message)}
 }
 function fixSn(l){const n=hasSer(l.i)?Math.min(l.q||0,200):0;while(l.sns.length<n)l.sns.push('');l.sns.length=n}
 function longestSerial(){let m=0;for(const r of DB.in.concat(DB.out))for(const l of r.lines)for(const s of (l.sns||[]))m=Math.max(m,String(s||'').length);return m}
@@ -646,10 +807,17 @@ function serialText(id){
 }
 function resStock(){
   const q=SEARCH.stock;
-  const rows=items.filter(i=>hit(q,[i.n,i.c,serialText(i.id)].join(' ')));
+  const rows=items.filter(i=>{
+    if(!hit(q,[i.n,i.c,serialText(i.id)].join(' ')))return false;
+    const qty=Number(i.s)||0;
+    if(FILTER.stockStatus==='out'&&qty!==0)return false;
+    if(FILTER.stockStatus==='low'&&(qty<1||qty>3))return false;
+    if(FILTER.stockStatus==='available'&&qty<4)return false;
+    return true;
+  });
   const pg=paginate(rows,PV.stock);
   const html=rows.length
-    ?`<div class="box tw"><h3>الأصناف (${rows.length})</h3><table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>الحالة</th></tr>${pg.rows.map(i=>`<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td class="nmcell">${e(i.n)}</td><td>${i.s}</td><td><span class="chip ${i.s>0?'ok':'bad'}">${i.s>0?'متوفر':'غير متوفر'}</span></td></tr>`).join('')}</table></div>`+pager('stock',PV.stock,pg.p,pg.n)
+    ?`<div class="box tw"><h3>الأصناف (${rows.length})</h3><table><tr><th>الفئة</th><th>الصنف</th><th>رصيد المخزن</th><th>الحالة</th></tr>${pg.rows.map(i=>{const qty=Number(i.s)||0;return `<tr><td>${catIcon(i.c)} ${e(i.c)}</td><td class="nmcell">${e(i.n)}</td><td>${qty}</td><td>${qty===0?'<span class="chip bad">نفد الرصيد</span>':qty<=3?'<span class="chip low-stock">رصيد منخفض</span>':'<span class="chip ok">متوفر</span>'}</td></tr>`}).join('')}</table></div>`+pager('stock',PV.stock,pg.p,pg.n)
     :(items.length?noRes('stock'):'<p class="mut">لا توجد أصناف.</p>');
   return {html,total:rows.length};
 }
@@ -657,7 +825,7 @@ function vStock(){
   if(stockLoc!==null&&!br(stockLoc))stockLoc=null;
   stockLoc=null;
   const d=resStock();
-  return `${sbox('stock','بحث: اسم الصنف، الفئة، السيريال',d.total)}<div id="res_stock">${d.html}</div>`;
+  return `<div class="filter-row"><label>حالة الرصيد<select onchange="FILTER.stockStatus=this.value;PV.stock=1;repaint('stock')"><option value="">كل الحالات</option><option value="out"${FILTER.stockStatus==='out'?' selected':''}>نفد الرصيد</option><option value="low"${FILTER.stockStatus==='low'?' selected':''}>رصيد منخفض (١–٣)</option><option value="available"${FILTER.stockStatus==='available'?' selected':''}>متوفر (٤ فأكثر)</option></select></label></div>${sbox('stock','بحث: اسم الصنف، الفئة، السيريال',d.total)}<div id="res_stock">${d.html}</div>`;
 }
 function tbl(){repaint('stock');}
 function trackTable(map,empty){
@@ -696,7 +864,16 @@ function vMaint(){
    <div id="res_maint">${d.html}</div>
    <p class="mut">تُضاف الأصناف من زر «صرف إلى مورد الصيانة»، ويُسجَّل استلامها من زر «إقرار استلام من الصيانة».</p>`;
 }
-function openIssMaint(){DR.issmaint=nd('issmaint');E.issmaint=null;maintView='out';go()}
+function openIssMaint(){DR.issmaint=nd('issmaint');E.issmaint=null;docKey='issmaint';docView='edit';maintView='out';go()}
+function maintenanceFormsForIssue(voucher,line){
+  const serials=(line.sns||[]).map(serial=>String(serial).trim().toLowerCase()).filter(Boolean);
+  return MFORMS.filter(form=>{
+    if(form.requestOnly||Number(form.issuePermitId||0)&&Number(form.issuePermitId)!==Number(voucher.id))return false;
+    if(form.itemId&&Number(form.itemId)!==Number(line.i))return false;
+    if(form.serial&&(!serials.length||!serials.includes(String(form.serial).trim().toLowerCase())))return false;
+    return !!(form.itemId||form.serial);
+  });
+}
 function maintOutRows(){
   const remaining={...MAINT},rows=[];
   [...DB.out].reverse().forEach(r=>{
@@ -706,7 +883,11 @@ function maintOutRows(){
       if(rem<=0)return;
       const q=Math.min(l.q,rem);
       remaining[l.i]=rem-q;
-      rows.push({r,l,q});
+      const meta=dspMeta(r.id);
+      const linkedForm=MFORMS.find(f=>Number(f.id)===Number(meta.maintenanceFormId)||Number(f.issuePermitId)===Number(r.id));
+      const candidates=linkedForm?[linkedForm]:maintenanceFormsForIssue(r,l);
+      const form=linkedForm|| (candidates.length===1?candidates[0]:null);
+      rows.push({r,l,q,form,formCandidates:candidates});
     });
   });
   return rows;
@@ -714,19 +895,37 @@ function maintOutRows(){
 function mackLine(){
   const m=maintItems(),id=m.length?m[0].id:0;
   const ref=id?maintOutRows().find(x=>x.l.i==id):null;
-  const L={i:id,q:1,sns:[],st:'stock',hw:false,wu:''};
+  const L={i:id,q:1,sns:[],st:'stock',hw:false,wu:'',maintenanceFormId:ref&&ref.form?ref.form.id:null,sourceVoucherId:ref?ref.r.id:null};
   if(ref)L.sns=ref.l.sns.slice(0,1);
   fixSn(L);
   return L;
 }
 function setAckItem(j,v){
   const id=+v||0,L=MA.lines[j],ref=id?maintOutRows().find(x=>x.l.i==id):null;
-  L.i=id;L.q=1;L.sns=ref?ref.l.sns.slice(0,1):[];
+  L.i=id;L.q=1;L.sns=ref?ref.l.sns.slice(0,1):[];L.maintenanceFormId=ref&&ref.form?ref.form.id:null;L.sourceVoucherId=ref?ref.r.id:null;
   fixSn(L);go();
+}
+function openAckForIssue(voucherId,itemId){
+  const ref=maintOutRows().find(x=>Number(x.r.id)===Number(voucherId)&&Number(x.l.i)===Number(itemId));
+  if(!ref)return toast('لا توجد كمية متبقية من إذن الخروج المحدد');
+  const q=ref.form&&ref.form.serial?1:Math.max(1,ref.q);
+  MA={sup:ref.r.sup||'',p:'',lines:[{i:itemId,q,sns:ref.form&&ref.form.serial?[ref.form.serial]:ref.l.sns.slice(0,q),st:'stock',hw:false,wu:'',maintenanceFormId:ref.form?ref.form.id:null,sourceVoucherId:ref.r.id}]};
+  fixSn(MA.lines[0]);maintView='ack';go();
+}
+function setAckForm(j,formId,voucherId){
+  const line=MA&&MA.lines[j],ref=maintOutRows().find(row=>Number(row.r.id)===Number(voucherId)&&line&&Number(row.l.i)===Number(line.i));
+  const form=ref&&maintenanceFormsForIssue(ref.r,ref.l).find(candidate=>Number(candidate.id)===Number(formId));
+  if(!line||!form)return toast('نموذج الصيانة لا يطابق إذن الخروج');
+  line.maintenanceFormId=form.id;
+  line.sourceVoucherId=ref.r.id;
+  if(form.serial)line.sns=[form.serial];
+  fixSn(line);go();
 }
 function setAckQ(j,v){
   const L=MA.lines[j];
-  L.q=Math.min(Math.max(1,Math.floor(+v||1)),Math.max(1,MAINT[L.i]||1));
+  const form=L.maintenanceFormId&&MFORMS.find(f=>Number(f.id)===Number(L.maintenanceFormId));
+  const max=form&&form.serial?1:Math.max(1,MAINT[L.i]||1);
+  L.q=Math.min(Math.max(1,Math.floor(+v||1)),max);
   fixSn(L);go();
 }
 function vMaintAck(){
@@ -742,13 +941,17 @@ function vMaintAck(){
     fixSn(l);
     const avail=items.filter(i=>(MAINT[i.id]||0)>0||i.id==l.i);
     const groups=CATS.map(c=>{const g=avail.filter(i=>i.c==c);return g.length?`<optgroup label="${e(c)}">`+g.map(i=>`<option value="${i.id}"${i.id==l.i?' selected':''}>${e(i.n)}</option>`).join('')+'</optgroup>':''}).join('');
-    const ref=open.find(x=>x.l.i==l.i);
-    const det=ref?`<div class="mut" style="margin:6px 0 0;line-height:1.8">إذن الخروج: ${e(ref.r.p)} · ${dcell(ref.r.d)} · الجهة: ${e(ref.r.sup||'-')}${ref.r.sb?' · من فرع '+e(ref.r.sb):''}${ref.l.rs?' · سبب الصيانة: '+e(ref.l.rs):''}${ref.l.nt?' · شرح: '+e(ref.l.nt):''} · سجّله: ${e(ref.r.by||'-')} · المتاح: ${ref.q}</div>`:'';
+    const ref=open.find(x=>Number(x.r.id)===Number(l.sourceVoucherId)&&Number(x.l.i)===Number(l.i))||open.find(x=>l.maintenanceFormId&&x.form&&Number(x.form.id)===Number(l.maintenanceFormId))||open.find(x=>x.l.i==l.i);
+    const selectedForm=l.maintenanceFormId?MFORMS.find(form=>Number(form.id)===Number(l.maintenanceFormId)):ref&&ref.form;
+    const det=ref?`<div class="mut" style="margin:6px 0 0;line-height:1.8">إذن الخروج: ${e(ref.r.p)} · ${dcell(ref.r.d)} · الجهة: ${e(ref.r.sup||'-')}${ref.r.sb?' · من فرع '+e(ref.r.sb):''}${selectedForm?' · نموذج الصيانة: '+e(selectedForm.number||'') :''}${ref.l.rs?' · سبب الصيانة: '+e(ref.l.rs):''}${ref.l.nt?' · شرح: '+e(ref.l.nt):''} · سجّله: ${e(ref.r.by||'-')} · المتاح: ${ref.q}</div>`:'';
+    const formCandidates=ref?maintenanceFormsForIssue(ref.r,ref.l):[];
+    const formPicker=!selectedForm&&formCandidates.length?`<label style="margin-top:8px">اختر نموذج الصيانة المطابق<select onchange="setAckForm(${j},this.value,${ref.r.id})"><option value="">اختر نموذجًا</option>${formCandidates.map(form=>`<option value="${form.id}">${e(form.number||'نموذج '+form.id)} — ${e(form.deviceType||((it(form.itemId)||{}).n)||'صنف غير محدد')}${form.serial?' — '+e(form.serial):''}</option>`).join('')}</select></label>`:'';
+    const linkedFormPreview=selectedForm?`<details class="maintenance-form-link" open><summary>ورقة نموذج الصيانة: ${e(selectedForm.number||'')}</summary><div class="maintenance-form-preview"><div class="paper-wrap"><div class="paper-sheet">${mfSheet(selectedForm,false,true)}</div></div></div></details>`:`${formPicker}<div class="mut" style="margin-top:8px">${formCandidates.length?'اختر نموذج الصيانة المطابق لعرض الورقة وربطها بإقرار الاستلام.':'لا يوجد نموذج صيانة مطابق لهذا الإذن. اربط نموذجًا مطابقًا من شاشة صرف إلى مورد الصيانة.'}</div>`;
     return `<div class="box" style="background:var(--soft)"><div class="grid">
      <label>الصنف<select onchange="setAckItem(${j},this.value)">${groups||'<option value="">لا توجد أصناف تحت الصيانة</option>'}</select>${warrantyBadge(l.i)}</label>
      <label>النتيجة<select onchange="MA.lines[${j}].st=this.value"><option value="stock"${l.st!='scrap'?' selected':''}>تم إصلاحه</option><option value="scrap"${l.st=='scrap'?' selected':''}>رفض الصيانة</option></select></label>
      <label>العدد المستلم (المتاح: ${MAINT[l.i]||0})<input type="number" min="1" value="${l.q}" onchange="setAckQ(${j},this.value)"></label></div>
-     ${det}
+     ${det}${linkedFormPreview}
      ${hasSer(l.i)?'<div class="grid sngrid" style="'+snGrid(l.sns)+'">'+l.sns.map((s,n)=>`<label>سيريال ${n+1}<input value="${e(s)}" oninput="MA.lines[${j}].sns[${n}]=this.value;snGrow(this)"></label>`).join('')+'</div>':'<p class="mut" style="margin:0">هذه الفئة بدون سيريال</p>'}
      <div class="ln" style="margin-top:8px"><label class="ln"><input type="checkbox" ${l.hw?'checked':''} onchange="MA.lines[${j}].hw=this.checked;go()"> هل يوجد ضمان؟</label>${l.hw?`<label>انتهاء الضمان<input type="date" value="${e(l.wu||'')}" oninput="MA.lines[${j}].wu=this.value"></label>`:''}</div>
      ${MA.lines.length>1?`<button class="btn ghost" style="margin-top:8px" onclick="MA.lines.splice(${j},1);go()">حذف السطر</button>`:''}</div>`;
@@ -777,8 +980,8 @@ async function saveAck(){
   if(!p)return toast('اكتب رقم الإقرار');
   const seen={},used={},lines=[];
   for(const l of MA.lines){
-    if(!l.i)return toast('اختر الصنف في كل سطر');
-    if(!(l.q>0))return toast('اكتب العدد في كل سطر');
+    if(!l.i)return setFormError('اختر الصنف في كل سطر');
+    if(!(l.q>0))return setFormError('اكتب عددًا أكبر من صفر في كل سطر');
     used[l.i]=(used[l.i]||0)+Number(l.q);
     if(used[l.i]>(MAINT[l.i]||0))return toast('العدد أكبر من الرصيد تحت الصيانة');
     let sns=[];
@@ -787,7 +990,7 @@ async function saveAck(){
       for(const s of sns){const t=s.toLowerCase();if(!t)return toast('اكتب كل السيريالات لصنف '+it(l.i).n);if(seen[t])return toast('سيريال مكرر: '+s);seen[t]=1}
     }
     if(l.hw&&!l.wu)return toast('اكتب تاريخ انتهاء الضمان');
-    lines.push({item_id:+l.i,qty:+l.q,serials:sns,state:l.st=='scrap'?'scrap':'stock',has_warranty:!!l.hw,warranty_until:l.hw?(l.wu||''):''});
+    lines.push({item_id:+l.i,qty:+l.q,serials:sns,state:l.st=='scrap'?'scrap':'stock',has_warranty:!!l.hw,warranty_until:l.hw?(l.wu||''):'',maintenance_form_id:l.maintenanceFormId||null,source_voucher_id:l.sourceVoucherId||null});
   }
   try{
     await api('/vouchers','POST',{direction:'in',kind:'maint',number:p,supplier_name:(MA.sup||'').trim(),branch_id:null,lines});
@@ -799,7 +1002,7 @@ function resMaintRel(){
   const rows=all.filter(({r,l})=>hit(term,[(it(l.i)||{}).n,(it(l.i)||{}).c,(l.sns||[]).join(' '),r.sup,r.p,r.sb,l.rs,l.nt,r.by,r.d].join(' ')));
   const pg=paginate(rows,PV.maint);
   const html=rows.length
-    ?`<div class="box tw"><table><tr><th>التاريخ</th><th>رقم الإذن</th><th>الفئة</th><th>الصنف</th><th>السيريال</th><th>العدد</th><th>الضمان</th><th>جهة الصيانة</th><th>الفرع المصدر</th><th>سبب الصيانة</th><th>شرح</th><th>سجّله</th></tr>${pg.rows.map(({r,l,q})=>`<tr><td>${dcell(r.d)}</td><td>${e(r.p)}</td><td>${e((it(l.i)||{c:'-'}).c)}</td><td class="nmcell">${e((it(l.i)||{n:'-'}).n)}</td><td>${e(l.sns.length?l.sns.slice(0,q).join('، '):'بدون سيريال')}</td><td>${q}</td><td>${warrantyBadge(l.i)}</td><td>${e(r.sup||'-')}</td><td>${e(r.sb||'-')}</td><td>${e(l.rs||'-')}</td><td>${e(l.nt||'-')}</td><td>${e(r.by||'-')}</td></tr>`).join('')}</table></div>`+pager('maint',PV.maint,pg.p,pg.n)
+    ?`<div class="box tw"><table><tr><th>التاريخ</th><th>رقم الإذن</th><th>الفئة</th><th>الصنف</th><th>السيريال</th><th>العدد</th><th>الضمان</th><th>جهة الصيانة</th><th>الفرع المصدر</th><th>سبب الصيانة</th><th>شرح</th><th>سجّله</th><th></th></tr>${pg.rows.map(({r,l,q,form})=>`<tr><td>${dcell(r.d)}</td><td>${e(r.p)}</td><td>${e((it(l.i)||{c:'-'}).c)}</td><td class="nmcell">${e((it(l.i)||{n:'-'}).n)}</td><td>${e(l.sns.length?l.sns.slice(0,q).join('، '):'بدون سيريال')}</td><td>${q}</td><td>${warrantyBadge(l.i)}</td><td>${e(r.sup||'-')}</td><td>${e(r.sb||'-')}</td><td>${e(l.rs||'-')}</td><td>${e(l.nt||'-')}</td><td>${e(r.by||'-')}</td><td><button class="btn ghost" onclick="openAckForIssue(${r.id},${l.i})">تسجيل الاستلام</button>${form?`<div class="mut">${e(form.number||'')}</div>`:''}</td></tr>`).join('')}</table></div>`+pager('maint',PV.maint,pg.p,pg.n)
     :(all.length?noRes('maint'):'<p class="mut">لا توجد أصناف ما زالت تحت الصيانة.</p>');
   return {html,total:rows.length};
 }
@@ -979,25 +1182,24 @@ function vScrapEditor(){
   </div>`;
 }
 async function saveScrap(){
-  if(!SCR||!SCR.lines.length)return toast('أضف صنفًا واحدًا على الأقل');
+  if(!SCR||!SCR.lines.length)return setFormError('أضف صنفًا واحدًا على الأقل');
   const mode=SCR.mode,seen={},lines=[];
   for(const l of SCR.lines){
-    if(!l.i)return toast('اختر الصنف في كل سطر');
-    if(!(l.q>0))return toast('اكتب العدد في كل سطر');
+    if(!l.i)return setFormError('اختر الصنف في كل سطر');
+    if(!(l.q>0))return setFormError('اكتب عددًا أكبر من صفر في كل سطر');
     const x=it(l.i)||{};
-    if(!(x.s>0))return toast('لا يوجد رصيد في المخزن لهذا الصنف');
-    if(l.q>x.s)return toast('الكمية أكبر من رصيد المخزن');
+    if(!(x.s>0))return setFormError('لا يوجد رصيد في المخزن لهذا الصنف');
+    if(l.q>x.s)return setFormError('الكمية أكبر من رصيد المخزن');
     let sns=[];
     if(mode=='serial'&&hasSer(l.i)){
       fixSn(l);sns=l.sns.map(s=>s.trim());
-      for(const s of sns){const t=s.toLowerCase();if(!t)return toast('اكتب كل السيريالات لصنف '+x.n);if(seen[t])return toast('سيريال مكرر: '+s);seen[t]=1}
+      for(const s of sns){const t=s.toLowerCase();if(!t)return setFormError('اكتب كل السيريالات لصنف '+x.n);if(seen[t])return setFormError('سيريال مكرر: '+s);seen[t]=1}
     }
     lines.push({item_id:+l.i,qty:+l.q,serials:sns});
   }
   try{await api('/scrap','POST',{mode,lines});scrapMode=null;SCR=null;await refresh();toast('تم تسجيل الأصناف في الخردة');go()}catch(err){toast(err.message)}
 }
 function vDoc(key){
-  if(key==='issmaint')return vDocLegacy(key);
   docKey=key;
   return docView==='edit'?vDocEditor(key):vDocList(key);
 }
@@ -1010,6 +1212,7 @@ function vDocList(key){
     <div><div class="eyebrow">المخزن</div><h2>${icon(key)} ${S.t}</h2><p>${flow}</p></div>
     <div class="acts"><button class="btn" onclick="newDoc()">${inn?'إذن استلام جديد':'إذن صرف جديد'}</button><button class="btn soft" onclick="printBlankDoc('${key}')">طباعة نموذج فارغ</button></div>
    </div>
+   <div class="filter-row"><label>من تاريخ<input type="date" value="${e(FILTER.docFrom)}" onchange="FILTER.docFrom=this.value;PV['doc_${key}']=1;repaint('doc_${key}')"></label><label>إلى تاريخ<input type="date" value="${e(FILTER.docTo)}" onchange="FILTER.docTo=this.value;PV['doc_${key}']=1;repaint('doc_${key}')"></label>${S.kind==='br'?`<label>الفرع<select onchange="FILTER.docBranch=this.value;PV['doc_${key}']=1;repaint('doc_${key}')"><option value="">كل الفروع</option>${branches.map(b=>`<option value="${b.id}"${String(FILTER.docBranch)===String(b.id)?' selected':''}>${e(b.n)}</option>`).join('')}</select></label>`:''}<button type="button" class="btn ghost" onclick="FILTER.docFrom='';FILTER.docTo='';FILTER.docBranch='';go()">مسح الفلاتر</button></div>
    ${sbox('doc_'+key,'بحث: رقم إذن، جهة، صنف، سيريال، مستخدم، تاريخ',d.total)}
    <h2>${icon(key)} ${S.t} (${d.total})</h2><div id="res_doc_${key}">${d.html}</div>`;
 }
@@ -1019,7 +1222,7 @@ function newDoc(){
   DR[key]=D;E[key]=null;docView='edit';go();window.scrollTo(0,0);
 }
 function docBack(){docView='list';go();window.scrollTo(0,0)}
-function docPartyLabel(key){return key==='recvsup'?'المورد':key==='recvbr'?'الفرع المُسلِّم':'الفرع المستلم'}
+function docPartyLabel(key){return key==='recvsup'?'المورد':key==='recvbr'?'الفرع المُسلِّم':key==='issmaint'?'جهة الصيانة':'الفرع المستلم'}
 function docPartyValue(key,D){
   return DS[key].kind==='br'?((br(D.b)||{}).n||''):(D.sup||'');
 }
@@ -1030,6 +1233,28 @@ function docSetBranch(v){
 function docSetSupplier(v){
   const D=DR[KK()],s=suppliers.find(x=>x.n===v);if(!D)return;
   D.sup=v;D.gov='';D.addr=s?(s.address||''):'';D.receiverName=v;go();
+}
+function docPickMaintForm(v){
+  const D=DR.issmaint,id=Number(v)||null;
+  const form=MFORMS.find(row=>Number(row.id)===id);
+  D.maintenanceFormId=form?form.id:null;
+  if(!form){go();return}
+  const serialInfo=form.serial?serialIndexLookup(form.serial):null;
+  const itemId=Number(form.itemId)||(serialInfo?Number(serialInfo.itemId):0);
+  if(!itemId)return toast('النموذج المحدد لا يحتوي على صنف. أكمل بيانات الصنف في نماذج الصيانة أولًا.');
+  D.sup=form.maintenanceEntity||D.sup;
+  D.sb=form.branchName||D.sb;
+  D.lines=[{i:itemId,q:1,sns:form.serial?[form.serial]:[],st:'stock',rs:form.faultDescription||'',nt:form.accessoriesNotes||'',cd:'يحتاج صيانة',hw:false,wu:''}];
+  toast('تمت تعبئة الصنف والسيريال وبيانات الصيانة من النموذج');
+  go();
+}
+function mfOpenFromIssue(id){
+  const form=MFORMS.find(row=>Number(row.id)===Number(id));
+  if(!form)return toast('نموذج الصيانة غير موجود');
+  mfReturnToIssue=true;tab='mf';MF=JSON.parse(JSON.stringify(form));mfView='edit';mfBlank=false;mfPendDel=null;go();
+}
+function mfReturnToIssuePage(){
+  mfReturnToIssue=false;tab='maint';maintView='out';docKey='issmaint';docView='edit';MF=null;mfView='list';mfBlank=false;go();
 }
 function docItemOptions(sel,dir){
   const pool=dir==='out'?items.filter(i=>i.s>0||Number(i.id)===Number(sel)):items;
@@ -1085,20 +1310,23 @@ function docLineRows(key){
 }
 function docDateCell(label,D){
   const v=D&&D.d?dispDate(D.d):'';
-  return `<div class="mf-cell"><span class="mf-label">${e(label)}</span><span class="mf-date"><input class="mf-line" id="doc_date" type="date" value="${e(v)}" data-mirror="mfm_doc_date" oninput="mfDateSync(this);DR[KK()].d=this.value"><span class="mirror" id="mfm_doc_date">${v?e(mfDMY(v)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div>`;
+  return `<div class="mf-cell"><span class="mf-label">${e(label)} *</span><span class="mf-date"><input class="mf-line" id="doc_date" type="date" required value="${e(v)}" data-mirror="mfm_doc_date" oninput="mfDateSync(this);DR[KK()].d=this.value"><span class="mirror" id="mfm_doc_date">${v?e(mfDMY(v)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div>`;
 }
 function docSheet(key){
   const S=DS[key],D=DR[key],inn=S.dir==='in',isb=S.kind==='br';
   const cols=inn?['م','التصنيف','اسم الصنف','السيريال','الكمية','الحالة','الضمان','ملاحظات']:['م','التصنيف','اسم الصنف','السيريال','الكمية','الحالة','ملاحظات'];
   const widths=inn?['4%','11%','19%','22%','6%','9%','18%','11%']:['4%','13%','23%','28%','7%','13%','12%'];
+  const selectedForm=key==='issmaint'?MFORMS.find(f=>Number(f.id)===Number(D.maintenanceFormId)):null;
+  const maintenanceFormField=key==='issmaint'?`<div class="mf-sec no-print"><div class="mf-sec-head">ربط نموذج الصيانة</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1fr"><div class="mf-cell"><span class="mf-label">اختر النموذج الذي أُنشئ مسبقًا في نماذج الصيانة *</span><select id="doc_maintenanceForm" class="mf-line" required onchange="docPickMaintForm(this.value)"><option value="">اختر نموذج صيانة</option>${MFORMS.map(f=>{const linkedId=Number(f.issuePermitId||0),currentId=Number(E.issmaint||0),disabled=linkedId&&linkedId!==currentId;return `<option value="${f.id}"${Number(D.maintenanceFormId)===Number(f.id)?' selected':''}${disabled?' disabled':''}>${e(f.number||('نموذج '+f.id))} — ${e(f.deviceType||((it(f.itemId)||{}).n)||'صنف غير محدد')}${f.serial?' — '+e(f.serial):''}${disabled?' — مرتبط بإذن آخر':''}</option>`}).join('')}</select>${MFORMS.length?'':'<div class="mut" style="margin-top:5px">لا توجد نماذج صيانة. أنشئ النموذج واحفظه أولًا من شاشة نماذج الصيانة.</div>'}</div></div></div>${selectedForm?`<div class="maintenance-form-preview"><div class="row" style="justify-content:space-between;align-items:center;margin-top:0"><b>تم اختيار نموذج الصيانة ${e(selectedForm.number||'')}</b>${mfCanEdit()?`<button class="btn ghost" onclick="mfOpenFromIssue(${selectedForm.id})">فتح النموذج واستكمال بياناته</button>`:''}</div><div class="mut">ستظهر صورة النموذج كاملة أسفل إذن الخروج، وتُطبع في صفحة مستقلة مرفقة به.</div></div>`:''}</div>`:'';
   const party=isb
-    ?`<div class="mf-cell"><span class="mf-label">${e(docPartyLabel(key))}</span><select class="mf-line" onchange="docSetBranch(this.value)">${branches.map(b=>`<option value="${b.id}"${Number(b.id)===Number(D.b)?' selected':''}>${e(b.n)}</option>`).join('')}</select></div>`
-    :`<div class="mf-cell"><span class="mf-label">${e(docPartyLabel(key))}</span><select class="mf-line" onchange="docSetSupplier(this.value)">${supplierOptions(D.sup)}</select></div>`;
+    ?`<div class="mf-cell"><span class="mf-label">${e(docPartyLabel(key))} *</span><select id="doc_branch" class="mf-line" required onchange="docSetBranch(this.value)">${branches.map(b=>`<option value="${b.id}"${Number(b.id)===Number(D.b)?' selected':''}>${e(b.n)}</option>`).join('')}</select></div>`
+    :`<div class="mf-cell"><span class="mf-label">${e(docPartyLabel(key))} *</span><select id="doc_supplier" class="mf-line" required onchange="docSetSupplier(this.value)">${supplierOptions(D.sup)}</select></div>`;
   const secondLbl=key==='recvsup'?'المورد / المسلّم':isb&&inn?'مسؤول الفرع':'اسم المستلم';
   return `${mfTitleBar(VFORM_TITLE[key]||S.t)}
+    ${maintenanceFormField}
     <div class="mf-sec"><div class="mf-sec-head">بيانات الإذن</div><div class="mf-table">
       <div class="mf-row" style="grid-template-columns:1.15fr 1fr 1.5fr 1.5fr">
-        <div class="mf-cell"><span class="mf-label">رقم الإذن</span><input class="mf-line" value="${e(D.p||'')}" oninput="DR[KK()].p=this.value"></div>
+        <div class="mf-cell"><span class="mf-label">رقم الإذن *</span><input class="mf-line" id="doc_number" required value="${e(D.p||'')}" oninput="DR[KK()].p=this.value"></div>
         ${docDateCell('التاريخ',D)}
         ${party}
         <div class="mf-cell"><span class="mf-label">المسؤول عن الحركة</span><input class="mf-line" value="${e(D.by||'')}" oninput="DR[KK()].by=this.value"></div>
@@ -1126,18 +1354,21 @@ function docSheet(key){
 }
 function vDocEditor(key){
   const S=DS[key],D=DR[key],ed=E[key];
+  const linkedForm=key==='issmaint'?MFORMS.find(f=>Number(f.id)===Number(D.maintenanceFormId)):null;
+  const linkedFormPage=linkedForm?`<section class="maintenance-form-page"><div class="maintenance-form-preview"><div class="row no-print" style="justify-content:space-between;align-items:center;margin-top:0"><b>نموذج الصيانة المرفق بإذن الخروج: ${e(linkedForm.number||'')}</b><button class="btn ghost" onclick="mfOpenFromIssue(${linkedForm.id})">استكمال بيانات النموذج</button></div><div class="paper-wrap"><div class="paper-sheet">${mfSheet(linkedForm,false,true)}</div></div></div></section>`:'';
   return `<div class="mf-page">
     <div class="mf-bar no-print">
       <div class="grp">
         <button class="btn ghost" onclick="docBack()">رجوع للقائمة</button>
         <button class="btn" onclick="saveDoc()">${ed?'حفظ التعديل':'تسجيل الإذن'}</button>
         <button class="btn soft" onclick="window.print()">طباعة</button>
-        ${ed&&ok('delRecv')?`<button class="btn bad" onclick="delDoc(${ed})">${pend==S.dir+ed?'تأكيد الحذف':'حذف'}</button>`:''}
+        ${ed&&ok('delRecv')?`<button class="btn bad" onclick="delDoc(${ed})">حذف الإذن</button>`:''}
       </div>
       <div class="grp"><span class="mf-no">${ed?'إذن رقم '+e(D.p):'إذن جديد'}</span></div>
     </div>
     <p class="mf-hint no-print">هذه هي صفحة الإدخال نفسها: املأ النموذج ثم اضغط «${ed?'حفظ التعديل':'تسجيل الإذن'}» ليُحدَّث المخزون، أو «طباعة» لطباعة الورقة كما هي.</p>
     <div class="print-root"><div class="paper-wrap"><div class="paper-sheet">${docSheet(key)}</div></div></div>
+    ${linkedFormPage}
   </div>`;
 }
 function vDocLegacy(key){
@@ -1184,13 +1415,19 @@ function docCard(key,r){
   const S=DS[key],K=S.dir,inn=K=='in',party=partyName(r);
   const mfLink=key=='recvbr'||key=='issmaint';
   return `<div class="box"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>إذن رقم ${e(r.p)}</b> <span class="chip ok">${SRC[K][r.k]}</span><div class="mut">الجهة: ${e(party)}${r.sb?' · من فرع '+e(r.sb):''} · ${dcell(r.d)} · ${e(r.by)}${r.ed?' · عدّله '+e(r.ed):''}</div></div>
-   <div class="acts" style="flex-wrap:wrap">${ok('stock')?`<button class="btn ghost" onclick="editDoc(${r.id})">تعديل</button>`:''}${key==='issmaint'?'':`<button class="btn soft" onclick="printVoucher('${key}',${r.id})">طباعة</button>`}${ok('delRecv')?`<button class="btn bad" onclick="delDoc(${r.id})">${pend==K+r.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></div>
+   <div class="acts" style="flex-wrap:wrap">${ok('stock')?`<button class="btn ghost" onclick="editDoc(${r.id})">تعديل</button>`:''}${key==='issmaint'?'':`<button class="btn soft" onclick="printVoucher('${key}',${r.id})">طباعة</button>`}${ok('delRecv')?`<button class="btn bad" onclick="delDoc(${r.id})">حذف</button>`:''}</div></div>
    <div class="tw"><table><tr><th>الصنف</th><th>السيريال</th>${inn?'<th>الحالة</th>':'<th>سبب الصيانة</th><th>شرح</th>'}<th>العدد</th>${mfLink?'<th></th>':''}</tr>${r.lines.map((l,j)=>`<tr><td class="nmcell">${e((it(l.i)||{n:'-'}).n)}</td><td>${l.sns.length?snList(l.sns):'<span class="mut">بدون سيريال</span>'}</td>${inn?`<td>${e(SM[l.st]||SM.stock)}${l.hw?` · ضمان حتى ${e(l.wu||'')}`:''}</td>`:`<td>${e(l.rs||'-')}</td><td>${e(l.nt||'-')}</td>`}<td>${l.q}</td>${mfLink?`<td><button class="btn ghost" style="padding:5px 9px;font-size:12px" onclick="mfFromVoucher(${r.id},${j})">نموذج صيانة</button></td>`:''}</tr>`).join('')}</table></div></div>`;
 }
 function resDoc(key){
   const S=DS[key],K=S.dir,sk='doc_'+key;
   const all=DB[K].filter(r=>r.k==S.kind);
-  const rows=all.filter(r=>hit(SEARCH[sk],docMatchText(r)));
+  const rows=all.filter(r=>{
+    if(!hit(SEARCH[sk],docMatchText(r)))return false;
+    if(FILTER.docFrom&&String(r.d)<FILTER.docFrom)return false;
+    if(FILTER.docTo&&String(r.d)>FILTER.docTo)return false;
+    if(S.kind==='br'&&FILTER.docBranch&&String(r.b)!==String(FILTER.docBranch))return false;
+    return true;
+  });
   const pg=paginate(rows,PV[sk]);
   const html=rows.length?pg.rows.map(r=>docCard(key,r)).join('')+pager(sk,PV[sk],pg.p,pg.n)
     :(all.length?noRes(sk):'<p class="mut">لا توجد أذونات بعد.</p>');
@@ -1202,32 +1439,37 @@ function editDoc(id){
   const key=KK(),K=DS[key].dir,r=DB[K].find(x=>x.id==id);if(!r)return;
   E[key]=id;pend=null;
   const m=dspMeta(r.id),b=r.b?br(r.b):null;
-  DR[key]={k:DS[key].kind,sup:r.sup||'',b:r.b||(branches[0]?branches[0].id:null),p:r.p||'',d:r.d||isoToday(),sb:r.sb||'',note:m.note||'',by:m.stockOfficer||r.by||'',stockOfficer:m.stockOfficer||r.by||'',stockOfficerSig:m.stockOfficerSignature||'',receiverName:m.receiverName||'',receiverSig:m.receiverSignature||'',receiveDate:m.receiveDate||r.d||isoToday(),gov:m.gov||(b?(b.g||''):''),addr:m.address||(b?(b.address||''):''),original:{},lines:r.lines.map(l=>({i:l.i,q:l.q,sns:[...l.sns],st:l.st||'stock',rs:l.rs||'',nt:l.nt||'',cd:l.cd||'سليم',hw:!!l.hw,wu:l.wu||''}))};
+  const linkedForm=MFORMS.find(f=>Number(f.issuePermitId)===Number(r.id));
+  DR[key]={k:DS[key].kind,sup:r.sup||'',b:r.b||(branches[0]?branches[0].id:null),p:r.p||'',d:r.d||isoToday(),sb:r.sb||'',note:m.note||'',by:m.stockOfficer||r.by||'',stockOfficer:m.stockOfficer||r.by||'',stockOfficerSig:m.stockOfficerSignature||'',receiverName:m.receiverName||'',receiverSig:m.receiverSignature||'',receiveDate:m.receiveDate||r.d||isoToday(),gov:m.gov||(b?(b.g||''):''),addr:m.address||(b?(b.address||''):''),maintenanceFormId:m.maintenanceFormId||(linkedForm?linkedForm.id:null),original:{},lines:r.lines.map(l=>({i:l.i,q:l.q,sns:[...l.sns],st:l.st||'stock',rs:l.rs||'',nt:l.nt||'',cd:l.cd||'سليم',hw:!!l.hw,wu:l.wu||''}))};
   r.lines.forEach(l=>{DR[key].original[l.i]=(DR[key].original[l.i]||0)+(+l.q||0)});
   docView='edit';go();window.scrollTo(0,0);
 }
 async function saveDoc(){
   const key=KK(),S=DS[key],K=S.dir,D=DR[key],k=S.kind,isb=k=='br',inn=K=='in',sendMaint=K=='out'&&k=='sup',sup=(D.sup||'').trim(),p=(D.p||'').trim(),editing=E[key];
-  if(isb&&!br(D.b))return toast('اختر فرعًا مسجلًا');
-  if(k=='sup'&&!sup)return toast('اختر المورد');
-  if(!p)return toast(inn?'اكتب رقم إذن الإدخال':'اكتب رقم إذن الصرف');
-  if(!D.d)return toast('اختر تاريخ الإذن');
+  if(isb&&!br(D.b))return setFormError('اختر فرعًا مسجلًا','doc_branch');
+  if(k=='sup'&&!sup)return setFormError('اختر المورد','doc_supplier');
+  const maintenanceForm=sendMaint?MFORMS.find(f=>Number(f.id)===Number(D.maintenanceFormId)):null;
+  if(sendMaint&&!maintenanceForm)return setFormError('اختر نموذج الصيانة الذي سيتم ربطه بإذن الخروج','doc_maintenanceForm');
+  if(sendMaint&&(D.lines.length!==1||Number(D.lines[0].i)!==Number(maintenanceForm.itemId)))return setFormError('الصنف يجب أن يطابق نموذج الصيانة المحدد');
+  if(!p)return setFormError(inn?'اكتب رقم إذن الإدخال':'اكتب رقم إذن الصرف','doc_number');
+  if(!D.d)return setFormError('اختر تاريخ الإذن','doc_date');
   const seen={},used={};const lines=[];
   for(const l of D.lines){
-    if(!l.i)return toast('اختر الصنف في كل سطر');
-    if(!(l.q>0))return toast('اكتب العدد في كل سطر');
+    if(!l.i)return setFormError('اختر الصنف في كل سطر');
+    if(!(l.q>0))return setFormError('اكتب عددًا أكبر من صفر في كل سطر');
     docFixLine(l);
     let sns=[];
     if(hasSer(l.i)){
       sns=l.sns.map(s=>s.trim());
-      for(const s of sns){const t=s.toLowerCase();if(!t)return toast('اكتب كل السيريالات لصنف '+it(l.i).n);if(seen[t])return toast('سيريال مكرر: '+s);seen[t]=1}
+      for(const s of sns){const t=s.toLowerCase();if(!t)return setFormError('اكتب كل السيريالات لصنف '+it(l.i).n);if(seen[t])return setFormError('سيريال مكرر: '+s);seen[t]=1}
+      if(sendMaint&&maintenanceForm.serial&&(Number(l.q)!==1||!sns.some(s=>s.toLowerCase()===String(maintenanceForm.serial).toLowerCase())))return setFormError('السيريال والكمية يجب أن يطابقا نموذج الصيانة المحدد');
     }
     if(!inn){
       used[l.i]=(used[l.i]||0)+(+l.q);
       const avail=((it(l.i)||{}).s||0)+(D.original[l.i]||0);
-      if(used[l.i]>avail)return toast('الكمية أكبر من رصيد المخزن للصنف '+((it(l.i)||{}).n||''));
+      if(used[l.i]>avail)return setFormError('الكمية أكبر من رصيد المخزن للصنف '+((it(l.i)||{}).n||''));
     }
-    if(inn&&l.hw&&!l.wu)return toast('اكتب تاريخ انتهاء الضمان');
+    if(inn&&l.hw&&!l.wu)return setFormError('اكتب تاريخ انتهاء الضمان');
     lines.push({
       item_id:+l.i,qty:+l.q,serials:sns,
       state:'stock',
@@ -1239,21 +1481,24 @@ async function saveDoc(){
     });
   }
   const body={direction:K,kind:k,number:p,doc_date:D.d||'',supplier_name:isb?'':sup,branch_id:isb?+D.b:null,source_branch:sendMaint?(D.sb||''):'',lines};
+  if(sendMaint)Object.assign(body,{maintenance_flow:true,maintenance_form_id:D.maintenanceFormId,note:D.note||'',stockOfficer:D.stockOfficer||'',stockOfficerSignature:D.stockOfficerSig||'',receiverName:D.receiverName||'',receiverSignature:D.receiverSig||'',receiveDate:D.receiveDate||'',gov:D.gov||'',address:D.addr||''});
   try{
     const res=editing?await api('/vouchers/'+editing,'PUT',body):await api('/vouchers','POST',body);
     const vid=(res&&res.id)||editing;
-    if(vid){
+    if(vid&&!sendMaint){
       try{await api('/dispatch-meta/'+vid,'PUT',{destType:isb?'branch':'supplier',note:D.note||'',stockOfficer:D.stockOfficer||'',stockOfficerSignature:D.stockOfficerSig||'',receiverName:D.receiverName||'',receiverSignature:D.receiverSig||'',receiveDate:D.receiveDate||'',gov:D.gov||'',address:D.addr||'',partyName:docPartyValue(key,D)})}catch(_){}
     }
     resetDoc();docView='list';if(document.activeElement)document.activeElement.blur();
-    await refresh();toast(editing?'تم حفظ تعديل الإذن':'تم تسجيل الإذن وتحديث الأرصدة');go();
+    if(sendMaint)maintView='release';
+    await refresh();toast(editing?'تم حفظ تعديل الإذن':'تم تسجيل إذن الخروج وربط نموذج الصيانة');go();
   }catch(err){toast(err.message)}
 }
 async function delDoc(id){
   const key=KK(),K=DS[key].dir;
   if(!ok('delRecv'))return;
-  if(pend!=K+id){pend=K+id;toast('اضغط تأكيد الحذف للمتابعة');return go()}
-  try{await api('/vouchers/'+id,'DELETE');try{await api('/dispatch-meta/'+id,'DELETE')}catch(_){}pend=null;if(E[key]==id)resetDoc();docView='list';await refresh();toast('تم حذف الإذن وتعديل الأرصدة');go()}catch(err){pend=null;toast(err.message);go()}
+  const record=DB[K].find(row=>Number(row.id)===Number(id));if(!record)return;
+  const reason=await confirmDelete('إذن رقم '+record.p,'سيُحذف الإذن ويُعكس أثره على الأرصدة.');if(!reason)return;
+  try{await api('/vouchers/'+id,'DELETE',{reason});pend=null;if(E[key]==id)resetDoc();docView='list';await refresh();toast('تم حذف الإذن وتعديل الأرصدة');go()}catch(err){toast(err.message)}
 }
 
 function branchText(b){
@@ -1261,7 +1506,7 @@ function branchText(b){
   return [b.n,b.number,b.g,b.manager,b.address,b.phone,its].join(' ');
 }
 function branchCard(b){
-  return `<button class="bc" onclick="sel=${b.id};go()"><b>${icon('br')}${e(b.n)}</b><span>${b.number?e(b.number)+' · ':''}${e(b.g)} · ${Object.keys(b.q).length} صنف · ${Object.values(b.q).reduce((a,c)=>a+c,0)} قطعة</span>${b.manager?`<span style="display:block">المسؤول: ${e(b.manager)}</span>`:''}${b.by?`<span style="display:block">أضافه: ${e(b.by)}</span>`:''}</button>${ok('addBranch')?`<div style="display:inline-block;vertical-align:middle;margin-left:4px"><button class="btn ghost" ${SAVING?'disabled':''} onclick="askDelBranch(${b.id})" aria-label="حذف">${pendDelBranch==b.id?'<b>تأكيد الحذف</b>':'حذف'}</button>${pendDelBranch==b.id?`<button class="btn ghost" ${SAVING?'disabled':''} onclick="pendDelBranch=null;go()">إلغاء</button>`:''}</div>`:''}`;
+  return `<button class="bc" onclick="sel=${b.id};go()"><b>${icon('br')}${e(b.n)}</b><span>${b.number?e(b.number)+' · ':''}${e(b.g)} · ${Object.keys(b.q).length} صنف · ${Object.values(b.q).reduce((a,c)=>a+c,0)} قطعة</span>${b.manager?`<span style="display:block">المسؤول: ${e(b.manager)}</span>`:''}${b.by?`<span style="display:block">أضافه: ${e(b.by)}</span>`:''}</button>${ok('addBranch')?`<div style="display:inline-block;vertical-align:middle;margin-left:4px"><button class="btn ghost" ${SAVING?'disabled':''} onclick="askDelBranch(${b.id})" aria-label="حذف">حذف</button></div>`:''}`;
 }
 function resBranches(){
   const rows=branches.filter(b=>hit(SEARCH.br,branchText(b)));
@@ -1280,7 +1525,7 @@ function vBranches(){
   return h+`<h2>${icon('br')} الفروع (${d.total})</h2>${sbox('br','بحث: اسم الفرع، الرقم، المحافظة، المسؤول، صنف داخله',d.total)}<div id="res_br">${d.html}</div>`;
 }
 async function addBranch(){
-  const n=$('#bn').value.trim();if(!n)return toast('اكتب اسم الفرع');
+  const n=$('#bn').value.trim();if(!n)return setFormError('اكتب اسم الفرع','bn');
   const num=($('#bnum')||{}).value.trim();if(num){if(num.length<1||num.length>20)return toast('رقم الفرع 1-20 حرفًا');if(!/^[A-Za-z0-9_-]+$/.test(num))return toast('رقم الفرع أحرف/أرقام/-/_ فقط');const dup=branches.find(b=>String(b.number||'').trim().toLowerCase()==num.toLowerCase());if(dup)return toast('رقم الفرع موجود مسبقًا');}
   const ph=($('#bphone')||{}).value.trim();if(ph){if(!/^[0-9+\s-]*$/.test(ph))return toast('هاتف غير صالح');const digs=ph.replace(/[^0-9]/g,'');if(digs.length<7||digs.length>15)return toast('هاتف 7-15 رقمًا');}
   try{await api('/branches','POST',{name:n,number:num||null,gov:$('#bg').value,manager:($('#bman')||{}).value.trim()||null,phone:ph||null,address:($('#baddr')||{}).value.trim()||null,location:($('#bloc')||{}).value.trim()||null,item_ids:readPick('b')});await refresh();toast('تمت إضافة الفرع');go()}catch(err){toast(err.message)}
@@ -1305,7 +1550,7 @@ function vBranch(){
   const add=ed&&free.length?`<div class="row" style="margin-top:12px"><label>إضافة صنف<select id="bai">${free.map(i=>`<option value="${i.id}">${e(i.n)} — ${e(i.c)}</option>`).join('')}</select></label><button class="btn" onclick="addBranchItem(${b.id})">إضافة للفرع</button></div>`:'';
   const editing=branchEditState&&branchEditState.id==b.id;
   const d=resBritems();
-  return `<button class="btn ghost" onclick="sel=null;go()">رجوع للفروع</button>${ok('addBranch')?`<div style="float:right">${pendDelBranch==b.id?`<b>حذف الفرع «${e(b.n)}»؟ لا يمكن التراجع.</b> <button class="btn bad" ${SAVING?'disabled':''} onclick="confirmDelBranch(${b.id})">تأكيد الحذف</button> <button class="btn ghost" ${SAVING?'disabled':''} onclick="pendDelBranch=null;go()">إلغاء</button>`:`<button class="btn bad" ${SAVING?'disabled':''} onclick="askDelBranch(${b.id})" aria-label="حذف">حذف الفرع</button>`}</div>`:''}<h2 style="margin-top:14px">${icon('br')} ${editing?e(branchEditState.name):e(b.n)} <span class="mut">${e(b.g)}</span> ${b.number&&!editing?`<span style="color:var(--pri)">(${e(b.number)})</span>`:''}</h2>${b.by&&!editing?`<div class="mut" style="margin:-6px 0 12px">تمت الإضافة بواسطة ${e(b.by)} · ${dcell(b.d)}</div>`:''}
+  return `<button class="btn ghost" onclick="sel=null;go()">رجوع للفروع</button>${ok('addBranch')?`<div style="float:right"><button class="btn bad" ${SAVING?'disabled':''} onclick="askDelBranch(${b.id})" aria-label="حذف">حذف الفرع</button></div>`:''}<h2 style="margin-top:14px">${icon('br')} ${editing?e(branchEditState.name):e(b.n)} <span class="mut">${e(b.g)}</span> ${b.number&&!editing?`<span style="color:var(--pri)">(${e(b.number)})</span>`:''}</h2>${b.by&&!editing?`<div class="mut" style="margin:-6px 0 12px">تمت الإضافة بواسطة ${e(b.by)} · ${dcell(b.d)}</div>`:''}
   ${editing?`<div class="box tw" style="margin-bottom:10px"><h3>تعديل بيانات الفرع</h3>
   <div class="row"><label>اسم الفرع<input id="bed_n" value="${e(branchEditState.name)}"></label><label>رقم الفرع<input id="bed_num" value="${e(branchEditState.number||'')}"></label><label>المحافظة<select id="bed_g">${opts(govList(branchEditState.gov),branchEditState.gov)}</select></label></div>
   <div class="row"><label>مسؤول الفرع<input id="bed_man" value="${e(branchEditState.manager||'')}"></label><label>هاتف<input id="bed_phone" value="${e(branchEditState.phone||'')}"></label></div>
@@ -1324,11 +1569,19 @@ async function addBranchItem(bid){
   try{await api('/branches/'+bid+'/items','POST',{item_id:+id});await refresh();toast('تمت إضافة الصنف للفرع');go()}catch(err){toast(err.message)}
 }
 let pendDelBranch=null;
-function askDelBranch(id){pendDelBranch=id;go();setTimeout(()=>{const el=document.getElementById('s_delBranch'+id);if(el){el.focus();el.selectionStart=el.selectionEnd=el.value.length;}},200);}
-function confirmDelBranch(id){if(pendDelBranch!==id)return;SAVING=true;api('/branches/'+id,'DELETE').then(async()=>{await refresh();toast('تم حذف الفرع');stockLoc=null;pendDelBranch=null;go()}).catch(err=>{toast(err.message||err);pendDelBranch=null;go()}).finally(()=>{SAVING=false;});}
+async function askDelBranch(id){
+  const branch=br(id);if(!branch)return;
+  const reason=await confirmDelete(branch.n,'لن يُسمح بالحذف إذا كانت هناك أصناف أو أذونات أو طلبات مرتبطة بالفرع.');if(!reason)return;
+  SAVING=true;
+  try{await api('/branches/'+id,'DELETE',{reason});await refresh();toast('تم حذف الفرع');stockLoc=null;pendDelBranch=null;go()}
+  catch(err){toast(err.message)}
+  finally{SAVING=false}
+}
 
 async function rmBranchItem(bid,iid){
-  try{await api('/branches/'+bid+'/items/'+iid,'DELETE');await refresh();toast('تمت إزالة الصنف من الفرع');go()}catch(err){toast(err.message)}
+  const item=it(iid);if(!item)return;
+  const reason=await confirmDelete(item.n,'سيُزال الصنف من قائمة أصناف الفرع، ولا يمكن ذلك ما دام له رصيد.');if(!reason)return;
+  try{await api('/branches/'+bid+'/items/'+iid,'DELETE',{reason});await refresh();toast('تمت إزالة الصنف من الفرع');go()}catch(err){toast(err.message)}
 }
 
 function reqText(r){
@@ -1356,7 +1609,14 @@ function vBranchReqs(){
    ${sbox('reqbr','بحث: فرع، مقدّم الطلب، الحالة، صنف',d.total)}<div id="res_reqbr">${d.html}</div>`;
 }
 function resRq(){
-  const rows=reqs.filter(r=>hit(SEARCH.rq,reqText(r)));
+  const rows=reqs.filter(r=>{
+    if(!hit(SEARCH.rq,reqText(r)))return false;
+    if(FILTER.reqStatus&&r.st!==FILTER.reqStatus)return false;
+    if(FILTER.reqBranch&&String(r.b)!==String(FILTER.reqBranch))return false;
+    if(FILTER.reqFrom&&String(r.d)<FILTER.reqFrom)return false;
+    if(FILTER.reqTo&&String(r.d)>FILTER.reqTo)return false;
+    return true;
+  });
   const pg=paginate(rows,PV.rq);
   const html=rows.length?pg.rows.map(card).join('')+pager('rq',PV.rq,pg.p,pg.n)
     :(reqs.length?noRes('rq'):'<p class="mut">لا توجد طلبات بعد.</p>');
@@ -1369,14 +1629,25 @@ function vReqs(){
     <div><div class="eyebrow">المخزن</div><h2>${icon('rq')} الطلبات</h2><p>طلبات الفروع على نموذج A4: يُعبأ النموذج من صفحته ثم يُرسل للاعتماد، ويمكن طباعة أي طلب محفوظ أو نموذج فارغ.</p></div>
     <div class="acts">${can?'<button class="btn" onclick="newRequest()">طلب جديد</button>':''}<button class="btn soft" onclick="printBlankRequest()">طباعة نموذج فارغ</button></div>
   </div>
+  <div class="filter-row"><label>الحالة<select onchange="FILTER.reqStatus=this.value;PV.rq=1;repaint('rq')"><option value="">كل الحالات</option>${Object.entries(ST).map(([key,value])=>`<option value="${key}"${FILTER.reqStatus===key?' selected':''}>${e(value[0])}</option>`).join('')}</select></label><label>الفرع<select onchange="FILTER.reqBranch=this.value;PV.rq=1;repaint('rq')"><option value="">كل الفروع</option>${branches.map(b=>`<option value="${b.id}"${String(FILTER.reqBranch)===String(b.id)?' selected':''}>${e(b.n)}</option>`).join('')}</select></label><label>من تاريخ<input type="date" value="${e(FILTER.reqFrom)}" onchange="FILTER.reqFrom=this.value;PV.rq=1;repaint('rq')"></label><label>إلى تاريخ<input type="date" value="${e(FILTER.reqTo)}" onchange="FILTER.reqTo=this.value;PV.rq=1;repaint('rq')"></label><button type="button" class="btn ghost" onclick="FILTER.reqStatus='';FILTER.reqBranch='';FILTER.reqFrom='';FILTER.reqTo='';go()">مسح الفلاتر</button></div>
   ${sbox('rq','بحث: فرع، مقدّم الطلب، الحالة، صنف، تاريخ',d.total)}
   <div id="res_rq">${d.html}</div>`;
 }
 function newRequest(){
+  editReqId=null;
   RQ={b:branches[0]?branches[0].id:null,by:(STATE.user||{}).name||'',d:isoToday(),note:'',lines:[requestLine()]};
   rqView='edit';go();window.scrollTo(0,0);
 }
-function rqBack(){rqView='list';RQ=null;go();window.scrollTo(0,0)}
+function editRequest(id){
+  const r=reqs.find(x=>Number(x.id)===Number(id));
+  if(!r)return toast('الطلب غير موجود');
+  editReqId=r.id;
+  const first=r.log&&r.log.length?r.log[0]:null;
+  RQ={b:r.b,by:r.by||'',d:r.d||'',note:first?(first.t||''):'',lines:(r.l||[]).map(x=>({i:+x.i,q:+x.q}))};
+  if(!RQ.lines.length)RQ.lines=[requestLine()];
+  ui=null;rqView='edit';go();window.scrollTo(0,0);
+}
+function rqBack(){rqView='list';RQ=null;editReqId=null;go();window.scrollTo(0,0)}
 function requestLine(){const x=items[0];return {i:x?x.id:0,q:1}}
 function rqFix(l){l.q=Math.max(1,Math.floor(+l.q||1))}
 function requestItemOptions(sel){
@@ -1412,8 +1683,8 @@ function requestEditableSheet(){
     <div class="mf-sec"><div class="mf-sec-head">بيانات الطلب</div><div class="mf-table">
       <div class="mf-row" style="grid-template-columns:1fr 1fr 1.6fr 1.4fr">
         <div class="mf-cell"><span class="mf-label">رقم الطلب</span><span class="mf-val">تلقائي</span></div>
-        <div class="mf-cell"><span class="mf-label">التاريخ</span><span class="mf-date"><input class="mf-line" id="rq_date" type="date" value="${e(RQ.d||'')}" data-mirror="mfm_rq_date" oninput="mfDateSync(this);RQ.d=this.value"><span class="mirror" id="mfm_rq_date">${RQ.d?e(mfDMY(RQ.d)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div>
-        <div class="mf-cell"><span class="mf-label">الفرع</span><select class="mf-line" onchange="RQ.b=+this.value;go()">${branches.map(b=>`<option value="${b.id}"${Number(b.id)===Number(RQ.b)?' selected':''}>${e(b.n)}</option>`).join('')}</select></div>
+        <div class="mf-cell"><span class="mf-label">التاريخ</span><span class="mf-date"><input class="mf-line" id="rq_date" type="date" value="${e(RQ.d||'')}" data-mirror="mfm_rq_date" oninput="mfDateSync(this);RQ.d=this.value"${editReqId?' disabled':''}><span class="mirror" id="mfm_rq_date">${RQ.d?e(mfDMY(RQ.d)):'&nbsp;/&nbsp;/&nbsp;'}</span></span></div>
+        <div class="mf-cell"><span class="mf-label">الفرع *</span><select id="rq_branch" class="mf-line" required onchange="RQ.b=+this.value;go()">${branches.map(b=>`<option value="${b.id}"${Number(b.id)===Number(RQ.b)?' selected':''}>${e(b.n)}</option>`).join('')}</select></div>
         <div class="mf-cell"><span class="mf-label">مقدّم الطلب</span><input class="mf-line" value="${e(RQ.by||'')}" disabled></div>
       </div>
      </div></div>
@@ -1435,26 +1706,44 @@ function requestEditableSheet(){
 }
 function vRequestEditor(){
   if(!RQ)return vReqs();
+  const editing=!!editReqId;
+  const reqNo='REQ-'+String(editReqId).padStart(4,'0');
   return `<div class="mf-page">
     <div class="mf-bar no-print">
       <div class="grp">
         <button class="btn ghost" onclick="rqBack()">رجوع للقائمة</button>
-        <button class="btn" onclick="saveRequest()">${role=='junior'?'إرسال للسينيور للمراجعة':'إرسال لمدير المنطقة'}</button>
+        <button class="btn" onclick="${editing?'saveRequestEdit()':'saveRequest()'}">${editing?'حفظ التعديل':(role=='junior'?'إرسال للسينيور للمراجعة':'إرسال لمدير المنطقة')}</button>
         <button class="btn soft" onclick="window.print()">طباعة</button>
       </div>
-      <div class="grp"><span class="mf-no">طلب جديد</span></div>
+      <div class="grp"><span class="mf-no">${editing?e(reqNo):'طلب جديد'}</span></div>
     </div>
-    <p class="mf-hint no-print">هذه هي صفحة إدخال الطلب نفسها: املأ النموذج على الورقة ثم اضغط «${role=='junior'?'إرسال للسينيور للمراجعة':'إرسال لمدير المنطقة'}» ليُسجَّل الطلب ويُرسل للاعتماد، أو «طباعة» لطباعة الورقة كما هي. رقم الطلب يُحدَّد تلقائيًا بعد الإرسال.</p>
+    <p class="mf-hint no-print">${editing?'عدّل بيانات النموذج ثم اضغط «حفظ التعديل» لتحديث الطلب نفسه. رقم الطلب وتاريخ الإنشاء يبقيان كما هما.':'هذه هي صفحة إدخال الطلب نفسها: املأ النموذج على الورقة ثم اضغط «'+(role=='junior'?'إرسال للسينيور للمراجعة':'إرسال لمدير المنطقة')+'» ليُسجَّل الطلب ويُرسل للاعتماد، أو «طباعة» لطباعة الورقة كما هي. رقم الطلب يُحدَّد تلقائيًا بعد الإرسال.'}</p>
     <div class="print-root"><div class="paper-wrap"><div class="paper-sheet">${requestEditableSheet()}</div></div></div>
   </div>`;
 }
-async function saveRequest(){
-  if(!RQ)return;
-  if(!br(RQ.b))return toast('اختر فرعًا مسجلًا');
-  if(!RQ.lines.length)return toast('أضف صنفًا واحدًا على الأقل');
+async function saveRequestEdit(){
+  if(!RQ||!editReqId)return;
+  if(!br(RQ.b))return setFormError('اختر فرعًا مسجلًا','rq_branch');
+  if(!RQ.lines.length)return setFormError('أضف صنفًا واحدًا على الأقل');
   const lines=[];
   for(const l of RQ.lines){
-    if(!l.i)return toast('اختر الصنف في كل سطر');
+    if(!l.i)return setFormError('اختر الصنف في كل سطر');
+    rqFix(l);
+    lines.push({item_id:+l.i,qty:+l.q});
+  }
+  try{
+    await api('/requests/'+editReqId+'/action','POST',{action:'save',branch_id:+RQ.b,lines,note:(RQ.note||'').trim()||'تم التعديل'});
+    rqView='list';RQ=null;editReqId=null;await refresh();
+    toast('تم حفظ التعديل');go();
+  }catch(err){toast(err.message)}
+}
+async function saveRequest(){
+  if(!RQ)return;
+  if(!br(RQ.b))return setFormError('اختر فرعًا مسجلًا','rq_branch');
+  if(!RQ.lines.length)return setFormError('أضف صنفًا واحدًا على الأقل');
+  const lines=[];
+  for(const l of RQ.lines){
+    if(!l.i)return setFormError('اختر الصنف في كل سطر');
     rqFix(l);
     lines.push({item_id:+l.i,qty:+l.q});
   }
@@ -1479,17 +1768,16 @@ function printBlankRequest(){
 function card(r){
   const [lb,cl]=ST[r.st],open=['review','pending','approved'].includes(r.st);
   const u=ui&&ui.id==r.id?ui.m:null;
-  const lines=u=='edit'?r.l.map(x=>`<label class="ln">${e(it(x.i).n)} <input type="number" min="0" value="${x.q}" id="e${r.id}_${x.i}"></label>`).join(''):r.l.map(x=>`${e(it(x.i).n)} × ${x.q}`).join('، ');
+  const lines=r.l.map(x=>`${e(it(x.i).n)} × ${x.q}`).join('، ');
   const log=r.log.length?'<div class="lg">'+r.log.map(g=>`<div><b>${e(g.by)}</b> <span class="chip ${g.k}">${e(g.a)}</span>${g.t?`<div>${e(g.t)}</div>`:''}</div>`).join('')+'</div>':'';
   const st={review:['rev','تأكيد وإرسال لمدير المنطقة','review'],pending:['ok','موافقة وإرسال لمسؤول المخزن','approve'],approved:['out','تأكيد الصرف من المخزن','release']}[r.st];
   let p='';
   if(open&&!u){
     if(st&&ok(st[2]))p+=`<button class="btn" onclick="act(${r.id},'${st[0]}')">${st[1]}</button>`;
     if(ok('reject'))p+=`<button class="btn bad" onclick="ui={id:${r.id},m:'no'};go()">رفض الطلب</button>`;
-    if(ok('edit'))p+=`<button class="btn ghost" onclick="ui={id:${r.id},m:'edit'};go()">تعديل الطلب</button>`;
+    if(ok('edit'))p+=`<button class="btn ghost" onclick="editRequest(${r.id})">تعديل الطلب</button>`;
   }
   if(open&&u=='no')p=`<input class="cm" style="margin:0" id="c${r.id}" placeholder="سبب الرفض (إجباري)"><button class="btn bad" onclick="act(${r.id},'no')">تأكيد الرفض</button><button class="btn ghost" onclick="ui=null;go()">إلغاء</button>`;
-  if(open&&u=='edit')p=`<input class="cm" style="margin:0" id="c${r.id}" value="تم التعديل"><button class="btn" onclick="act(${r.id},'save')">حفظ التعديل</button><button class="btn ghost" onclick="ui=null;go()">إلغاء</button>`;
   p+=`<button class="btn soft" onclick="printRequest(${r.id})">طباعة النموذج</button>`;
   return `<div class="box"><b>${e(br(r.b).n)}</b> <span class="chip ${cl}">${lb}</span><div class="mut">${e(r.by)}</div><div style="margin-top:6px">${lines}</div>${log}${p?`<div class="acts" style="margin-top:10px;flex-wrap:wrap">${p}</div>`:''}</div>`;
 }
@@ -1501,15 +1789,9 @@ async function send(){
 async function act(id,a){
   const body={action:a};
   if(a=='no'){body.note=(($('#c'+id)||{}).value||'').trim();if(!body.note)return toast('اكتب سبب الرفض في التعليق')}
-  if(a=='save'){
-    const r=reqs.find(x=>x.id==id);
-    body.lines=r.l.map(x=>({item_id:x.i,qty:+($('#e'+id+'_'+x.i)||{}).value})).filter(x=>x.qty>0);
-    body.note=(($('#c'+id)||{}).value||'تم التعديل').trim();
-    if(!body.lines.length)return toast('اترك صنفًا واحدًا على الأقل أو ارفض الطلب');
-  }
   try{
     await api('/requests/'+id+'/action','POST',body);ui=null;await refresh();
-    toast(a=='out'?'تم الصرف':a=='no'?'تم رفض الطلب':a=='save'?'تم حفظ التعديل':a=='rev'?'تم التأكيد وإرسال الطلب لمدير المنطقة':'تمت الموافقة وإرسال الطلب لمسؤول المخزن');
+    toast(a=='out'?'تم الصرف':a=='no'?'تم رفض الطلب':a=='rev'?'تم التأكيد وإرسال الطلب لمدير المنطقة':'تمت الموافقة وإرسال الطلب لمسؤول المخزن');
     go();
   }catch(err){toast(err.message)}
 }
@@ -1639,8 +1921,8 @@ function mfPickEntry(no){
   const st=document.getElementById('mf_status');if(st)st.value=MF.status;
   toast('تم ربط إذن الدخول وتحديث الحالة');
 }
-function mfSheet(rec,blank){
-  const ro=!blank&&rec&&rec.id&&!mfCanEdit();
+function mfSheet(rec,blank,readOnly){
+  const ro=!!readOnly||(!blank&&rec&&rec.id&&!mfCanEdit());
   const f=(label,key,opt)=>mfField(label,rec,key,Object.assign({ro},opt||{}));
   const dcell=(label,key)=>mfDateCell(label,rec,key,{ro});
   const area=(label,key,rows)=>mfArea(label,rec,key,{ro,rows});
@@ -1745,7 +2027,7 @@ function mfOpen(id,print){
 }
 function mfNew(){tab='mf';MF=mfBlankRecord();mfView='edit';mfBlank=false;mfPendDel=null;go()}
 function mfBlankPrint(){tab='mf';MF=mfBlankRecord();mfView='edit';mfBlank=true;mfPendDel=null;go();setTimeout(()=>window.print(),550)}
-function mfBack(){mfView='list';MF=null;mfBlank=false;mfPendDel=null;go()}
+function mfBack(){if(mfReturnToIssue)return mfReturnToIssuePage();mfView='list';MF=null;mfBlank=false;mfPendDel=null;go()}
 function mfPrintCurrent(){mfCollect();window.print()}
 async function mfSave(){
   if(!MF)return;
@@ -1757,13 +2039,16 @@ async function mfSave(){
   Object.keys(MF).forEach(k=>{if(!['id','number','createdBy','createdAt','updatedBy','updatedAt'].includes(k))body[k]=MF[k]});
   try{
     const res=MF.id?await api('/maintenance-forms/'+MF.id,'PUT',body):await api('/maintenance-forms','POST',body);
-    MF=res.form;mfView='edit';mfBlank=false;await refresh();toast(MF.number?'تم حفظ نموذج الصيانة '+MF.number:'تم حفظ نموذج الصيانة');go();
+    MF=res.form;mfView='edit';mfBlank=false;await refresh();
+    if(mfReturnToIssue){toast('تم حفظ نموذج الصيانة، أكمل بيانات إذن الخروج');mfReturnToIssuePage();return}
+    toast(MF.number?'تم حفظ نموذج الصيانة '+MF.number:'تم حفظ نموذج الصيانة');go();
   }catch(err){toast(err.message)}
 }
 async function mfDelete(id){
   if(!ok('maintDelete'))return;
-  if(mfPendDel!==id){mfPendDel=id;toast('اضغط تأكيد الحذف للمتابعة');return go()}
-  try{await api('/maintenance-forms/'+id,'DELETE');mfPendDel=null;if(MF&&MF.id==id){MF=null;mfView='list'}await refresh();toast('تم حذف نموذج الصيانة');go()}catch(err){mfPendDel=null;toast(err.message);go()}
+  const record=MFORMS.find(row=>Number(row.id)===Number(id));if(!record)return;
+  const reason=await confirmDelete(record.number||'نموذج الصيانة','سيتم حذف سجل النموذج المرتبط بهذا الجهاز.');if(!reason)return;
+  try{await api('/maintenance-forms/'+id,'DELETE',{reason});mfPendDel=null;if(MF&&MF.id==id){MF=null;mfView='list'}await refresh();toast('تم حذف نموذج الصيانة');go()}catch(err){toast(err.message)}
 }
 function resMaintForms(){
   const q=SEARCH.mf;
@@ -1782,7 +2067,7 @@ function resMaintForms(){
     <td class="nmcell">${e(r.branchName||r.maintenanceEntity||'-')}</td>
     <td>${r.maintenanceType==='external'?'<span class="chip">خارجية</span>':'<span class="chip">داخلية</span>'}</td>
     <td>${mfStatusChip(r.status)}</td>
-    <td><div class="acts"><button class="btn ghost" onclick="mfOpen(${r.id})">${mfCanEdit()?'فتح / تعديل':'عرض'}</button><button class="btn soft" onclick="mfOpen(${r.id},true)">طباعة</button>${ok('maintDelete')?`<button class="btn bad" onclick="mfDelete(${r.id})">${mfPendDel==r.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></td>
+    <td><div class="acts"><button class="btn ghost" onclick="mfOpen(${r.id})">${mfCanEdit()?'فتح / تعديل':'عرض'}</button><button class="btn soft" onclick="mfOpen(${r.id},true)">طباعة</button>${ok('maintDelete')?`<button class="btn bad" onclick="mfDelete(${r.id})">حذف</button>`:''}</div></td>
    </tr>`).join('')}</table></div>`+pager('mf',PV.mf,pg.p,pg.n):(MFORMS.length?noRes('mf'):'<p class="mut">لا توجد نماذج صيانة بعد. ابدأ بنموذج جديد أو من سطر إذن الاستلام.</p>');
   return {html,total:rows.length};
 }
@@ -1808,7 +2093,7 @@ function vMaintFormEditor(){
       <button class="btn ghost" onclick="mfBack()">رجوع للقائمة</button>
       ${ro?'':`<button class="btn" onclick="mfSave()">${rec.id?'حفظ التعديل':'حفظ النموذج'}</button>`}
       <button class="btn soft" onclick="mfPrintCurrent()">طباعة</button>
-      ${rec.id&&ok('maintDelete')?`<button class="btn bad" onclick="mfDelete(${rec.id})">${mfPendDel==rec.id?'تأكيد الحذف':'حذف'}</button>`:''}
+      ${rec.id&&ok('maintDelete')?`<button class="btn bad" onclick="mfDelete(${rec.id})">حذف</button>`:''}
     </div>
     <div class="grp">
       <label>نوع الصيانة<select id="mf_type" ${ro?'disabled':''} onchange="mfSetType(this.value)">${MF_TYPE.map(([v,l])=>`<option value="${v}"${rec.maintenanceType===v?' selected':''}>${l}</option>`).join('')}</select></label>
@@ -1824,6 +2109,9 @@ function mfFromVoucher(vid,li){
   const v=[...DB.in,...DB.out].find(x=>Number(x.id)===Number(vid));
   if(!v||!v.lines||!v.lines[li])return toast('سطر الإذن غير موجود');
   const l=v.lines[li];
+  const firstSerial=(l.sns||[])[0]||'';
+  const linked=MFORMS.find(f=>(Number(f.issuePermitId)===Number(v.id)||Number(f.entryPermitId)===Number(v.id)||Number(f.receiptVoucherId)===Number(v.id))&&Number(f.itemId)===Number(l.i)&&String(f.serial||'').toLowerCase()===String(firstSerial).toLowerCase());
+  if(linked)return mfOpen(linked.id);
   const rec=mfBlankRecord();
   rec.maintenanceType=v.k==='sup'?'external':'internal';
   rec.status=v.k==='sup'?'sent_external':(v.k==='maint'?'received_after_maintenance':'received');
@@ -2032,8 +2320,9 @@ function dspBack(){dspView='list';DSP=null;dspPendDel=null;go()}
 function dspPrintCurrent(){dspCollect();window.print()}
 async function dspDelete(id){
   if(!ok('delRecv'))return;
-  if(dspPendDel!==id){dspPendDel=id;toast('اضغط تأكيد الحذف للمتابعة');return go()}
-  try{await api('/vouchers/'+id,'DELETE');try{await api('/dispatch-meta/'+id,'DELETE')}catch(_){}dspPendDel=null;await refresh();toast('تم حذف إذن الصرف وتعديل الأرصدة');go()}catch(e){dspPendDel=null;toast(e.message);go()}
+  const record=DB.out.find(row=>Number(row.id)===Number(id));if(!record)return;
+  const reason=await confirmDelete('إذن رقم '+record.p,'سيُحذف الإذن ويُعكس أثره على الأرصدة.');if(!reason)return;
+  try{await api('/vouchers/'+id,'DELETE',{reason});dspPendDel=null;await refresh();toast('تم حذف إذن الصرف وتعديل الأرصدة');go()}catch(e){toast(e.message)}
 }
 function dspListText(v){
   const m=dspMeta(v.id);
@@ -2044,7 +2333,7 @@ function resDispatch(){
   const pg=paginate(rows,PV.dispatch);
   const html=rows.length?`<div class="box tw"><h3>أذون الصرف / الإرسال (${rows.length})</h3><table style="min-width:980px;table-layout:fixed"><colgroup><col style="width:10%"><col style="width:8%"><col style="width:10%"><col style="width:18%"><col style="width:7%"><col style="width:7%"><col style="width:15%"><col style="width:25%"></colgroup><tr><th>رقم الإذن</th><th>التاريخ</th><th>نوع الجهة</th><th>الجهة المستلمة</th><th>الأصناف</th><th>القطع</th><th>نموذج صيانة</th><th>الإجراءات</th></tr>${pg.rows.map(v=>{
     const m=dspMeta(v.id),dest=m.destType||dspInferDest(v),f=m.maintenanceFormId?MFORMS.find(x=>Number(x.id)===Number(m.maintenanceFormId)):null;
-    return `<tr><td><b>${e(v.p)}</b></td><td>${dcell(v.d)}</td><td>${e(DSP_DEST_LABEL[dest]||'-')}</td><td class="nmcell">${e(dspPartyOf(v)||'-')}</td><td>${v.lines.length}</td><td>${v.lines.reduce((a,l)=>a+(+l.q||0),0)}</td><td>${f?`<span class="chip">${e(f.number)}</span>`:'<span class="mut">-</span>'}</td><td><div class="acts"><button class="btn ghost" onclick="dspOpen(${v.id})">${ok('stock')?'فتح / تعديل':'عرض'}</button><button class="btn soft" onclick="dspOpen(${v.id},true)">طباعة</button>${ok('delRecv')?`<button class="btn bad" onclick="dspDelete(${v.id})">${dspPendDel==v.id?'تأكيد الحذف':'حذف'}</button>`:''}</div></td></tr>`;
+    return `<tr><td><b>${e(v.p)}</b></td><td>${dcell(v.d)}</td><td>${e(DSP_DEST_LABEL[dest]||'-')}</td><td class="nmcell">${e(dspPartyOf(v)||'-')}</td><td>${v.lines.length}</td><td>${v.lines.reduce((a,l)=>a+(+l.q||0),0)}</td><td>${f?`<span class="chip">${e(f.number)}</span>`:'<span class="mut">-</span>'}</td><td><div class="acts"><button class="btn ghost" onclick="dspOpen(${v.id})">${ok('stock')?'فتح / تعديل':'عرض'}</button><button class="btn soft" onclick="dspOpen(${v.id},true)">طباعة</button>${ok('delRecv')?`<button class="btn bad" onclick="dspDelete(${v.id})">حذف</button>`:''}</div></td></tr>`;
   }).join('')}</table></div>`+pager('dispatch',PV.dispatch,pg.p,pg.n):(DB.out.length?noRes('dispatch'):'<p class="mut">لا توجد أذون صرف بعد.</p>');
   return {html,total:rows.length};
 }
@@ -2135,7 +2424,7 @@ function vDispatchEditor(){
       <button class="btn ghost" onclick="dspBack()">رجوع للقائمة</button>
       <button class="btn" onclick="dspSave()">${DSP.id?'حفظ التعديل':'تسجيل الإذن'}</button>
       <button class="btn soft" onclick="dspPrintCurrent()">طباعة</button>
-      ${DSP.id&&ok('delRecv')?`<button class="btn bad" onclick="dspDelete(${DSP.id})">${dspPendDel==DSP.id?'تأكيد الحذف':'حذف'}</button>`:''}
+      ${DSP.id&&ok('delRecv')?`<button class="btn bad" onclick="dspDelete(${DSP.id})">حذف</button>`:''}
     </div>
     <div class="grp">
       <label>ربط نموذج صيانة<select onchange="dspPickMaintForm(this.value)"><option value="">بدون</option>${maintOpts.map(f=>`<option value="${f.id}"${Number(DSP.maintenanceFormId)===Number(f.id)?' selected':''}>${e(f.number)} — ${e(f.serial||'')}</option>`).join('')}</select></label>
