@@ -20,6 +20,7 @@ store.backupNow();
 const routes = require('./routes');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(cors());
 app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 app.use(express.json({ limit: '8mb' }));

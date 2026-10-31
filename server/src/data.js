@@ -403,7 +403,9 @@ function serialLedger(itemIds, excludeVoucherId) {
   let sequence = 0;
   liveVouchers().slice().sort((a, b) => Number(a.id) - Number(b.id)).forEach((voucher) => {
     if (excludeVoucherId != null && Number(voucher.id) === Number(excludeVoucherId)) return;
-    let at = voucher.edited_at || voucher.created_at || '';
+    // Only immutable timestamps order the ledger: an edit must never move a
+    // historical receipt after a later stocktake or scrap.
+    let at = voucher.created_at || '';
     (voucher.lines || []).forEach((line) => {
       const reviewedAt = line.inspection && line.inspection.reviewed_at;
       if (reviewedAt && (!at || String(reviewedAt) > String(at))) at = reviewedAt;
@@ -790,8 +792,14 @@ function voucherLink(form, key, value, actor) {
 
 const DEFAULT_STATUS_ORDER = { review: 0, pending: 1, approved: 2, released: 3, rejected: 4 };
 
-function bootstrap(role) {
+function bootstrap(role, allowed) {
   const junior = role === 'junior';
+  // Callers pass the real permission check (role + per-user overrides) so the
+  // payload never carries data the matching endpoint would refuse.
+  const may = typeof allowed === 'function' ? allowed : () => false;
+  const mayViewForms = may('maintView');
+  const mayViewDispatch = may('view');
+  const mayViewPhotos = may('view');
   const categoryName = new Map(state.categories.map((c) => [Number(c.id), c.name]));
   const supplierName = new Map(state.suppliers.map((s) => [Number(s.id), s.name]));
   const branchQtyMap = {};
@@ -823,7 +831,7 @@ function bootstrap(role) {
         status: l.inspection.status || '',
         condition: l.inspection.condition || '',
         notes: l.inspection.notes || '',
-        photos: (l.inspection.photos || []).map((photo) => ({ id: photo.id, url: '/api/inspection-photos/' + encodeURIComponent(photo.id) })),
+        photos: mayViewPhotos ? (l.inspection.photos || []).map((photo) => ({ id: photo.id, url: '/api/inspection-photos/' + encodeURIComponent(photo.id) })) : [],
         decision: l.inspection.decision || '',
         reviewedBy: l.inspection.reviewed_by || '',
         reviewedAt: l.inspection.reviewed_at || '',
@@ -910,8 +918,8 @@ function bootstrap(role) {
       at: r.created_at || ''
     })),
     requests,
-    maintenanceForms: state.forms,
-    dispatchMeta: junior ? {} : state.dispatchMeta
+    maintenanceForms: mayViewForms ? state.forms : [],
+    dispatchMeta: mayViewDispatch ? state.dispatchMeta : {}
   };
 }
 
