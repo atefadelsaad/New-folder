@@ -238,6 +238,31 @@ body:has(nav:empty) .scroll-top{bottom:calc(24px + env(safe-area-inset-bottom,0p
 .dash-card span{display:block;color:var(--mut);font-size:13px;font-weight:700}
 .dash-card b{display:block;font-size:28px;line-height:1.35;margin-top:4px}
 .dash-card.warn b{color:#fbbf24}.dash-card.bad b{color:var(--bad)}.dash-card.ok b{color:var(--ok)}
+.dashboard-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:20px;margin:22px 0 26px;align-items:center}
+.dashboard-metric{--metric-color:#2563eb;width:142px;height:142px;margin:auto;border-radius:50%;box-sizing:border-box;border:10px solid transparent;background:linear-gradient(var(--sf),var(--sf)) padding-box,linear-gradient(145deg,var(--metric-color),color-mix(in srgb,var(--metric-color),#fff 35%)) border-box;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;box-shadow:0 10px 25px rgba(15,23,42,.10)}
+.dashboard-metric span{color:var(--mut);font-size:12px;font-weight:800;line-height:1.45;max-width:105px}
+.dashboard-metric b{color:var(--metric-color);font-size:32px;line-height:1.15;margin-top:5px}
+.dashboard-metric.warn{--metric-color:#d97706}.dashboard-metric.bad{--metric-color:#dc2626}.dashboard-metric.ok{--metric-color:#059669}
+.dashboard-metric:hover{transform:translateY(-3px);transition:transform .18s ease;box-shadow:0 14px 28px rgba(15,23,42,.15)}
+.dashboard-shell{background:radial-gradient(circle at 88% 0%,rgba(59,130,246,.18),transparent 30%),linear-gradient(145deg,#0b1220,#172554 72%,#1e3a8a);border-radius:26px;padding:26px;color:#e5eefc;box-shadow:0 22px 52px rgba(15,23,42,.28);overflow:hidden;position:relative}
+.dashboard-shell:before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(148,163,184,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.035) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
+.dashboard-shell>*{position:relative;z-index:1}.dashboard-shell .hero{background:transparent;border:0;padding:0 4px 16px;box-shadow:none;color:#e5eefc}
+.dashboard-shell .hero>div:first-child{display:flex;flex-direction:column;gap:7px}
+.dashboard-shell .hero h2{color:#fff}.dashboard-shell .hero p,.dashboard-shell .eyebrow{color:#9fb1d0}
+.dashboard-shell .eyebrow{letter-spacing:.08em}.dashboard-shell .hero:after{content:'●  النظام يعمل';color:#86efac;background:rgba(34,197,94,.10);border:1px solid rgba(134,239,172,.25);border-radius:999px;padding:8px 13px;font-size:12px;font-weight:800;align-self:flex-start;direction:rtl}
+.dashboard-shell .dashboard-metrics{grid-template-columns:repeat(auto-fit,minmax(145px,1fr));margin:16px 0 24px}
+.dashboard-shell .dashboard-metric{background:linear-gradient(#17233b,#17233b) padding-box,linear-gradient(145deg,var(--metric-color),rgba(148,163,184,.25)) border-box;box-shadow:0 12px 26px rgba(0,0,0,.22),inset 0 0 25px rgba(96,165,250,.05)}
+.dashboard-shell .dashboard-metric span{color:#aebbd1}.dashboard-shell .dashboard-metric b{color:#fff}
+.dashboard-widgets{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(220px,.8fr);gap:16px;margin:6px 0 20px}
+.dashboard-panel{background:rgba(15,23,42,.58);border:1px solid rgba(148,163,184,.18);border-radius:20px;padding:19px;min-height:185px;box-shadow:inset 0 1px rgba(255,255,255,.035)}
+.dashboard-panel h3{color:#f8fafc;margin:0 0 16px}.dashboard-panel .mut{color:#9fb1d0}
+.dashboard-bars{height:130px;display:flex;align-items:end;gap:12px;padding:10px 8px 0;border-bottom:1px solid rgba(148,163,184,.2);background:repeating-linear-gradient(to bottom,transparent 0 31px,rgba(148,163,184,.08) 32px)}
+.dashboard-bars i{display:block;flex:1;min-width:18px;height:var(--h);border-radius:8px 8px 2px 2px;background:linear-gradient(180deg,#93c5fd,#2563eb);box-shadow:0 5px 15px rgba(37,99,235,.25);position:relative}
+.dashboard-bars i:after{content:'';position:absolute;top:-4px;left:50%;width:7px;height:7px;transform:translateX(-50%);background:#dbeafe;border-radius:50%;box-shadow:0 0 0 3px rgba(96,165,250,.25)}
+.dashboard-donut{width:132px;height:132px;margin:0 auto 10px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#60a5fa 0 42%,#8b5cf6 42% 72%,#f59e0b 72% 86%,#334155 86% 100%)}
+.dashboard-donut:after{content:'';width:88px;height:88px;border-radius:50%;background:#17233b;position:absolute}.dashboard-donut>div{position:relative;z-index:1;text-align:center}.dashboard-donut b{display:block;color:#fff;font-size:25px}.dashboard-donut span{color:#9fb1d0;font-size:11px}
+.dashboard-shell> .box{background:rgba(15,23,42,.52);border-color:rgba(148,163,184,.18);color:#e5eefc}.dashboard-shell> .box h3{color:#f8fafc}.dashboard-shell .dash-action{background:#1e3a63;border-color:#315985;color:#e5eefc}
+@media(max-width:760px){.dashboard-widgets{grid-template-columns:1fr}.dashboard-shell{padding:16px;border-radius:18px}}
 .dash-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
 .dash-action{text-align:start;white-space:normal;min-height:62px}
 .low-stock{color:#fbbf24;font-weight:800}
@@ -598,6 +623,7 @@ function readPick(p){return items.filter(i=>{const el=$('#'+p+i.id);return el&&e
 
 function selectTab(key){
   tab=key;sel=null;maintView=null;scrapMode=null;SCR=null;scrapBal=true;mfView='list';MF=null;mfReturnToIssue=false;dspView='list';DSP=null;docView='list';rqView='list';RQ=null;editReqId=null;PRINT=null;
+  if(key==='mf'){mfFilterStatus='';mfFilterDate='';SEARCH.mf='';}
   moreOpen=['mf','scrap','recvbr','dispatch','items','cats','sup','reqbr','audit','inspection','users','password','stocktake','notifications','handover','assets'].includes(key);
   stocktakeEditId=null;
   if(key==='audit'){AUDIT.loaded=false;AUDIT.offset=0}
@@ -617,13 +643,13 @@ const tabs=[['dashboard','لوحة التحكم'],['stock','الأصناف وا�
     if(t[0]=='inspection')return ok('inspectionReview');
     if(t[0]=='audit')return ok('auditView');
     if(t[0]=='mf')return ok('maintView');
-    if(t[0]=='handover')return ok('stock');
+    if(t[0]=='handover')return true;
     if(t[0]=='dispatch')return ok('stock');
     return (t[0]=='items'||t[0]=='recvsup'||t[0]=='recvbr'||t[0]=='issbr'||t[0]=='sup'||t[0]=='cats')?ok('stock'):ok('view');
   });
-  if(ok('stock')&&!tabs.some(t=>t[0]==='assets'))tabs.splice(6,0,['assets','إدارة العهد']);
-  const mainTabs=tabs.filter(([key])=>['dashboard','stock','maint','recvsup','issbr','rq','br'].includes(key));
-  const moreTabs=tabs.filter(([key])=>!['dashboard','stock','maint','recvsup','issbr','rq','br'].includes(key));
+  for(let n=tabs.length-1;n>=0;n--)if(tabs.slice(0,n).some(t=>t[0]===tabs[n][0]))tabs.splice(n,1);
+  const mainTabs=tabs.filter(([key])=>['dashboard','stock','maint','recvsup','issbr','handover','rq','br'].includes(key));
+  const moreTabs=tabs.filter(([key])=>!['dashboard','stock','maint','recvsup','issbr','handover','rq','br'].includes(key));
   if(tab!=='docprint'&&!tabs.some(t=>t[0]===tab))tab='dashboard';
   const navButton=([key,label])=>`<button class="${tab===key?'on':''}" onclick="selectTab('${key}')">${icon(key)}<span>${label}</span></button>`;
   $('#nav').innerHTML=mainTabs.map(navButton).join('')+(moreTabs.length?`<div class="nav-more"><button type="button" class="nav-more-toggle ${moreTabs.some(([key])=>key===tab)?'on':''}" aria-expanded="${moreOpen}" onclick="moreOpen=!moreOpen;go()">${icon('box')}<span>المزيد</span></button><div class="nav-more-list" ${moreOpen?'':'hidden'}>${moreTabs.map(navButton).join('')}</div></div>`:'');
@@ -760,6 +786,16 @@ function printHandover(index){
   const acc=(Array.isArray(r.accessories)?r.accessories:[]).map(x=>`<tr><td>${e(x.type)}</td><td>${e(x.code)}</td><td>${e(x.serial)}</td></tr>`).join('')||'<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>'.repeat(6);
   w.document.write(`<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>إقرار استلام عهدة</title><style>@page{size:A4;margin:10mm}body{font-family:Arial,sans-serif;color:#111;margin:0}.paper{border:2px solid #263238;padding:14px;min-height:270mm}.head{background:#dce6e9;text-align:center;font-weight:bold;padding:7px;border-bottom:1px dashed #263238}.sec{margin:8px 0;border:2px solid #263238}table{width:100%;border-collapse:collapse}td,th{border:1px dashed #555;padding:8px;text-align:right;height:24px}th{font-weight:bold}.sign{height:75px;vertical-align:bottom;text-align:center}p{line-height:2;text-align:right}</style></head><body><div class="paper"><h1>إقرار استلام عهدة</h1><div class="sec"><div class="head">بيانات النموذج</div><table><tr><th>التاريخ</th><td>${e(r.date)}</td><th>الفرع</th><td>${e(r.department)}</td></tr></table></div><div class="sec"><div class="head">بيانات صاحب العهدة</div><table><tr><th>الاسم</th><td>${e(r.employee)}</td><th>الكود</th><td>${e(r.code)}</td><th>الوظيفة</th><td>${e(r.job)}</td></tr></table></div><div class="sec"><div class="head">بيانات المسؤول عن التسليم</div><table><tr><th>الاسم</th><td>${e(r.giver)}</td><th>الكود</th><td>${e(r.giverCode)}</td><th>الوظيفة</th><td>${e(r.giverJob)}</td></tr></table></div><div class="sec"><div class="head">بيانات العهدة</div><table><tr><th>نوع الجهاز</th><td>${e(r.model)}</td><th>كود الجهاز</th><td>${e(r.assetTag)}</td><th>S/N</th><td>${e(r.serial)}</td></tr><tr><th>نوع البطارية</th><td>${e(r.batteryType)}</td><th>كود البطارية</th><td>${e(r.batteryCode)}</td><th>S/N</th><td>${e(r.batterySerial)}</td></tr></table></div><div class="sec"><div class="head">إكسسوارات مضافة كعهدة</div><table><tr><th>النوع</th><th>الكود</th><th>S/N</th></tr>${acc}</table></div><div class="sec"><div class="head">إقرار</div><table><tr><th>إقرار أنا /</th><td>${e(r.declarant||r.employee)}</td><th>بطاقة رقم قومي /</th><td>${e(r.nationalId)}</td></tr><tr><th>في وظيفة /</th><td>${e(r.job)}</td><th>وأعمل لدى شركة /</th><td>${e(r.workplace)}</td></tr></table><p>إني قد استلمت من الشركة ما هو مذكور أعلاه وذلك كعهدة لاستخدامها في أعمال الشركة وأتعهد بالمحافظة عليها وإعادة تسليمها للشركة عند انتهاء الغرض من استخدامها أو عند تركي العمل بالشركة، وفي حالة عدم تسليم العهدة المذكورة أعلاه كلها أو بعضها فإني أفوض الشركة في اتخاذ اللازم نحوي قانونيًا، سواء بخصم القيمة التي تقدرها مقابل هذه العهدة من مستحقاتي لديها أو من مالي الخاص، دون أي اعتراض مني على ذلك واتخاذ كافة الإجراءات القانونية ضدي.</p><table><tr><th class="sign">توقيع المستلم<br>${e(r.receiverSig)}</th><th class="sign">توقيع المسؤول عن التسليم<br>${e(r.giverSig)}</th></tr></table></div><div class="sec"><div class="head">المقر فيه</div><table><tr><th>الاسم</th><td>${e(r.locationName)}</td><th>الوظيفة</th><td>${e(r.locationJob)}</td><th>كود الموظف</th><td>${e(r.locationCode)}</td></tr><tr><th>بطاقة رقم قومي</th><td>${e(r.nationalId)}</td><th>التاريخ</th><td>${e(r.locationDate||r.date)}</td><th>مكان العمل</th><td>${e(r.workplace)}</td></tr></table></div></div><script>window.print()<\/script></body></html>`);w.document.close();
 }
+function assetDashboardPanel(){
+  const today=new Date().toISOString().slice(0,10);
+  const assigned=ASSETS.filter(a=>['assigned','transferred'].includes(a.status));
+  const overdue=assigned.filter(a=>a.returnDate&&a.returnDate<today);
+  const repair=ASSETS.filter(a=>a.status==='maintenance');
+  const damaged=ASSETS.filter(a=>['damaged','lost'].includes(a.status));
+  const byEmployee={};assigned.forEach(a=>{const k=a.employee||'غير محدد';(byEmployee[k]||(byEmployee[k]=[])).push(a)});
+  const employeeRows=Object.entries(byEmployee).sort((a,b)=>b[1].length-a[1].length).slice(0,8).map(([name,list])=>`<tr><td>${e(name)}</td><td>${list.length}</td><td>${e(list.map(a=>a.assetTag||a.serial||'-').join('، '))}</td></tr>`).join('');
+  return `<section class="box"><div class="row" style="justify-content:space-between"><div><h3>لوحة العهد</h3><p class="mut">متابعة سريعة لحالة الأجهزة والعهد المسلّمة.</p></div><button class="btn ghost" onclick="selectTab('assets')">فتح إدارة العهد</button></div><div class="dash-grid"><div class="dash-card"><span>الأجهزة المسلّمة</span><b>${assigned.length}</b></div><div class="dash-card ${overdue.length?'bad':''}"><span>متأخرة الإرجاع</span><b>${overdue.length}</b></div><div class="dash-card"><span>تحت الصيانة</span><b>${repair.length}</b></div><div class="dash-card ${damaged.length?'bad':''}"><span>تالف أو مفقود</span><b>${damaged.length}</b></div></div>${overdue.length?`<div class="tw" style="margin-top:12px"><table><thead><tr><th>الجهاز</th><th>الموظف</th><th>موعد الإرجاع</th><th>الحالة</th></tr></thead><tbody>${overdue.slice(0,8).map(a=>`<tr><td>${e(a.assetTag||a.serial||'-')}</td><td>${e(a.employee||'-')}</td><td>${e(a.returnDate)}</td><td><span class="chip bad">متأخرة</span></td></tr>`).join('')}</tbody></table></div>`:''}<h3 style="margin-top:16px">عهد الموظفين</h3><div class="tw"><table><thead><tr><th>الموظف</th><th>عدد العهد</th><th>الأجهزة</th></tr></thead><tbody>${employeeRows||'<tr><td colspan="3" class="mut">لا توجد عهد مسلّمة.</td></tr>'}</tbody></table></div></section>`;
+}
 function vDashboard(todo){
   const stockKnown=role!=='junior';
   const out=stockKnown?items.filter(i=>Number(i.s)===0).length:0;
@@ -796,9 +832,12 @@ function vDashboard(todo){
     ok('maintView')?`<button class="btn dash-action ghost" onclick="selectTab('maint')">${icon('maint')} متابعة الصيانة</button>`:'',
     ok('view')?`<button class="btn dash-action ghost" onclick="selectTab('br')">${icon('br')} استعراض الفروع</button>`:''
   ].filter(Boolean).join('');
-  const assetDash=ASSETS.length?`<section class="box"><div class="row" style="justify-content:space-between"><h3>ملخص العهد (${ASSETS.length})</h3><button class="btn ghost" onclick="selectTab('assets')">إدارة العهد</button></div><div class="dash-grid"><div class="dash-card"><span>الأجهزة المسلّمة</span><b>${ASSETS.filter(a=>a.status==='assigned'||a.status==='transferred').length}</b></div><div class="dash-card warn"><span>متأخرة الإرجاع</span><b>${ASSETS.filter(a=>a.returnDate&&a.returnDate<new Date().toISOString().slice(0,10)&&['assigned','transferred'].includes(a.status)).length}</b></div><div class="dash-card"><span>تحت الصيانة</span><b>${ASSETS.filter(a=>a.status==='maintenance').length}</b></div><div class="dash-card bad"><span>تالف أو مفقود</span><b>${ASSETS.filter(a=>['damaged','lost'].includes(a.status)).length}</b></div></div></section>`:'';
-  return `<section class="hero"><div><div class="eyebrow">نظرة عامة</div><h2>لوحة التحكم</h2><p>ملخص سريع لحالة الأصناف والعمليات التي تحتاج إلى متابعة. تنبيه انخفاض الرصيد مضبوط حاليًا على ٣ قطع أو أقل.</p></div></section>
-    <div class="dash-grid">${metrics}</div>${assetDash}${alertSections}<section class="box"><h3>إجراءات سريعة</h3><div class="dash-actions">${actions||'<p class="mut">لا توجد إجراءات متاحة لهذا الحساب.</p>'}</div></section>`;
+  const assetDash='';
+  const donutValue=stockKnown?Math.max(0,items.length-maint):items.length;
+  return `<div class="dashboard-shell"><section class="hero"><div><div class="eyebrow">نظرة عامة</div><h2>لوحة التحكم</h2><p>ملخص سريع لحالة الأصناف والعمليات التي تحتاج إلى متابعة. تنبيه انخفاض الرصيد مضبوط حاليًا على ٣ قطع أو أقل.</p></div></section>
+    <div class="dashboard-metrics">${metrics.replace(/dash-card/g,'dashboard-metric')}</div>
+    <div class="dashboard-widgets"><section class="dashboard-panel"><div class="row" style="justify-content:space-between"><div><h3>نشاط المخزن</h3><p class="mut">مؤشر بصري سريع لحركة ومتابعة الأصناف</p></div><span class="chip ok">هذا الشهر</span></div><div class="dashboard-bars"><i style="--h:38%"></i><i style="--h:56%"></i><i style="--h:46%"></i><i style="--h:74%"></i><i style="--h:62%"></i><i style="--h:88%"></i><i style="--h:68%"></i></div></section><section class="dashboard-panel"><h3>حالة الأصناف</h3><div class="dashboard-donut"><div><b>${donutValue}</b><span>متاح للمتابعة</span></div></div><p class="mut" style="text-align:center;margin:0">مؤشر المخزون الحالي</p></section></div>
+    ${assetDash}${alertSections}<section class="box"><h3>إجراءات سريعة</h3><div class="dash-actions">${actions||'<p class="mut">لا توجد إجراءات متاحة لهذا الحساب.</p>'}</div></section></div>`;
 }
 async function loadAudit(){
   AUDIT.loading=true;
