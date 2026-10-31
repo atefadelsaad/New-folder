@@ -84,6 +84,7 @@ tbody tr:hover td{background:var(--soft)}
 .rq{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:start}
 .acts{display:flex;flex-wrap:wrap;gap:8px}
 .ln{flex-direction:row;align-items:center;gap:8px;margin:4px 0}
+.permission-check{flex-direction:row;align-items:center;gap:8px;margin:4px 0}.permission-check input[type=checkbox],.ln input[type=checkbox]{width:18px;height:18px;min-height:18px;padding:0;margin:0;accent-color:var(--pri);cursor:pointer}
 .lg{margin-top:10px;border-inline-start:3px solid var(--ln);padding-inline-start:10px;font-size:13.5px;display:grid;gap:6px}
 .cm{width:100%;margin-top:10px}
 #t{position:fixed;inset-inline-start:236px;inset-inline-end:0;bottom:calc(22px + env(safe-area-inset-bottom,0px));margin:auto;width:max-content;max-width:90vw;background:var(--ink);color:var(--bg);padding:11px 20px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;box-shadow:var(--sh2);font-size:14.5px;font-weight:600;z-index:50}
@@ -173,6 +174,10 @@ body:has(nav:empty) .scroll-top{bottom:calc(24px + env(safe-area-inset-bottom,0p
 .maintenance-form-link .maintenance-form-preview{background:transparent}
 .paper-sheet{width:210mm;min-height:296mm;background:#fff;color:#000;margin:0 auto;padding:7mm 8mm 6mm;box-shadow:0 18px 42px rgba(0,0,0,.42);border-radius:2px;font-family:Cairo,Tahoma,Arial,sans-serif;font-size:8.8pt;line-height:1.35;direction:rtl}
 .paper-sheet *{box-sizing:border-box}
+.paper-sheet#handoverForm{margin:0 auto 18px;box-shadow:0 18px 42px rgba(0,0,0,.42)}
+.paper-sheet#handoverForm label{color:#000;font-weight:800}
+.paper-sheet#handoverForm input,.paper-sheet#handoverForm select,.paper-sheet#handoverForm textarea{background:#fff;color:#000;border:1px solid #777;border-radius:2px}
+.paper-sheet#handoverForm .acts{justify-content:center}
 .mf-head{position:relative;background:#000;color:#fff;height:11.5mm;display:flex;align-items:center;justify-content:center;margin-bottom:2.2mm;border:1px solid #000}
 .mf-head .mf-title{font-size:12pt;font-weight:800;letter-spacing:0;text-align:center;padding:0 28mm}
 .mf-head .mf-logo{position:absolute;right:2.2mm;top:50%;transform:translateY(-50%);height:9mm;max-width:24mm;object-fit:contain;background:#000}
@@ -362,6 +367,13 @@ let docView='list';
 let rqView='list',RQ=null,editReqId=null;
 let supEdit=null,pendSup=null;
 let role='junior',tab='dashboard',sel=null,q='',branchEditState=null,moreOpen=false;
+const HANDOVER_KEY='wh_handover_forms_v1';
+let HANDOVERS=[];
+try{HANDOVERS=JSON.parse(localStorage.getItem(HANDOVER_KEY)||'[]');if(!Array.isArray(HANDOVERS))HANDOVERS=[]}catch(_){HANDOVERS=[]}
+const ASSET_KEY='wh_asset_lifecycle_v1';
+let ASSETS=[];let assetSearch='';
+try{ASSETS=JSON.parse(localStorage.getItem(ASSET_KEY)||'[]');if(!Array.isArray(ASSETS))ASSETS=[]}catch(_){ASSETS=[]}
+const ASSET_STATUS={warehouse:'في المخزن',assigned:'مسلّمة لموظف',transferred:'منقولة لموظف آخر',returned:'مرتجعة للمخزن',maintenance:'تحت الصيانة',damaged:'تالفة',lost:'مفقودة'};
 let SAVING=false;
 const AUDIT={rows:[],total:0,offset:0,limit:50,loaded:false,loading:false};
 const FILTER={stockStatus:'',reqStatus:'',reqBranch:'',reqFrom:'',reqTo:'',docBranch:'',docFrom:'',docTo:''};
@@ -586,7 +598,7 @@ function readPick(p){return items.filter(i=>{const el=$('#'+p+i.id);return el&&e
 
 function selectTab(key){
   tab=key;sel=null;maintView=null;scrapMode=null;SCR=null;scrapBal=true;mfView='list';MF=null;mfReturnToIssue=false;dspView='list';DSP=null;docView='list';rqView='list';RQ=null;editReqId=null;PRINT=null;
-  moreOpen=['mf','scrap','recvbr','dispatch','items','cats','sup','reqbr','audit','inspection','users','password','stocktake','notifications'].includes(key);
+  moreOpen=['mf','scrap','recvbr','dispatch','items','cats','sup','reqbr','audit','inspection','users','password','stocktake','notifications','handover','assets'].includes(key);
   stocktakeEditId=null;
   if(key==='audit'){AUDIT.loaded=false;AUDIT.offset=0}
   go();
@@ -595,7 +607,7 @@ function go(){
   syncSearchScope();
   const todo=reqs.filter(r=>(r.st=='review'&&ok('review'))||(r.st=='pending'&&ok('approve'))||(r.st=='approved'&&ok('release'))).length;
   const alertCount=notificationRows().length;
-  const tabs=[['dashboard','لوحة التحكم'],['stock','الأصناف والمخزن'],['maint','تحت الصيانة'],['recvsup','استلام من مورد'],['issbr','صرف إلى فرع'],['rq','الطلبات'+(todo?` (${todo})`:'')],['br','الفروع'],['notifications','الإشعارات'+(alertCount?` (${alertCount})`:'')],['stocktake','الجرد الدوري'],['mf','نماذج الصيانة'],['scrap','الخردة'],['recvbr','استلام من فرع'],['dispatch','إرسال البضاعة'],['items','إدارة الأصناف'],['cats','الفئات'],['sup','الموردون'],['reqbr','متطلبات الفروع'],['inspection','فحص الاستلامات'],['users','إدارة المستخدمين'],['password','تغيير كلمة المرور']].filter(t=>{
+const tabs=[['dashboard','لوحة التحكم'],['stock','الأصناف والمخزن'],['maint','تحت الصيانة'],['recvsup','استلام من مورد'],['issbr','صرف إلى فرع'],['handover','نماذج استلام العهدة'],['rq','الطلبات'+(todo?` (${todo})`:'')],['br','الفروع'],['notifications','الإشعارات'+(alertCount?` (${alertCount})`:'')],['stocktake','الجرد الدوري'],['mf','نماذج الصيانة'],['scrap','الخردة'],['recvbr','استلام من فرع'],['dispatch','إرسال البضاعة'],['items','إدارة الأصناف'],['cats','الفئات'],['sup','الموردون'],['reqbr','متطلبات الفروع'],['inspection','فحص الاستلامات'],['users','إدارة المستخدمين'],['password','تغيير كلمة المرور']].filter(t=>{
     if(t[0]=='rq')return true;
     if(t[0]=='dashboard')return true;
     if(t[0]=='notifications')return true;
@@ -605,16 +617,19 @@ function go(){
     if(t[0]=='inspection')return ok('inspectionReview');
     if(t[0]=='audit')return ok('auditView');
     if(t[0]=='mf')return ok('maintView');
+    if(t[0]=='handover')return ok('stock');
     if(t[0]=='dispatch')return ok('stock');
     return (t[0]=='items'||t[0]=='recvsup'||t[0]=='recvbr'||t[0]=='issbr'||t[0]=='sup'||t[0]=='cats')?ok('stock'):ok('view');
   });
+  if(ok('stock')&&!tabs.some(t=>t[0]==='assets'))tabs.splice(6,0,['assets','إدارة العهد']);
   const mainTabs=tabs.filter(([key])=>['dashboard','stock','maint','recvsup','issbr','rq','br'].includes(key));
   const moreTabs=tabs.filter(([key])=>!['dashboard','stock','maint','recvsup','issbr','rq','br'].includes(key));
   if(tab!=='docprint'&&!tabs.some(t=>t[0]===tab))tab='dashboard';
   const navButton=([key,label])=>`<button class="${tab===key?'on':''}" onclick="selectTab('${key}')">${icon(key)}<span>${label}</span></button>`;
   $('#nav').innerHTML=mainTabs.map(navButton).join('')+(moreTabs.length?`<div class="nav-more"><button type="button" class="nav-more-toggle ${moreTabs.some(([key])=>key===tab)?'on':''}" aria-expanded="${moreOpen}" onclick="moreOpen=!moreOpen;go()">${icon('box')}<span>المزيد</span></button><div class="nav-more-list" ${moreOpen?'':'hidden'}>${moreTabs.map(navButton).join('')}</div></div>`:'');
-  const content=tab==='docprint'?vDocPrint():tab==='dashboard'?vDashboard(todo):tab==='notifications'?vNotifications():tab==='stocktake'?vStocktakes():tab==='stock'?vStock():tab==='maint'?(maintView==='out'?vDoc('issmaint'):vMaint()):tab==='mf'?vMaintForms():tab==='scrap'?vScrap():tab==='recvsup'?vDoc('recvsup'):tab==='recvbr'?vDoc('recvbr'):tab==='issbr'?vDoc('issbr'):tab==='dispatch'?vDispatch():tab==='items'?vItems():tab==='cats'?vCats():tab==='sup'?vSuppliers():tab==='br'?(sel?vBranch():vBranches()):tab==='reqbr'?vBranchReqs():tab==='audit'?vAudit():tab==='inspection'?vInspectionQueue():tab==='users'?vUsers():tab==='password'?vChangePassword():vReqs();
+  const content=tab==='docprint'?vDocPrint():tab==='dashboard'?vDashboard(todo):tab==='notifications'?vNotifications():tab==='stocktake'?vStocktakes():tab==='stock'?vStock():tab==='maint'?(maintView==='out'?vDoc('issmaint'):vMaint()):tab==='mf'?vMaintForms():tab==='handover'?vHandover():tab==='assets'?vAssets():tab==='scrap'?vScrap():tab==='recvsup'?vDoc('recvsup'):tab==='recvbr'?vDoc('recvbr'):tab==='issbr'?vDoc('issbr'):tab==='dispatch'?vDispatch():tab==='items'?vItems():tab==='cats'?vCats():tab==='sup'?vSuppliers():tab==='br'?(sel?vBranch():vBranches()):tab==='reqbr'?vBranchReqs():tab==='audit'?vAudit():tab==='inspection'?vInspectionQueue():tab==='users'?vUsers():tab==='password'?vChangePassword():vReqs();
   $('#m').innerHTML=`<div id="formError" class="form-error" role="alert" aria-live="polite"></div>${content}`;
+  hydratePermissionCheckboxes($('#m'));
   decorateTables($('#m'));
   hydrateInspectionPhotos($('#m'));
   if(tab==='audit'&&!AUDIT.loaded&&!AUDIT.loading)loadAudit();
@@ -691,6 +706,60 @@ async function approveStocktake(id){
   if(!confirm('سيتم تعديل أرصدة المخزن إلى الكميات الفعلية المسجلة. هل تريد اعتماد التسوية؟'))return;
   try{await api('/stocktakes/'+id+'/approve','POST',{});stocktakeEditId=null;await refresh();toast('تم اعتماد تسوية الجرد');go()}catch(err){toast(err.message)}
 }
+function assetPersist(){localStorage.setItem(ASSET_KEY,JSON.stringify(ASSETS))}
+function assetAction(id,status){
+  const a=ASSETS.find(x=>Number(x.id)===Number(id));if(!a)return;
+  if(status==='assigned'||status==='transferred'){const name=prompt(status==='assigned'?'اسم الموظف المستلم':'اسم الموظف الجديد',a.employee||'');if(name===null)return;a.employee=name.trim()}
+  if(status==='returned'||status==='warehouse'){a.employee=''}
+  if(status==='maintenance')a.maintenanceDate=new Date().toISOString().slice(0,10);
+  a.status=status;a.history=a.history||[];a.history.push({status,employee:a.employee||'',date:new Date().toISOString().slice(0,10)});assetPersist();go();
+}
+function saveAsset(){
+  const val=id=>String(document.getElementById(id)?.value||'').trim();
+  const a={id:Date.now(),assetTag:val('asset_tag'),serial:val('asset_serial'),type:val('asset_type'),employee:val('asset_employee'),branch:val('asset_branch'),deliveryDate:val('asset_date'),returnDate:val('asset_return'),notes:val('asset_notes'),status:val('asset_status'),history:[]};
+  if(!a.assetTag&&!a.serial)return toast('اكتب رقم الجهاز أو السيريال');
+  ASSETS.push(a);assetPersist();toast('تم تسجيل العهدة');go();
+}
+function printAsset(id){
+  const a=ASSETS.find(x=>Number(x.id)===Number(id));if(!a)return;const w=window.open('','_blank');if(!w)return;
+  w.document.write(`<html dir="rtl"><head><meta charset="utf-8"><title>إقرار استلام عهدة</title><style>@page{size:A4;margin:12mm}body{font-family:Arial;color:#111}.paper{border:2px solid #222;padding:20px}h1{text-align:center}.sec{border:2px solid #222;margin:12px 0}.head{background:#dce6e9;text-align:center;font-weight:bold;padding:8px}table{width:100%;border-collapse:collapse}td,th{border:1px dashed #555;padding:10px;text-align:right}.sign{height:90px;vertical-align:bottom;text-align:center}</style></head><body><div class="paper"><h1>إقرار استلام عهدة</h1><div class="sec"><div class="head">بيانات العهدة</div><table><tr><th>نوع الجهاز</th><td>${e(a.type)}</td><th>رقم الجهاز</th><td>${e(a.assetTag)}</td></tr><tr><th>السيريال</th><td>${e(a.serial)}</td><th>الحالة</th><td>${e(ASSET_STATUS[a.status]||a.status)}</td></tr><tr><th>المستلم</th><td>${e(a.employee)}</td><th>الفرع</th><td>${e(a.branch)}</td></tr><tr><th>تاريخ التسليم</th><td>${e(a.deliveryDate)}</td><th>موعد الإرجاع</th><td>${e(a.returnDate)}</td></tr></table></div><div class="sec"><div class="head">ملاحظات</div><p>${e(a.notes)}</p></div><table><tr><th class="sign">توقيع المستلم</th><th class="sign">توقيع مسؤول العهدة</th></tr></table></div><script>window.print()<\/script></body></html>`);w.document.close();
+}
+function vAssets(){
+  const q=assetSearch.toLowerCase();const rows=ASSETS.filter(a=>!q||[a.assetTag,a.serial,a.employee,a.branch,a.type].join(' ').toLowerCase().includes(q));
+  const counts=Object.keys(ASSET_STATUS).map(k=>`<div class="dash-card"><span>${ASSET_STATUS[k]}</span><b>${ASSETS.filter(a=>a.status===k).length}</b></div>`).join('');
+  const actions=a=>`<button class="btn soft" onclick="assetAction(${a.id},'assigned')">تسليم</button><button class="btn soft" onclick="assetAction(${a.id},'transferred')">نقل</button><button class="btn soft" onclick="assetAction(${a.id},'returned')">إرجاع</button><button class="btn soft" onclick="assetAction(${a.id},'maintenance')">صيانة</button><button class="btn soft" onclick="assetAction(${a.id},'damaged')">تلف</button><button class="btn soft" onclick="assetAction(${a.id},'lost')">فقد</button><button class="btn ghost" onclick="printAsset(${a.id})">طباعة</button>`;
+  return `<div class="hero"><div><div class="eyebrow">العهد</div><h2>إدارة دورة حياة العهد</h2><p>استلام وتسليم ونقل وإرجاع وصيانة وتسجيل تلف أو فقد الأجهزة.</p></div></div><div class="dash-grid">${counts}</div><section class="box"><h3>تسجيل عهدة جديدة</h3><div class="grid"><label>رقم الجهاز<input id="asset_tag"></label><label>السيريال<input id="asset_serial"></label><label>نوع الجهاز<input id="asset_type" placeholder="لاب توب"></label><label>اسم الموظف<input id="asset_employee"></label><label>الفرع / القسم<input id="asset_branch"></label><label>تاريخ التسليم<input id="asset_date" type="date"></label><label>موعد الإرجاع<input id="asset_return" type="date"></label><label>الحالة<select id="asset_status">${Object.entries(ASSET_STATUS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label></div><label style="margin-top:10px">ملاحظات<textarea id="asset_notes" rows="2"></textarea></label><button class="btn" style="margin-top:12px" onclick="saveAsset()">حفظ العهدة</button></section><section class="box"><div class="row"><h3>سجل العهد</h3><input placeholder="بحث برقم الجهاز أو السيريال أو اسم الموظف" value="${e(assetSearch)}" oninput="assetSearch=this.value;go()"></div><div class="tw"><table><thead><tr><th>الجهاز</th><th>السيريال</th><th>الموظف</th><th>الحالة</th><th>موعد الإرجاع</th><th>الإجراءات</th></tr></thead><tbody>${rows.map(a=>`<tr><td>${e(a.assetTag||'-')}<br>${e(a.type||'')}</td><td>${e(a.serial||'-')}</td><td>${e(a.employee||'-')}</td><td>${e(ASSET_STATUS[a.status]||a.status)}</td><td>${e(a.returnDate||'-')}</td><td><div class="acts">${actions(a)}</div></td></tr>`).join('')||'<tr><td colspan="6">لا توجد عهد مسجلة.</td></tr>'}</tbody></table></div></section>`;
+}
+function vHandover(){
+  const rows=HANDOVERS.slice().reverse().map((r,i)=>`<tr><td>${HANDOVERS.length-i}</td><td>${e(r.employee||'-')}</td><td>${e(r.department||'-')}</td><td>${e(r.assetTag||r.serial||'-')}</td><td>${e(r.date||'-')}</td><td><button class="btn soft" onclick="printHandover(${HANDOVERS.length-1-i})">طباعة النموذج</button></td></tr>`).join('');
+  const blank=()=>`<div class="mf-sec"><div class="mf-sec-head">بيانات النموذج</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1fr 1fr 1fr"><div class="mf-cell"><span class="mf-label">التاريخ:</span><input class="mf-line" id="ho_date" type="date" value="${new Date().toISOString().slice(0,10)}" required></div><div class="mf-cell"><span class="mf-label">الفرع:</span><input class="mf-line" id="ho_department"></div><div class="mf-cell"><span class="mf-label">القسم:</span><input class="mf-line" id="ho_section"></div></div></div></div>
+  <div class="mf-sec"><div class="mf-sec-head">بيانات صاحب العهدة</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1.5fr 1fr 1fr"><div class="mf-cell"><span class="mf-label">الاسم:</span><input class="mf-line" id="ho_employee" required></div><div class="mf-cell"><span class="mf-label">الكود:</span><input class="mf-line" id="ho_code"></div><div class="mf-cell"><span class="mf-label">الوظيفة:</span><input class="mf-line" id="ho_job"></div></div></div></div>
+  <div class="mf-sec"><div class="mf-sec-head">بيانات المسؤول عن التسليم</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1.5fr 1fr 1fr"><div class="mf-cell"><span class="mf-label">الاسم:</span><input class="mf-line" id="ho_giver" required></div><div class="mf-cell"><span class="mf-label">الكود:</span><input class="mf-line" id="ho_giverCode"></div><div class="mf-cell"><span class="mf-label">الوظيفة:</span><input class="mf-line" id="ho_giverJob"></div></div></div></div>
+  <div class="mf-sec"><div class="mf-sec-head">بيانات العهدة</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1.4fr 1fr 1fr"><div class="mf-cell"><span class="mf-label">نوع الجهاز:</span><input class="mf-line" id="ho_model"></div><div class="mf-cell"><span class="mf-label">كود الجهاز:</span><input class="mf-line" id="ho_assetTag" required></div><div class="mf-cell"><span class="mf-label">S/N:</span><input class="mf-line" id="ho_serial"></div></div><div class="mf-row" style="grid-template-columns:1.4fr 1fr 1fr"><div class="mf-cell"><span class="mf-label">نوع البطارية:</span><input class="mf-line" id="ho_batteryType"></div><div class="mf-cell"><span class="mf-label">كود البطارية:</span><input class="mf-line" id="ho_batteryCode"></div><div class="mf-cell"><span class="mf-label">S/N:</span><input class="mf-line" id="ho_batterySerial"></div></div></div></div>
+  <div class="mf-sec"><div class="mf-sec-head">إكسسوارات مضافة كعهدة</div><table class="dsp-table"><thead><tr><th>النوع</th><th>الكود</th><th>S/N</th></tr></thead><tbody>${Array.from({length:6},(_,i)=>`<tr><td><input class="mf-line" id="ho_acc_type_${i}"></td><td><input class="mf-line" id="ho_acc_code_${i}"></td><td><input class="mf-line" id="ho_acc_sn_${i}"></td></tr>`).join('')}</tbody></table></div>
+  <div class="mf-sec"><div class="mf-sec-head">إقرار</div><div class="mf-table"><div class="mf-cell mf-block"><div class="mf-row" style="grid-template-columns:1fr"><div class="mf-cell"><span class="mf-label">إقرار أنا /</span><input class="mf-line" id="ho_declarant"></div><div class="mf-cell"><span class="mf-label">بطاقة رقم قومي /</span><input class="mf-line" id="ho_nationalId"></div><div class="mf-cell"><span class="mf-label">في وظيفة /</span><input class="mf-line" id="ho_job"></div><div class="mf-cell"><span class="mf-label">وأعمل لدى شركة /</span><input class="mf-line" id="ho_workplace"></div></div><p>إني قد استلمت من الشركة ما هو مذكور أعلاه وذلك كعهدة لاستخدامها في أعمال الشركة وأتعهد بالمحافظة عليها وإعادة تسليمها للشركة عند انتهاء الغرض من استخدامها أو عند تركي العمل بالشركة، وفي حالة عدم تسليم العهدة المذكورة أعلاه كلها أو بعضها فإني أفوض الشركة في اتخاذ اللازم نحوي قانونيًا، سواء بخصم القيمة التي تقدرها مقابل هذه العهدة من مستحقاتي لديها أو من مالي الخاص، دون أي اعتراض مني على ذلك واتخاذ كافة الإجراءات القانونية ضدي.</p><div class="mf-row" style="grid-template-columns:1fr 1fr"><div class="mf-cell"><span class="mf-label">توقيع المستلم:</span><input class="mf-line" id="ho_receiverSig"></div><div class="mf-cell"><span class="mf-label">توقيع المسؤول عن التسليم:</span><input class="mf-line" id="ho_giverSig"></div></div></div></div></div>
+  <div class="mf-sec"><div class="mf-sec-head">المقر فيه</div><div class="mf-table"><div class="mf-row" style="grid-template-columns:1.4fr 1fr 1fr"><div class="mf-cell"><span class="mf-label">الاسم:</span><input class="mf-line" id="ho_locationName"></div><div class="mf-cell"><span class="mf-label">الوظيفة:</span><input class="mf-line" id="ho_locationJob"></div><div class="mf-cell"><span class="mf-label">كود الموظف:</span><input class="mf-line" id="ho_locationCode"></div></div><div class="mf-row" style="grid-template-columns:1.4fr 1fr 1fr"><div class="mf-cell"><span class="mf-label">بطاقة رقم قومي:</span><input class="mf-line" id="ho_bottomNationalId"></div><div class="mf-cell"><span class="mf-label">التاريخ:</span><input class="mf-line" id="ho_locationDate" type="date"></div><div class="mf-cell"><span class="mf-label">مكان العمل:</span><input class="mf-line" id="ho_bottomWorkplace"></div></div></div></div>`;
+  return `<div class="hero no-print"><div><div class="eyebrow">العهد</div><h2>${icon('box')} نماذج استلام العهدة</h2></div><div class="acts"><button class="btn" onclick="document.getElementById('handoverForm').scrollIntoView({behavior:'smooth'})">نموذج جديد</button></div></div><div class="mf-page"><div class="paper-wrap"><section class="paper-sheet" id="handoverForm">${mfTitleBar('إقرار استلام عهدة')}${blank()}<div class="acts no-print" style="justify-content:center;margin-top:5mm"><button class="btn" onclick="saveHandover()">حفظ النموذج</button><button class="btn soft" onclick="window.print()">طباعة النموذج</button></div></section></div></div><section class="box no-print"><h3>النماذج المحفوظة</h3>${rows?`<div class="table-wrap"><table><thead><tr><th>م</th><th>المستلم</th><th>الفرع</th><th>كود الجهاز</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p class="mut">لا توجد نماذج محفوظة حتى الآن.</p>'}</section>`;
+}
+function saveHandover(){
+  const val=id=>String(document.getElementById(id)?.value||'').trim();
+  const accessories=Array.from({length:6},(_,i)=>({type:val('ho_acc_type_'+i),code:val('ho_acc_code_'+i),serial:val('ho_acc_sn_'+i)})).filter(x=>x.type||x.code||x.serial);
+  const r={employee:val('ho_employee'),declarant:val('ho_declarant'),department:val('ho_department'),section:val('ho_section'),code:val('ho_code'),job:val('ho_job'),date:val('ho_date'),assetTag:val('ho_assetTag'),serial:val('ho_serial'),model:val('ho_model'),batteryType:val('ho_batteryType'),batteryCode:val('ho_batteryCode'),batterySerial:val('ho_batterySerial'),accessories,giver:val('ho_giver'),giverCode:val('ho_giverCode'),giverJob:val('ho_giverJob'),giverSig:val('ho_giverSig'),receiverSig:val('ho_receiverSig'),locationName:val('ho_locationName'),locationJob:val('ho_locationJob'),locationCode:val('ho_locationCode'),nationalId:val('ho_nationalId'),workplace:val('ho_workplace'),locationDate:val('ho_locationDate'),createdAt:new Date().toISOString()};
+  if(!r.employee||!r.date||!r.assetTag||!r.giver)return toast('أكمل الحقول الإلزامية في نموذج استلام العهدة');
+  HANDOVERS.push(r);localStorage.setItem(HANDOVER_KEY,JSON.stringify(HANDOVERS));toast('تم حفظ نموذج استلام العهدة');go();
+}
+function printHandover(index){
+  const r=HANDOVERS[index];if(!r)return;
+  const w=window.open('','_blank');if(!w)return toast('اسمح بفتح نافذة الطباعة');
+  const acc=(Array.isArray(r.accessories)?r.accessories:[]).map(x=>`<tr><td>${e(x.type)}</td><td>${e(x.code)}</td><td>${e(x.serial)}</td></tr>`).join('')||'<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>'.repeat(6);
+  w.document.write(`<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>إقرار استلام عهدة</title><style>@page{size:A4;margin:10mm}body{font-family:Arial,sans-serif;color:#111;margin:0}.paper{border:2px solid #263238;padding:14px;min-height:270mm}h1{text-align:center;margin:0 0 18px}.sec{margin:8px 0;border:2px solid #263238}.head{background:#dce6e9;text-align:center;font-weight:bold;padding:7px;border-bottom:1px dashed #263238}table{width:100%;border-collapse:collapse}td,th{border:1px dashed #555;padding:8px;text-align:right;height:24px}th{font-weight:bold}.sign{height:75px;vertical-align:bottom;text-align:center}p{line-height:2;text-align:right}</style></head><body><div class="paper"><h1>إقرار استلام عهدة</h1><div class="sec"><div class="head">بيانات النموذج</div><table><tr><th>التاريخ</th><td>${e(r.date)}</td><th>الفرع</th><td>${e(r.department)}</td></tr></table></div><div class="sec"><div class="head">بيانات صاحب العهدة</div><table><tr><th>الاسم</th><td>${e(r.employee)}</td><th>الكود</th><td>${e(r.code)}</td><th>الوظيفة</th><td>${e(r.job)}</td></tr></table></div><div class="sec"><div class="head">بيانات المسؤول عن التسليم</div><table><tr><th>الاسم</th><td>${e(r.giver)}</td><th>الكود</th><td>${e(r.giverCode)}</td><th>الوظيفة</th><td>${e(r.giverJob)}</td></tr></table></div><div class="sec"><div class="head">بيانات العهدة</div><table><tr><th>نوع الجهاز</th><td>${e(r.model)}</td><th>كود الجهاز</th><td>${e(r.assetTag)}</td><th>S/N</th><td>${e(r.serial)}</td></tr><tr><th>نوع البطارية</th><td>${e(r.batteryType)}</td><th>كود البطارية</th><td>${e(r.batteryCode)}</td><th>S/N</th><td>${e(r.batterySerial)}</td></tr></table></div><div class="sec"><div class="head">إكسسوارات مضافة كعهدة</div><table><tr><th>النوع</th><th>الكود</th><th>S/N</th></tr>${acc}</table></div><div class="sec"><div class="head">إقرار</div><p>أقر أنا الموقع أدناه باستلام العهدة الموضحة أعلاه، وأتعهد بالمحافظة عليها واستخدامها في أعمال الشركة وإعادتها عند انتهاء الغرض منها أو عند ترك العمل، وفي حالة عدم تسليم العهدة أتحمل كافة الإجراءات القانونية والمالية المقررة.</p><table><tr><th class="sign">توقيع المستلم<br>${e(r.receiverSig)}</th><th class="sign">توقيع المسؤول عن التسليم<br>${e(r.giverSig)}</th></tr></table></div><div class="sec"><div class="head">بيانات المقر وجهة العمل</div><table><tr><th>الاسم</th><td>${e(r.locationName)}</td><th>الوظيفة</th><td>${e(r.locationJob)}</td><th>كود الموظف</th><td>${e(r.locationCode)}</td></tr><tr><th>بطاقة رقم قومي</th><td>${e(r.nationalId)}</td><th>أعمل لدى شركة</th><td>${e(r.workplace)}</td><th>التاريخ</th><td>${e(r.locationDate)}</td></tr></table></div></div><script>window.print()<\/script></body></html>`);w.document.close();
+}
+function printHandover(index){
+  const r=HANDOVERS[index];if(!r)return;
+  const w=window.open('','_blank');if(!w)return toast('اسمح بفتح نافذة الطباعة');
+  const acc=(Array.isArray(r.accessories)?r.accessories:[]).map(x=>`<tr><td>${e(x.type)}</td><td>${e(x.code)}</td><td>${e(x.serial)}</td></tr>`).join('')||'<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>'.repeat(6);
+  w.document.write(`<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>إقرار استلام عهدة</title><style>@page{size:A4;margin:10mm}body{font-family:Arial,sans-serif;color:#111;margin:0}.paper{border:2px solid #263238;padding:14px;min-height:270mm}.head{background:#dce6e9;text-align:center;font-weight:bold;padding:7px;border-bottom:1px dashed #263238}.sec{margin:8px 0;border:2px solid #263238}table{width:100%;border-collapse:collapse}td,th{border:1px dashed #555;padding:8px;text-align:right;height:24px}th{font-weight:bold}.sign{height:75px;vertical-align:bottom;text-align:center}p{line-height:2;text-align:right}</style></head><body><div class="paper"><h1>إقرار استلام عهدة</h1><div class="sec"><div class="head">بيانات النموذج</div><table><tr><th>التاريخ</th><td>${e(r.date)}</td><th>الفرع</th><td>${e(r.department)}</td></tr></table></div><div class="sec"><div class="head">بيانات صاحب العهدة</div><table><tr><th>الاسم</th><td>${e(r.employee)}</td><th>الكود</th><td>${e(r.code)}</td><th>الوظيفة</th><td>${e(r.job)}</td></tr></table></div><div class="sec"><div class="head">بيانات المسؤول عن التسليم</div><table><tr><th>الاسم</th><td>${e(r.giver)}</td><th>الكود</th><td>${e(r.giverCode)}</td><th>الوظيفة</th><td>${e(r.giverJob)}</td></tr></table></div><div class="sec"><div class="head">بيانات العهدة</div><table><tr><th>نوع الجهاز</th><td>${e(r.model)}</td><th>كود الجهاز</th><td>${e(r.assetTag)}</td><th>S/N</th><td>${e(r.serial)}</td></tr><tr><th>نوع البطارية</th><td>${e(r.batteryType)}</td><th>كود البطارية</th><td>${e(r.batteryCode)}</td><th>S/N</th><td>${e(r.batterySerial)}</td></tr></table></div><div class="sec"><div class="head">إكسسوارات مضافة كعهدة</div><table><tr><th>النوع</th><th>الكود</th><th>S/N</th></tr>${acc}</table></div><div class="sec"><div class="head">إقرار</div><table><tr><th>إقرار أنا /</th><td>${e(r.declarant||r.employee)}</td><th>بطاقة رقم قومي /</th><td>${e(r.nationalId)}</td></tr><tr><th>في وظيفة /</th><td>${e(r.job)}</td><th>وأعمل لدى شركة /</th><td>${e(r.workplace)}</td></tr></table><p>إني قد استلمت من الشركة ما هو مذكور أعلاه وذلك كعهدة لاستخدامها في أعمال الشركة وأتعهد بالمحافظة عليها وإعادة تسليمها للشركة عند انتهاء الغرض من استخدامها أو عند تركي العمل بالشركة، وفي حالة عدم تسليم العهدة المذكورة أعلاه كلها أو بعضها فإني أفوض الشركة في اتخاذ اللازم نحوي قانونيًا، سواء بخصم القيمة التي تقدرها مقابل هذه العهدة من مستحقاتي لديها أو من مالي الخاص، دون أي اعتراض مني على ذلك واتخاذ كافة الإجراءات القانونية ضدي.</p><table><tr><th class="sign">توقيع المستلم<br>${e(r.receiverSig)}</th><th class="sign">توقيع المسؤول عن التسليم<br>${e(r.giverSig)}</th></tr></table></div><div class="sec"><div class="head">المقر فيه</div><table><tr><th>الاسم</th><td>${e(r.locationName)}</td><th>الوظيفة</th><td>${e(r.locationJob)}</td><th>كود الموظف</th><td>${e(r.locationCode)}</td></tr><tr><th>بطاقة رقم قومي</th><td>${e(r.nationalId)}</td><th>التاريخ</th><td>${e(r.locationDate||r.date)}</td><th>مكان العمل</th><td>${e(r.workplace)}</td></tr></table></div></div><script>window.print()<\/script></body></html>`);w.document.close();
+}
 function vDashboard(todo){
   const stockKnown=role!=='junior';
   const out=stockKnown?items.filter(i=>Number(i.s)===0).length:0;
@@ -727,8 +796,9 @@ function vDashboard(todo){
     ok('maintView')?`<button class="btn dash-action ghost" onclick="selectTab('maint')">${icon('maint')} متابعة الصيانة</button>`:'',
     ok('view')?`<button class="btn dash-action ghost" onclick="selectTab('br')">${icon('br')} استعراض الفروع</button>`:''
   ].filter(Boolean).join('');
+  const assetDash=ASSETS.length?`<section class="box"><div class="row" style="justify-content:space-between"><h3>ملخص العهد (${ASSETS.length})</h3><button class="btn ghost" onclick="selectTab('assets')">إدارة العهد</button></div><div class="dash-grid"><div class="dash-card"><span>الأجهزة المسلّمة</span><b>${ASSETS.filter(a=>a.status==='assigned'||a.status==='transferred').length}</b></div><div class="dash-card warn"><span>متأخرة الإرجاع</span><b>${ASSETS.filter(a=>a.returnDate&&a.returnDate<new Date().toISOString().slice(0,10)&&['assigned','transferred'].includes(a.status)).length}</b></div><div class="dash-card"><span>تحت الصيانة</span><b>${ASSETS.filter(a=>a.status==='maintenance').length}</b></div><div class="dash-card bad"><span>تالف أو مفقود</span><b>${ASSETS.filter(a=>['damaged','lost'].includes(a.status)).length}</b></div></div></section>`:'';
   return `<section class="hero"><div><div class="eyebrow">نظرة عامة</div><h2>لوحة التحكم</h2><p>ملخص سريع لحالة الأصناف والعمليات التي تحتاج إلى متابعة. تنبيه انخفاض الرصيد مضبوط حاليًا على ٣ قطع أو أقل.</p></div></section>
-    <div class="dash-grid">${metrics}</div>${alertSections}<section class="box"><h3>إجراءات سريعة</h3><div class="dash-actions">${actions||'<p class="mut">لا توجد إجراءات متاحة لهذا الحساب.</p>'}</div></section>`;
+    <div class="dash-grid">${metrics}</div>${assetDash}${alertSections}<section class="box"><h3>إجراءات سريعة</h3><div class="dash-actions">${actions||'<p class="mut">لا توجد إجراءات متاحة لهذا الحساب.</p>'}</div></section>`;
 }
 async function loadAudit(){
   AUDIT.loading=true;
@@ -786,10 +856,18 @@ function setUserEditor(id){
 }
 function userPermissionsEditor(user){
   const permissions=Object.keys(CAN);
-  return `<div class="box"><h3>الصلاحيات الدقيقة</h3><p class="mut">«حسب الدور» يستخدم صلاحيات الدور الأساسي، ويمكن السماح أو المنع لكل عملية لهذا الحساب فقط.</p><div class="grid">${permissions.map(key=>{
+  return `<div class="box"><h3>الصلاحيات الدقيقة</h3><p class="mut">ضع علامة صح لتفعيل الصلاحية لهذا الحساب.</p><div class="grid">${permissions.map(key=>{
     const value=user&&user.permissions&&Object.prototype.hasOwnProperty.call(user.permissions,key)?(user.permissions[key]?'allow':'deny'):'inherit';
-    return `<label>${e(PERMISSION_LABELS[key]||key)}<select id="user_perm_${key}"><option value="inherit"${value==='inherit'?' selected':''}>حسب الدور</option><option value="allow"${value==='allow'?' selected':''}>سماح</option><option value="deny"${value==='deny'?' selected':''}>منع</option></select></label>`;
+    return `<label class="permission-check" title="الحالة الحالية: ${value==='inherit'?'حسب الدور':value==='allow'?'مفعلة':'متوقفة'}"><input type="checkbox" id="user_perm_${key}" data-state="${value}"${value==='allow'?' checked':''} onchange="toggleUserPermission('${key}',this)"><span>${e(PERMISSION_LABELS[key]||key)}</span></label>`;
   }).join('')}</div></div>`;
+}
+function toggleUserPermission(key,box){
+  const next=box.checked?'allow':'inherit';
+  box.dataset.state=next;box.indeterminate=false;
+  const label=box.closest('label');if(label)label.title=next==='allow'?'الصلاحية مفعلة':'تستخدم صلاحية الدور';
+}
+function hydratePermissionCheckboxes(root){
+  (root||document).querySelectorAll('.permission-check input').forEach(box=>{box.indeterminate=false;box.checked=box.dataset.state==='allow'});
 }
 function vUsers(){
   if(!ok('userAdmin'))return '<h2>غير مصرح</h2>';
@@ -814,7 +892,7 @@ async function saveUser(){
   if(!username)return setFormError('اكتب اسم المستخدم');
   if(!name)return setFormError('اكتب الاسم الظاهر');
   const permissions={};
-  Object.keys(CAN).forEach(key=>{const value=($('#user_perm_'+key)||{}).value;if(value==='allow')permissions[key]=true;else if(value==='deny')permissions[key]=false});
+  Object.keys(CAN).forEach(key=>{const box=$('#user_perm_'+key);const value=box&&box.dataset.state;if(value==='allow')permissions[key]=true;else if(value==='deny')permissions[key]=false});
   const editId=USER_ADMIN.editId;
   const body={username,name,role:roleName,permissions};
   if(editId!=null)body.active=!!($('#user_active')||{}).checked;
