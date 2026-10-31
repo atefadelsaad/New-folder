@@ -492,7 +492,7 @@ const $=s=>document.querySelector(s);
 function updateScrollTopButton(){document.body.classList.toggle('scrolled',window.scrollY>320)}
 window.addEventListener('scroll',updateScrollTopButton,{passive:true});
 updateScrollTopButton();
-const e=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const e=s=>String(s).replace(/[&<>"'\\]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','\\':'&#92;'}[c]));
 const ok=a=>a==='userAdmin'?role==='admin':!!CAN[a]&&(
   STATE.user&&STATE.user.permissions&&Object.prototype.hasOwnProperty.call(STATE.user.permissions,a)
     ?STATE.user.permissions[a]===true:CAN[a].includes(role)
@@ -573,6 +573,20 @@ function confirmDelete(title,detail){
     backdrop.querySelector('#deleteReason').focus();
   });
 }
+
+document.addEventListener('click',event=>{
+  const edit=event.target.closest('[data-branch-edit]');
+  if(edit){
+    const b=br(edit.dataset.branchEdit);
+    if(b){
+      branchEditState={id:b.id,name:b.n,number:b.number||'',gov:b.g,manager:b.manager||'',phone:b.phone||'',address:b.address||'',location:b.location||'',unsaved:true};
+      go();
+    }
+    return;
+  }
+  const photo=event.target.closest('[data-photo-id]');
+  if(photo)openInspectionPhoto(photo.dataset.photoId);
+});
 
 function renderLogin(msg){
   $('#nav').innerHTML='';$('#roleBar').innerHTML='';
@@ -965,7 +979,7 @@ async function saveOwnPassword(){
 function vInspectionQueue(){
   if(!ok('inspectionReview'))return '<h2>غير مصرح</h2>';
   if(!INSPECTIONS.length)return '<h2>فحص الاستلامات</h2><div class="empty">لا توجد أصناف بانتظار الفحص.</div>';
-  return `<h2>فحص الاستلامات (${INSPECTIONS.length})</h2><p class="mut">الأصناف هنا محجوزة ولا يمكن صرفها حتى اعتماد النتيجة. الصنف المقبول يدخل المخزون، والتالف يُسجل في الخردة.</p>${INSPECTIONS.map(row=>`<article class="box"><div class="row" style="justify-content:space-between"><div><h3>${e(row.item)} · ${e(row.number)}</h3><div class="mut">${e(row.party||'-')} · ${dcell(row.date)} · الكمية: ${row.qty}</div></div><span class="chip warn">بانتظار الفحص</span></div><p><b>الحالة المسجلة:</b> ${e(row.condition||'غير محددة')} ${row.serials.length?`· <b>السيريال:</b> ${row.serials.map(e).join('، ')}`:''}</p>${row.notes?`<p><b>ملاحظات الاستلام:</b> ${e(row.notes)}</p>`:''}${row.photos.length?`<div class="row">${row.photos.map(photo=>`<img data-photo-id="${e(photo.id)}" onclick="openInspectionPhoto('${e(photo.id)}')" alt="صورة الصنف عند الاستلام" style="width:92px;height:92px;object-fit:cover;border-radius:8px;border:1px solid var(--ln);cursor:pointer">`).join('')}</div>`:''}<label>ملاحظة المراجع<textarea id="inspection_review_${row.lineId}" rows="2" maxlength="2000"></textarea></label><div class="acts" style="margin-top:10px"><button class="btn" onclick="reviewInspection(${row.voucherId},${row.lineId},'good')">اعتماد سليم وإضافته للمخزون</button><button class="btn bad" onclick="reviewInspection(${row.voucherId},${row.lineId},'damaged')">اعتماد تالف ونقله للخردة</button></div></article>`).join('')}`;
+  return `<h2>فحص الاستلامات (${INSPECTIONS.length})</h2><p class="mut">الأصناف هنا محجوزة ولا يمكن صرفها حتى اعتماد النتيجة. الصنف المقبول يدخل المخزون، والتالف يُسجل في الخردة.</p>${INSPECTIONS.map(row=>`<article class="box"><div class="row" style="justify-content:space-between"><div><h3>${e(row.item)} · ${e(row.number)}</h3><div class="mut">${e(row.party||'-')} · ${dcell(row.date)} · الكمية: ${row.qty}</div></div><span class="chip warn">بانتظار الفحص</span></div><p><b>الحالة المسجلة:</b> ${e(row.condition||'غير محددة')} ${row.serials.length?`· <b>السيريال:</b> ${row.serials.map(e).join('، ')}`:''}</p>${row.notes?`<p><b>ملاحظات الاستلام:</b> ${e(row.notes)}</p>`:''}${row.photos.length?`<div class="row">${row.photos.map(photo=>`<img data-photo-id="${e(photo.id)}" alt="صورة الصنف عند الاستلام" style="width:92px;height:92px;object-fit:cover;border-radius:8px;border:1px solid var(--ln);cursor:pointer">`).join('')}</div>`:''}<label>ملاحظة المراجع<textarea id="inspection_review_${row.lineId}" rows="2" maxlength="2000"></textarea></label><div class="acts" style="margin-top:10px"><button class="btn" onclick="reviewInspection(${row.voucherId},${row.lineId},'good')">اعتماد سليم وإضافته للمخزون</button><button class="btn bad" onclick="reviewInspection(${row.voucherId},${row.lineId},'damaged')">اعتماد تالف ونقله للخردة</button></div></article>`).join('')}`;
 }
 async function reviewInspection(voucherId,lineId,decision){
   if(decision==='damaged'&&!confirm('سيُنقل الصنف التالف إلى الخردة ولن يصبح متاحًا للصرف. هل تريد المتابعة؟'))return;
@@ -1662,7 +1676,7 @@ async function addInspectionPhotos(index,input){
   }catch(err){setFormError(err.message);input.value=''}
 }
 function inspectionPhotoPreview(line){
-  const saved=(line.insp&&line.insp.photos||[]).map(photo=>`<img data-photo-id="${e(photo.id)}" onclick="openInspectionPhoto('${e(photo.id)}')" alt="صورة محفوظة" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--ln);cursor:pointer">`);
+  const saved=(line.insp&&line.insp.photos||[]).map(photo=>`<img data-photo-id="${e(photo.id)}" alt="صورة محفوظة" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--ln);cursor:pointer">`);
   const fresh=(line.photoData||[]).map(photo=>`<img src="${photo}" alt="صورة جديدة" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--ln)">`);
   return saved.concat(fresh).join('');
 }
@@ -1959,7 +1973,7 @@ function vBranch(){
   <div class="row"><label>اسم الفرع<input id="bed_n" value="${e(branchEditState.name)}"></label><label>رقم الفرع<input id="bed_num" value="${e(branchEditState.number||'')}"></label><label>المحافظة<select id="bed_g">${opts(govList(branchEditState.gov),branchEditState.gov)}</select></label></div>
   <div class="row"><label>مسؤول الفرع<input id="bed_man" value="${e(branchEditState.manager||'')}"></label><label>هاتف<input id="bed_phone" value="${e(branchEditState.phone||'')}"></label></div>
   <div class="row"><label>العنوان<input id="bed_addr" value="${e(branchEditState.address||'')}"></label><label>الموقع<input id="bed_loc" value="${e(branchEditState.location||'')}"></label></div>
-  <div class="row"><button class="btn" onclick="saveBranchEdit()">حفظ</button><button class="btn ghost" onclick="branchEditState=null;go()">إلغاء</button></div></div>`:`<div class="box tw" style="margin-bottom:10px"><h3>بيانات الفرع</h3><table><tr><th>المسؤول</th><td>${b.manager?e(b.manager):'-'}</td></tr><tr><th>الهاتف</th><td>${b.phone?e(b.phone):'-'}</td></tr><tr><th>العنوان</th><td>${b.address?e(b.address):'-'}</td></tr><tr><th>الموقع</th><td>${b.location?(b.location.match(/^https?:\/\//)?`<a href="${e(b.location)}" target="_blank" rel="noopener noreferrer">فتح الخريطة</a>`:e(b.location)):'-'}</td></tr></table>${ok('addBranch')?`<button class="btn ghost" onclick="branchEditState={id:${b.id},name:'${e(b.n)}',number:'${e(b.number||'')}',gov:'${e(b.g)}',manager:'${e(b.manager||'')}',phone:'${e(b.phone||'')}',address:'${e(b.address||'')}',location:'${e(b.location||'')}',unsaved:true};go()">تعديل بيانات الفرع</button>`:''}</div>`}
+  <div class="row"><button class="btn" onclick="saveBranchEdit()">حفظ</button><button class="btn ghost" onclick="branchEditState=null;go()">إلغاء</button></div></div>`:`<div class="box tw" style="margin-bottom:10px"><h3>بيانات الفرع</h3><table><tr><th>المسؤول</th><td>${b.manager?e(b.manager):'-'}</td></tr><tr><th>الهاتف</th><td>${b.phone?e(b.phone):'-'}</td></tr><tr><th>العنوان</th><td>${b.address?e(b.address):'-'}</td></tr><tr><th>الموقع</th><td>${b.location?(b.location.match(/^https?:\/\//)?`<a href="${e(b.location)}" target="_blank" rel="noopener noreferrer">فتح الخريطة</a>`:e(b.location)):'-'}</td></tr></table>${ok('addBranch')?`<button class="btn ghost" data-branch-edit="${b.id}">تعديل بيانات الفرع</button>`:''}</div>`}
   <div class="box tw"><h3>أصناف الفرع (${d.total})</h3>${sbox('britems','بحث: صنف، فئة، سيريال',d.total)}<div id="res_britems">${d.html}</div>${add}</div>`;
 }
 async function saveBranchEdit(){

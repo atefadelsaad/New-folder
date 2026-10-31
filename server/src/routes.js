@@ -15,6 +15,8 @@ const guard = (perm) => (req, res, next) =>
 
 const text = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
 
+const e = (v) => String(v == null ? '' : v).replace(/\(/g, '&\(').replace(/\)/g, '&\)').replace(/\n/g, '\r\n').replace(/\r/g, '\n');
+
 const asInt = (v, fallback = 0) => {
   const n = parseInt(v, 10);
   return Number.isFinite(n) ? n : fallback;
@@ -113,7 +115,7 @@ router.use((req, res, next) => {
 
 router.get('/auth/me', (req, res) => res.json({ user: req.user }));
 
-router.get('/inspection-photos/:id', (req, res) => {
+router.get('/inspection-photos/:id', guard('view'), (req, res) => {
   const file = inspectionPhotos.resolve(req.params.id);
   if (!file || !fs.existsSync(file)) return res.status(404).json({ error: 'الصورة غير موجودة' });
   res.set('X-Content-Type-Options', 'nosniff');
@@ -251,7 +253,7 @@ router.get('/audit', (req, res) => {
 /* ------------------------------- bootstrap ------------------------------ */
 
 router.get('/bootstrap', route((req, res) => {
-  const payload = data.bootstrap(req.user.role);
+  const payload = data.bootstrap(req.user.role, (perm) => can(req.user, perm));
   payload.user = { role: req.user.role, name: req.user.name, username: req.user.username, permissions: req.user.permissions || {} };
   payload.inspectionQueue = can(req.user, 'inspectionReview') ? data.pendingInspections() : [];
   payload.stocktakes = can(req.user, 'stocktake')
@@ -326,8 +328,9 @@ router.delete('/categories/:name', guard('stock'), route((req, res) => {
     const usedBranch = st.branchItems.some((r) => itemIds.includes(Number(r.item_id)) && Number(r.qty) > 0);
     const usedVoucher = st.vouchers.some((v) => (v.lines || []).some((l) => itemIds.includes(Number(l.item_id))));
     const usedRequest = st.requests.some((r) => (r.lines || []).some((l) => itemIds.includes(Number(l.item_id))));
-    if (usedBranch || usedVoucher || usedRequest) {
-      data.fail(400, 'لا يمكن حذف الفئة: بعض أصنافها مستخدمة في فروع أو أذونات أو طلبات');
+    const usedScrap = st.scrapEntries.some((r) => itemIds.includes(Number(r.item_id)));
+    if (usedBranch || usedVoucher || usedRequest || usedScrap) {
+      data.fail(400, 'لا يمكن حذف الفئة: بعض أصنافها مستخدمة في فروع أو أذونات أو طلبات أو خردة');
     }
     st.branchItems = st.branchItems.filter((r) => !itemIds.includes(Number(r.item_id)));
     st.items = st.items.filter((i) => Number(i.category_id) !== Number(category.id));
@@ -496,6 +499,7 @@ router.put('/branches/:id/qty', guard('branchEdit'), route((req, res) => {
   const branchId = asInt(req.params.id);
   const itemId = asInt(body.item_id);
   const qty = Math.max(0, asInt(body.qty));
+  if (!body.reason) data.fail(400, 'اكتب سبب تعديل الكمية');
   data.tx(() => {
     if (!data.branchById(branchId)) data.fail(404, 'الفرع غير موجود');
     if (!data.itemById(itemId)) data.fail(404, 'الصنف غير موجود');
@@ -880,6 +884,27 @@ const asVoucherShape = (v) => ({
   lines: (v.lines || []).map((l) => ({ itemId: l.item_id, qty: l.qty, state: l.state }))
 });
 
+// A voucher released against a request must spend exactly what was approved:
+// same branch, same items, same quantities.
+function assertVoucherMatchesRequest(n, request) {
+  if (Number(request.branch_id) !== Number(n.branchId)) {
+    data.fail(400, 'فرع الإذن لا يطابق الطلب المعتمد');
+  }
+  const aggregate = (rows) => {
+    const map = new Map();
+    for (const row of rows) {
+      const itemId = Number(row.itemId != null ? row.itemId : row.item_id);
+      map.set(itemId, (map.get(itemId) || 0) + Number(row.qty));
+    }
+    return map;
+  };
+  const wanted = aggregate(request.lines || []);
+  const actual = aggregate(n.lines || []);
+  const matches = wanted.size === actual.size
+    && [...wanted].every(([itemId, qty]) => actual.get(itemId) === qty);
+  if (!matches) data.fail(400, 'أصناف أو كميات الإذن لا تطابق الطلب المعتمد');
+}
+
 router.post('/vouchers', guard('stock'), route((req, res) => {
   const body = bodyOf(req);
   const n = normalizeVoucher(body);
@@ -898,6 +923,7 @@ router.post('/vouchers', guard('stock'), route((req, res) => {
     if (requestId) {
       request = st.requests.find((r) => Number(r.id) === requestId);
       if (!request || request.status !== 'approved') data.fail(400, 'الطلب غير معتمد أو تم صرفه من قبل');
+      assertVoucherMatchesRequest(n, request);
     }
     const serialError = data.validateSerials(n, null);
     if (serialError) data.fail(400, serialError);
@@ -969,8 +995,36 @@ router.put('/vouchers/:id', guard('stock'), route((req, res) => {
     const applied = data.applyChange(asVoucherShape(old), n);
     if (!applied.ok) data.fail(400, data.stockError(applied));
     data.assertUniqueNumber(n.direction, n.number, id);
+    const oldDirection = old.direction;
+    const oldKind = old.kind;
     old.direction = n.direction;
     old.kind = n.kind;
+    // Unlink old maintenance form if direction/kind changed
+    if (oldDirection !== n.direction || oldKind !== n.kind) {
+      const previousMeta = st.dispatchMeta[old.id] && typeof st.dispatchMeta[old.id] === 'object'
+        ? st.dispatchMeta[old.id] : {};
+      const previousFormId = previousMeta.maintenanceFormId == null ? null : Number(previousMeta.maintenanceFormId);
+      if (previousFormId) {
+        const previousForm = data.formById(previousFormId);
+        if (previousForm) {
+          data.unlinkFormFromDispatch(previousForm, req.user.name);
+          previousForm.maintenanceEntity = null;
+          previousForm.itemId = null;
+          previousForm.serial = null;
+          previousForm.faultDescription = null;
+          previousForm.accessoriesNotes = null;
+          previousForm.branchName = '';
+          previousForm.permitNumber = '';
+          previousForm.supportOfficer = '';
+          previousForm.deliveryDate2 = '';
+          previousForm.issuePermitNumber = '';
+          previousForm.maintenanceType = 'internal';
+          previousForm.status = 'received';
+        }
+      }
+      // Clear dispatchMeta entry for this voucher
+      delete st.dispatchMeta[old.id];
+    }
     old.supplier_id = n.kind === 'br' ? null : data.ensureSupplier(n.supplierName);
     old.branch_id = n.branchId;
     old.number = n.number;
@@ -1097,7 +1151,11 @@ router.post('/scrap', guard('pool'), route((req, res) => {
     const ledger = mode === 'serial' ? data.serialLedger(ids, null) : new Map();
     const seen = new Set();
     for (const l of lines) {
-      if (mode === 'serial' && data.hasSerial(l.itemId)) {
+      if (data.hasSerial(l.itemId)) {
+        if (mode !== 'serial') {
+          const item = data.itemById(l.itemId);
+          data.fail(400, 'الصنف ' + (item ? item.name : '') + ' له سيريالات: اختر السيريالات بدل الخردة بالكمية');
+        }
         if (l.serials.length !== l.qty) data.fail(400, 'اكتب سيريال لكل قطعة');
         if (l.serials.some((s) => !s)) data.fail(400, 'اكتب كل السيريالات');
         for (const sn of l.serials) {
@@ -1201,6 +1259,9 @@ router.post('/requests/:id/action', route((req, res) => {
       request.status = 'rejected';
     } else if (action === 'save') {
       if (!can(role, 'edit')) data.fail(403, 'لا تملك صلاحية هذا الإجراء');
+      if (request.status !== 'review' && request.status !== 'pending') {
+        data.fail(400, 'لا يمكن تعديل الطلب بعد اعتماده، أرجعه للمراجعة أولًا');
+      }
       const lines = readRequestLines(body.lines);
       if (!lines.length) data.fail(400, 'اترك صنفًا واحدًا على الأقل أو ارفض الطلب');
       if (has(body, 'branch_id')) {
@@ -1209,6 +1270,8 @@ router.post('/requests/:id/action', route((req, res) => {
         request.branch_id = nextBranch;
       }
       request.lines = lines.map((l) => ({ id: ++st.counters.requestLine, item_id: l.itemId, qty: l.qty }));
+      // Any edit invalidates a previous review/approval.
+      request.status = 'pending';
       log('عدّل الطلب', '', text(body.note, 2000) || 'تم التعديل');
     } else if (action === 'rev') {
       if (!can(role, 'review') || request.status !== 'review') data.fail(400, 'لا يمكن تنفيذ هذا الإجراء');
@@ -1328,7 +1391,7 @@ function linkFormVouchers(form, body, actor) {
   }
 }
 
-router.get('/maintenance-forms', route((req, res) => {
+router.get('/maintenance-forms', guard('maintView'), route((req, res) => {
   res.json({ forms: data.state.forms });
 }));
 
@@ -1435,7 +1498,7 @@ const META_FIELDS = {
   partyName: 200
 };
 
-router.get('/dispatch-meta', route((req, res) => {
+router.get('/dispatch-meta', guard('view'), route((req, res) => {
   res.json({ meta: data.state.dispatchMeta });
 }));
 
